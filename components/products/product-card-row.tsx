@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ShoppingCart, Minus, Plus, Check } from "lucide-react";
+import { ShoppingCart, Minus, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FavoriteButton } from "@/components/products/favorite-button";
@@ -51,7 +51,7 @@ export function ProductCardRow({ product }: ProductCardRowProps) {
     <div className="group bg-card rounded-xl border overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-foreground/20">
       <div className="flex flex-col sm:flex-row">
         {/* Image */}
-        <Link href={`/products/${product.id}`} className="sm:w-48 md:w-56 shrink-0">
+        <Link href={`/products/${product.id}`} className="sm:w-40 md:w-48 shrink-0">
           <div className="relative aspect-square sm:aspect-auto sm:h-full overflow-hidden bg-muted">
             {product.imageUrl ? (
               <img
@@ -60,13 +60,13 @@ export function ProductCardRow({ product }: ProductCardRowProps) {
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
             ) : (
-              <div className="flex items-center justify-center h-full min-h-[200px] text-muted-foreground text-sm">
+              <div className="flex items-center justify-center h-full min-h-[160px] text-muted-foreground text-sm">
                 Brak zdjęcia
               </div>
             )}
 
             {/* Badges */}
-            <div className="absolute top-3 left-3 flex flex-col gap-2">
+            <div className="absolute top-2 left-2 flex flex-col gap-1">
               {isOutOfStock && (
                 <Badge variant="destructive" className="text-xs">
                   Wyprzedane
@@ -78,73 +78,80 @@ export function ProductCardRow({ product }: ProductCardRowProps) {
                 </Badge>
               )}
             </div>
-
-            {/* Wishlist button - mobile */}
-            <FavoriteButton
-              product={product}
-              className="absolute top-3 right-3 sm:hidden"
-            />
           </div>
         </Link>
 
         {/* Content */}
-        <div className="flex-1 p-4 sm:p-5 flex flex-col sm:flex-row gap-4">
+        <div className="flex-1 p-4 flex flex-col sm:flex-row gap-4">
           {/* Info */}
           <div className="flex-1 min-w-0">
-            <Link href={`/products/${product.id}`}>
-              <h3 className="font-semibold text-base md:text-lg line-clamp-2 hover:text-primary transition-colors leading-tight">
-                {product.name}
-              </h3>
-            </Link>
-
-            {product.descriptionShort && (
-              <p className="text-sm text-muted-foreground mt-2 line-clamp-2 hidden md:block">
-                {product.descriptionShort.replace(/<[^>]*>/g, '')}
-              </p>
-            )}
-
-            {/* Features */}
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              {product.reference && (
-                <span>SKU: {product.reference}</span>
-              )}
-              {product.weight > 0 && (
-                <span>Waga: {product.weight} kg</span>
-              )}
+            {/* Favorite button - top right */}
+            <div className="flex items-start justify-between gap-2">
+              <Link href={`/products/${product.id}`} className="flex-1">
+                <h3 className="font-semibold text-base line-clamp-2 hover:text-primary transition-colors leading-tight">
+                  {product.name}
+                </h3>
+              </Link>
+              <FavoriteButton
+                product={product}
+                className="shrink-0 -mt-1"
+              />
             </div>
 
-            {/* Availability */}
-            <div className="mt-3">
-              {isOutOfStock ? (
-                <span className="text-xs font-medium flex items-center gap-1.5 text-destructive">
-                  <span className="w-2 h-2 rounded-full bg-destructive"></span>
-                  Niedostępny
+            {/* Details - vertical list */}
+            <div className="mt-3 space-y-1 text-sm">
+              <div>
+                <span className="text-muted-foreground">Wysyłka:</span>
+                <br />
+                <span className={isOutOfStock ? "text-destructive" : "text-green-600 font-medium"}>
+                  {isOutOfStock ? "Niedostępny" : "Wysyłka jutro"}
                 </span>
-              ) : (
-                <span className="text-xs font-medium flex items-center gap-1.5 text-green-600">
-                  <Check className="size-3" />
-                  W magazynie ({product.quantity} szt.)
-                </span>
+              </div>
+              {product.reference && (
+                <div>
+                  <span className="text-muted-foreground">SKU:</span>
+                  <br />
+                  <span>{product.reference}</span>
+                </div>
               )}
             </div>
           </div>
 
           {/* Price & Actions */}
-          <div className="sm:w-48 md:w-56 shrink-0 flex flex-col justify-between gap-3 sm:border-l sm:pl-5">
-            <div className="flex items-center justify-between sm:flex-col sm:items-end gap-2">
-              <span className="text-xl md:text-2xl font-bold">{formatPrice(product.price)}</span>
+          <div className="sm:w-44 md:w-48 shrink-0 flex flex-col justify-end gap-2 sm:border-l sm:pl-4">
+            {/* Manufacturer badge */}
+            {product.manufacturerName && (
+              <div className="text-right">
+                <span className="inline-block text-[10px] font-medium px-2 py-0.5 bg-muted rounded-full text-muted-foreground">
+                  {product.manufacturerName}
+                </span>
+              </div>
+            )}
 
-              {/* Wishlist button - desktop */}
-              <FavoriteButton
-                product={product}
-                className="hidden sm:flex"
-              />
+            {/* Stock */}
+            <div className="text-right">
+              {isOutOfStock ? (
+                <span className="text-xs font-medium flex items-center justify-end gap-1 text-destructive">
+                  <span className="size-1 rounded-full bg-destructive"></span>
+                  Brak
+                </span>
+              ) : (
+                <span className="text-xs font-medium flex items-center justify-end gap-1 text-green-600">
+                  <span className="size-1 rounded-full bg-green-500"></span>
+                  {product.quantity > 99 ? "99+" : product.quantity} szt.
+                </span>
+              )}
+            </div>
+
+            {/* Price */}
+            <div className="text-right">
+              <span className="text-xl md:text-2xl font-bold">{formatPrice(product.price)}</span>
             </div>
 
             {/* Add to cart section */}
             <div className="space-y-2">
               {isOutOfStock ? (
-                <Button disabled className="w-full h-10" variant="secondary">
+                <Button disabled className="w-full h-9" variant="secondary" size="sm">
                   Niedostępny
                 </Button>
               ) : (
@@ -153,36 +160,31 @@ export function ProductCardRow({ product }: ProductCardRowProps) {
                   <div className="flex items-center justify-center border rounded-lg overflow-hidden bg-muted/50">
                     <button
                       onClick={decrementQuantity}
-                      className="h-9 w-10 flex items-center justify-center hover:bg-muted transition-colors"
+                      className="h-8 w-9 flex items-center justify-center hover:bg-muted transition-colors"
                       disabled={quantity <= 1}
                     >
-                      <Minus className="size-4" />
+                      <Minus className="size-3" />
                     </button>
-                    <span className="w-12 text-center text-sm font-medium">{quantity}</span>
+                    <span className="w-10 text-center text-sm font-medium">{quantity}</span>
                     <button
                       onClick={incrementQuantity}
-                      className="h-9 w-10 flex items-center justify-center hover:bg-muted transition-colors"
+                      className="h-8 w-9 flex items-center justify-center hover:bg-muted transition-colors"
                       disabled={quantity >= (product.quantity || 99)}
                     >
-                      <Plus className="size-4" />
+                      <Plus className="size-3" />
                     </button>
                   </div>
 
                   {/* Add to cart button */}
                   <Button
                     onClick={handleAddToCart}
-                    className="w-full h-10 gap-2"
+                    className="w-full h-9 gap-2"
+                    size="sm"
                   >
                     <ShoppingCart className="size-4" />
-                    Dodaj do koszyka
+                    Do koszyka
                   </Button>
                 </>
-              )}
-
-              {!isOutOfStock && (
-                <p className="text-xs text-muted-foreground text-center">
-                  Wysyłka w 24h
-                </p>
               )}
             </div>
           </div>

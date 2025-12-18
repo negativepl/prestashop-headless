@@ -154,6 +154,21 @@ class PrestaShopClient {
       // Stock not available
     }
 
+    let manufacturerName: string | null = null;
+    if (p.id_manufacturer && p.id_manufacturer > 0) {
+      try {
+        const mfResponse = await this.fetch<PSResponse<{ id: number; name: string }[]>>(
+          `manufacturers/${p.id_manufacturer}?display=full`
+        );
+        const manufacturer = mfResponse.manufacturers?.[0] || mfResponse.manufacturer;
+        if (manufacturer) {
+          manufacturerName = manufacturer.name;
+        }
+      } catch {
+        // Manufacturer not available
+      }
+    }
+
     return {
       id: p.id,
       name: this.getMultiLangValue(p.name),
@@ -167,6 +182,8 @@ class PrestaShopClient {
       active: p.active === "1",
       quantity,
       weight: parseFloat(p.weight) || 0,
+      manufacturerId: p.id_manufacturer,
+      manufacturerName,
     };
   }
 

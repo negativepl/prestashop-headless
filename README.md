@@ -42,6 +42,7 @@ NEXT_PUBLIC_PRESTASHOP_URL=http://your-prestashop.com
 | `categories` | ✅ | | | | | |
 | `countries` | ✅ | | | | | |
 | `customers` | ✅ | ✅ | ✅ | | | |
+| `manufacturers` | ✅ | | | | | |
 | `order_states` | ✅ | | | | | |
 | `orders` | ✅ | | ✅ | | | |
 | `products` | ✅ | | | | | |

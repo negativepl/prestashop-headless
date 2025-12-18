@@ -279,6 +279,8 @@ export interface Product {
   active: boolean;
   quantity: number;
   weight: number;
+  manufacturerId: number;
+  manufacturerName: string | null;
 }
 
 export interface Category {
