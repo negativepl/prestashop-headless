@@ -4,6 +4,7 @@ import { useEffect, useState, use } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ChevronDown, ChevronRight, SlidersHorizontal, X, Grid3X3, LayoutList } from "lucide-react";
 import { ProductCard } from "@/components/products/product-card";
+import { ProductCardRow } from "@/components/products/product-card-row";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -292,16 +293,16 @@ export default function CategoryPage({ params }: CategoryPageProps) {
                 </Button>
               )}
             </div>
-          ) : (
-            <div
-              className={
-                viewMode === "grid"
-                  ? "grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4"
-                  : "space-y-4"
-              }
-            >
+          ) : viewMode === "grid" ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredProducts.map((product) => (
+                <ProductCardRow key={product.id} product={product} />
               ))}
             </div>
           )}
