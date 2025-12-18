@@ -33,14 +33,23 @@ NEXT_PUBLIC_PRESTASHOP_URL=http://your-prestashop.com
 2. Go to: **Advanced Parameters → Webservice**
 3. Enable webservice (toggle to "Yes")
 4. Click **Add new key**
-5. Generate key and set permissions:
-   - `products` - read
-   - `categories` - read
-   - `images` - read
-   - `customers` - read/write
-   - `carts` - read/write
-   - `orders` - read/write
+5. Generate key and set **only these permissions**:
+
+| Resource | GET | POST | PUT | DELETE |
+|----------|-----|------|-----|--------|
+| `products` | ✅ | | | |
+| `categories` | ✅ | | | |
+| `stock_availables` | ✅ | | | |
+| `countries` | ✅ | | | |
+| `order_states` | ✅ | | | |
+| `customers` | ✅ | ✅ | ✅ | |
+| `addresses` | ✅ | ✅ | | ✅ |
+| `carts` | ✅ | ✅ | ✅ | |
+| `orders` | ✅ | ✅ | | |
+
 6. Save and copy the generated key to `.env.local`
+
+> **Security note:** Do not enable more permissions than listed above. The frontend only needs these specific resources.
 
 ## Development
 
