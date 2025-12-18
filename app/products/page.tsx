@@ -1,0 +1,40 @@
+import { ProductGrid } from "@/components/products/product-grid";
+import { prestashop } from "@/lib/prestashop/client";
+
+export const dynamic = "force-dynamic";
+
+export const metadata = {
+  title: "Produkty | PrestaShop Headless",
+  description: "Lista wszystkich produktów",
+};
+
+export default async function ProductsPage() {
+  let products = [];
+  let error = null;
+
+  try {
+    products = await prestashop.getProducts({ limit: 100 });
+  } catch (e) {
+    error = e instanceof Error ? e.message : "Błąd połączenia z API";
+  }
+
+  return (
+    <div className="container py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">Produkty</h1>
+        <p className="text-muted-foreground mt-2">
+          Przeglądaj wszystkie dostępne produkty
+        </p>
+      </div>
+
+      {error ? (
+        <div className="text-center py-12 bg-muted rounded-lg">
+          <p className="text-destructive font-medium">Błąd połączenia z PrestaShop</p>
+          <p className="text-sm text-muted-foreground mt-2">{error}</p>
+        </div>
+      ) : (
+        <ProductGrid products={products} />
+      )}
+    </div>
+  );
+}
