@@ -37,15 +37,15 @@ NEXT_PUBLIC_PRESTASHOP_URL=http://your-prestashop.com
 
 | Resource | GET | POST | PUT | DELETE |
 |----------|-----|------|-----|--------|
-| `products` | ✅ | | | |
-| `categories` | ✅ | | | |
-| `stock_availables` | ✅ | | | |
-| `countries` | ✅ | | | |
-| `order_states` | ✅ | | | |
-| `customers` | ✅ | ✅ | ✅ | |
 | `addresses` | ✅ | ✅ | | ✅ |
 | `carts` | ✅ | ✅ | ✅ | |
+| `categories` | ✅ | | | |
+| `countries` | ✅ | | | |
+| `customers` | ✅ | ✅ | ✅ | |
+| `order_states` | ✅ | | | |
 | `orders` | ✅ | ✅ | | |
+| `products` | ✅ | | | |
+| `stock_availables` | ✅ | | | |
 
 6. Save and copy the generated key to `.env.local`
 
