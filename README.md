@@ -35,15 +35,15 @@ NEXT_PUBLIC_PRESTASHOP_URL=http://your-prestashop.com
 4. Click **Add new key**
 5. Generate key and set **only these permissions**:
 
-| Resource | GET | POST | PUT | DELETE |
-|----------|-----|------|-----|--------|
-| `addresses` | ✅ | ✅ | | ✅ |
+| Resource | GET | PUT | POST | DELETE |
+|----------|-----|-----|------|--------|
+| `addresses` | ✅ | | ✅ | ✅ |
 | `carts` | ✅ | ✅ | ✅ | |
 | `categories` | ✅ | | | |
 | `countries` | ✅ | | | |
 | `customers` | ✅ | ✅ | ✅ | |
 | `order_states` | ✅ | | | |
-| `orders` | ✅ | ✅ | | |
+| `orders` | ✅ | | ✅ | |
 | `products` | ✅ | | | |
 | `stock_availables` | ✅ | | | |
 
