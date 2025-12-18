@@ -1,63 +1,63 @@
 # PrestaShop Headless Frontend
 
-Next.js 16 frontend dla PrestaShop headless e-commerce.
+Next.js 16 headless frontend for PrestaShop e-commerce.
 
-## Wymagania
+## Requirements
 
 - Node.js 18+
-- PrestaShop 8.x/9.x z włączonym Webservice API
+- PrestaShop 8.x/9.x with Webservice API enabled
 
-## Instalacja
+## Installation
 
 ```bash
 npm install
 ```
 
-## Konfiguracja
+## Configuration
 
-Utwórz plik `.env.local` w głównym katalogu:
+Create a `.env.local` file in the root directory:
 
 ```env
 # PrestaShop API
-PRESTASHOP_URL=http://twoj-prestashop.pl
-PRESTASHOP_API_KEY=TWOJ_KLUCZ_API
+PRESTASHOP_URL=http://your-prestashop.com
+PRESTASHOP_API_KEY=YOUR_API_KEY
 
 # App
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_PRESTASHOP_URL=http://twoj-prestashop.pl
+NEXT_PUBLIC_PRESTASHOP_URL=http://your-prestashop.com
 ```
 
-### Jak uzyskać klucz API PrestaShop?
+### How to get PrestaShop API key?
 
-1. Zaloguj się do panelu administracyjnego PrestaShop
-2. Przejdź do: **Zaawansowane → Webservice**
-3. Włącz webservice (przełącznik na "Tak")
-4. Kliknij **Dodaj nowy klucz**
-5. Wygeneruj klucz i zaznacz uprawnienia:
-   - `products` - odczyt
-   - `categories` - odczyt
-   - `images` - odczyt
-   - `customers` - odczyt/zapis
-   - `carts` - odczyt/zapis
-   - `orders` - odczyt/zapis
-6. Zapisz i skopiuj wygenerowany klucz do `.env.local`
+1. Log in to PrestaShop admin panel
+2. Go to: **Advanced Parameters → Webservice**
+3. Enable webservice (toggle to "Yes")
+4. Click **Add new key**
+5. Generate key and set permissions:
+   - `products` - read
+   - `categories` - read
+   - `images` - read
+   - `customers` - read/write
+   - `carts` - read/write
+   - `orders` - read/write
+6. Save and copy the generated key to `.env.local`
 
-## Uruchomienie
+## Development
 
 ```bash
 npm run dev
 ```
 
-Aplikacja dostępna pod: http://localhost:3000
+App available at: http://localhost:3000
 
-## Build produkcyjny
+## Production Build
 
 ```bash
 npm run build
 npm start
 ```
 
-## Technologie
+## Tech Stack
 
 - Next.js 16 (App Router)
 - React 19
@@ -65,32 +65,32 @@ npm start
 - Tailwind CSS
 - Shadcn/ui
 - Zustand (state management)
-- Zod (walidacja)
+- Zod (validation)
 
-## Struktura projektu
+## Project Structure
 
 ```
 frontend/
 ├── app/                # Next.js App Router
-│   ├── account/        # Strona konta użytkownika
+│   ├── account/        # User account page
 │   ├── api/            # API Routes
-│   ├── checkout/       # Proces zamówienia
-│   ├── favorites/      # Ulubione produkty
-│   ├── login/          # Logowanie
-│   ├── products/       # Lista i szczegóły produktów
-│   └── register/       # Rejestracja
-├── components/         # Komponenty React
-│   └── ui/             # Shadcn/ui komponenty
+│   ├── checkout/       # Checkout process
+│   ├── favorites/      # Favorite products
+│   ├── login/          # Login page
+│   ├── products/       # Product list & details
+│   └── register/       # Registration page
+├── components/         # React components
+│   └── ui/             # Shadcn/ui components
 ├── hooks/              # Custom React hooks
-└── lib/                # Utilities i konfiguracja
+└── lib/                # Utilities and config
 ```
 
-## Deploy na Vercel
+## Deploy on Vercel
 
-1. Połącz repozytorium z [Vercel](https://vercel.com)
-2. Dodaj zmienne środowiskowe w ustawieniach projektu
-3. Deploy automatyczny przy każdym pushu
+1. Connect repository to [Vercel](https://vercel.com)
+2. Add environment variables in project settings
+3. Auto-deploy on every push
 
-## Licencja
+## License
 
 MIT
