@@ -8,6 +8,26 @@ import { ThemeToggle } from "@/components/theme-toggle";
 export function Footer() {
   return (
     <footer className="bg-zinc-900 text-white">
+      {/* Newsletter */}
+      <div className="border-b border-zinc-800">
+        <div className="container py-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+              <h4 className="font-semibold">Zapisz się do newslettera</h4>
+              <p className="text-sm text-zinc-400">Otrzymuj informacje o nowościach i promocjach</p>
+            </div>
+            <form className="flex gap-2 w-full md:w-auto">
+              <Input
+                type="email"
+                placeholder="Twój email"
+                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 w-full md:w-64"
+              />
+              <Button type="submit" className="bg-white text-zinc-900 hover:bg-zinc-200">Zapisz</Button>
+            </form>
+          </div>
+        </div>
+      </div>
+
       {/* Main footer */}
       <div className="container py-12 md:py-16">
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 lg:gap-12">
@@ -144,26 +164,6 @@ export function Footer() {
                 <span>ul. Szeroka 20<br />75-814 Koszalin<br />Polska</span>
               </li>
             </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* Newsletter */}
-      <div className="border-t border-zinc-800">
-        <div className="container py-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div>
-              <h4 className="font-semibold">Zapisz się do newslettera</h4>
-              <p className="text-sm text-zinc-400">Otrzymuj informacje o nowościach i promocjach</p>
-            </div>
-            <form className="flex gap-2 w-full md:w-auto">
-              <Input
-                type="email"
-                placeholder="Twój email"
-                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 w-full md:w-64"
-              />
-              <Button type="submit" className="bg-white text-zinc-900 hover:bg-zinc-200">Zapisz</Button>
-            </form>
           </div>
         </div>
       </div>

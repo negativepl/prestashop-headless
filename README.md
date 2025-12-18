@@ -96,6 +96,45 @@ frontend/
 
 ---
 
+## Roadmap / TODO
+
+### High Priority
+- [ ] Product filters (price, attributes, availability)
+- [ ] Product variants support (size, color)
+- [ ] ISR caching for product/category pages
+- [ ] Secure password verification (PrestaShop module or custom endpoint)
+- [ ] Payment integrations (Przelewy24, PayU, BLIK)
+- [ ] Shipping integrations (InPost, DPD, Poczta Polska)
+
+### Medium Priority
+- [ ] Product search with filters
+- [ ] Breadcrumbs navigation
+- [ ] Product reviews/ratings
+- [ ] Wishlist sync with PrestaShop
+- [ ] Order tracking page
+- [ ] Password reset flow
+- [ ] Email notifications
+
+### Low Priority / Nice to Have
+- [ ] Multi-language support
+- [ ] Multi-currency support
+- [ ] Compare products
+- [ ] Recently viewed products
+- [ ] Related products improvements
+- [ ] SEO meta tags from PrestaShop
+- [ ] Sitemap generation
+- [ ] Analytics integration (GA4, GTM)
+
+### Performance & Security
+- [ ] Redis/Upstash caching layer
+- [ ] Rate limiting on API routes
+- [ ] CSRF protection
+- [ ] Input sanitization audit
+- [ ] Image optimization pipeline
+- [ ] CDN for static assets
+
+---
+
 ## Production Deployment
 
 ### Architecture Overview
