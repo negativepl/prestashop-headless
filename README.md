@@ -35,17 +35,17 @@ NEXT_PUBLIC_PRESTASHOP_URL=http://your-prestashop.com
 4. Click **Add new key**
 5. Generate key and set **only these permissions**:
 
-| Resource | GET | PUT | POST | DELETE |
-|----------|-----|-----|------|--------|
-| `addresses` | ✅ | | ✅ | ✅ |
-| `carts` | ✅ | ✅ | ✅ | |
-| `categories` | ✅ | | | |
-| `countries` | ✅ | | | |
-| `customers` | ✅ | ✅ | ✅ | |
-| `order_states` | ✅ | | | |
-| `orders` | ✅ | | ✅ | |
-| `products` | ✅ | | | |
-| `stock_availables` | ✅ | | | |
+| Resource | GET | PUT | POST | PATCH | DELETE | HEAD |
+|----------|-----|-----|------|-------|--------|------|
+| `addresses` | ✅ | | ✅ | | ✅ | |
+| `carts` | ✅ | ✅ | ✅ | | | |
+| `categories` | ✅ | | | | | |
+| `countries` | ✅ | | | | | |
+| `customers` | ✅ | ✅ | ✅ | | | |
+| `order_states` | ✅ | | | | | |
+| `orders` | ✅ | | ✅ | | | |
+| `products` | ✅ | | | | | |
+| `stock_availables` | ✅ | | | | | |
 
 6. Save and copy the generated key to `.env.local`
 
