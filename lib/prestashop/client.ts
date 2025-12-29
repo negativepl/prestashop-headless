@@ -22,11 +22,62 @@ class PrestaShopClient {
   private baseUrl: string;
   private apiKey: string;
   private langId: number;
+  private countryId: number;
+  private taxRatesCache: Map<number, number> | null = null; // tax_rules_group_id -> rate
 
   constructor() {
     this.baseUrl = process.env.PRESTASHOP_URL || "http://localhost:8080";
     this.apiKey = process.env.PRESTASHOP_API_KEY || "";
     this.langId = 1; // Polish
+    this.countryId = 14; // Poland
+  }
+
+  // Load tax rates from API and build cache
+  private async loadTaxRates(): Promise<Map<number, number>> {
+    if (this.taxRatesCache) return this.taxRatesCache;
+
+    try {
+      // Fetch all taxes (id -> rate)
+      const taxesResponse = await this.fetch<{ taxes: { id: number; rate: string }[] }>(
+        "taxes?display=full",
+        undefined,
+        3600 // Cache for 1 hour
+      );
+      const taxesMap = new Map<number, number>();
+      for (const tax of taxesResponse.taxes || []) {
+        taxesMap.set(tax.id, parseFloat(tax.rate) || 0);
+      }
+
+      // Fetch tax rules for our country
+      const rulesResponse = await this.fetch<{
+        tax_rules: { id_tax_rules_group: string; id_country: string; id_tax: string }[];
+      }>("tax_rules?display=full", undefined, 3600);
+
+      // Build map: tax_rules_group_id -> rate (for our country)
+      this.taxRatesCache = new Map<number, number>();
+      for (const rule of rulesResponse.tax_rules || []) {
+        const countryId = parseInt(rule.id_country);
+        if (countryId === this.countryId || countryId === 0) {
+          const groupId = parseInt(rule.id_tax_rules_group);
+          const taxId = parseInt(rule.id_tax);
+          const rate = taxesMap.get(taxId) || 0;
+          this.taxRatesCache.set(groupId, rate);
+        }
+      }
+
+      return this.taxRatesCache;
+    } catch (error) {
+      console.error("Failed to load tax rates:", error);
+      // Fallback: return empty map (will use 0% tax)
+      this.taxRatesCache = new Map();
+      return this.taxRatesCache;
+    }
+  }
+
+  // Get tax rate for a product's tax_rules_group
+  private async getTaxRate(taxRulesGroupId: number): Promise<number> {
+    const rates = await this.loadTaxRates();
+    return rates.get(taxRulesGroupId) || 0;
   }
 
   private getHeaders(): HeadersInit {
@@ -38,7 +89,8 @@ class PrestaShopClient {
 
   private async fetch<T>(
     endpoint: string,
-    options?: RequestInit
+    options?: RequestInit,
+    cacheTime: number = 60
   ): Promise<T> {
     const url = `${this.baseUrl}/api/${endpoint}`;
     const separator = url.includes("?") ? "&" : "?";
@@ -47,6 +99,7 @@ class PrestaShopClient {
     const response = await fetch(fullUrl, {
       ...options,
       headers: this.getHeaders(),
+      next: { revalidate: cacheTime },
     });
 
     if (!response.ok) {
@@ -69,6 +122,8 @@ class PrestaShopClient {
     offset?: number;
     categoryId?: number;
     active?: boolean;
+    withImages?: boolean;
+    withStock?: boolean;
   }): Promise<Product[]> {
     const filters: string[] = [];
 
@@ -84,17 +139,47 @@ class PrestaShopClient {
       endpoint += `?${filters.join("&")}`;
     }
 
-    if (params?.limit) {
+    // Fetch more products if filtering by images (to ensure we get enough after filtering)
+    const fetchLimit = params?.withImages ? (params?.limit || 12) * 3 : params?.limit;
+    if (fetchLimit) {
       const separator = endpoint.includes("?") ? "&" : "?";
-      endpoint += `${separator}limit=${params.offset || 0},${params.limit}`;
+      endpoint += `${separator}limit=${params?.offset || 0},${fetchLimit}`;
     }
 
-    endpoint += `${endpoint.includes("?") ? "&" : "?"}display=full`;
+    // Sort by ID descending (newest first)
+    endpoint += `${endpoint.includes("?") ? "&" : "?"}sort=[id_DESC]`;
+    endpoint += "&display=full";
 
     const response = await this.fetch<PSResponse<PSProduct[]>>(endpoint);
-    const products = response.products || [];
+    let products = response.products || [];
 
-    return Promise.all(products.map((p) => this.mapProduct(p)));
+    // Filter products with images if requested
+    if (params?.withImages) {
+      products = products.filter(p => p.associations?.images?.length > 0);
+      // Limit to requested amount
+      if (params?.limit) {
+        products = products.slice(0, params.limit);
+      }
+    }
+
+    // Fetch stock for all products if requested
+    let stockMap: Map<number, number> = new Map();
+    if (params?.withStock && products.length > 0) {
+      try {
+        const productIds = products.map(p => p.id);
+        const stockResponse = await this.fetch<PSResponse<PSStockAvailable[]>>(
+          `stock_availables?filter[id_product]=[${productIds.join("|")}]&filter[id_product_attribute]=0&display=full`
+        );
+        const stocks = stockResponse.stock_availables || [];
+        for (const stock of stocks) {
+          stockMap.set(stock.id_product, stock.quantity);
+        }
+      } catch {
+        // Stock not available
+      }
+    }
+
+    return Promise.all(products.map((p) => this.mapProduct(p, false, stockMap.get(p.id))));
   }
 
   async searchProducts(query: string, limit: number = 10): Promise<Product[]> {
@@ -109,7 +194,25 @@ class PrestaShopClient {
     try {
       const response = await this.fetch<PSResponse<PSProduct[]>>(endpoint);
       const products = response.products || [];
-      return Promise.all(products.map((p) => this.mapProduct(p)));
+
+      // Fetch stock for all products
+      let stockMap: Map<number, number> = new Map();
+      if (products.length > 0) {
+        try {
+          const productIds = products.map(p => p.id);
+          const stockResponse = await this.fetch<PSResponse<PSStockAvailable[]>>(
+            `stock_availables?filter[id_product]=[${productIds.join("|")}]&filter[id_product_attribute]=0&display=full`
+          );
+          const stocks = stockResponse.stock_availables || [];
+          for (const stock of stocks) {
+            stockMap.set(stock.id_product, stock.quantity);
+          }
+        } catch {
+          // Stock not available
+        }
+      }
+
+      return Promise.all(products.map((p) => this.mapProduct(p, false, stockMap.get(p.id))));
     } catch (error) {
       console.error("Search error:", error);
       return [];
@@ -124,7 +227,7 @@ class PrestaShopClient {
         ? (response.product as PSProduct)
         : (response.products as PSProduct[])?.[0];
       if (!product) return null;
-      return this.mapProduct(product);
+      return this.mapProduct(product, true); // fetchExtras for single product
     } catch {
       return null;
     }
@@ -137,45 +240,55 @@ class PrestaShopClient {
     return `${this.baseUrl}/img/p/${path}/${id}.jpg`;
   }
 
-  private async mapProduct(p: PSProduct): Promise<Product> {
+  private async mapProduct(p: PSProduct, fetchExtras: boolean = false, preloadedQuantity?: number): Promise<Product> {
     const imageIds = p.associations?.images?.map((img) => img.id) || [];
     const images = imageIds.map((imgId) => this.getPublicImageUrl(imgId));
 
-    let quantity = 0;
-    try {
-      const stockResponse = await this.fetch<PSResponse<PSStockAvailable[]>>(
-        `stock_availables?filter[id_product]=${p.id}&filter[id_product_attribute]=0&display=full`
-      );
-      const stocks = stockResponse.stock_availables || [];
-      if (stocks.length > 0) {
-        quantity = (stocks[0] as PSStockAvailable).quantity;
-      }
-    } catch {
-      // Stock not available
-    }
+    let quantity: number | null = preloadedQuantity ?? null;
+    let manufacturerName: string | null = (p as any).manufacturer_name || null;
 
-    let manufacturerName: string | null = null;
-    if (p.id_manufacturer && p.id_manufacturer > 0) {
+    // Only fetch extras for single product view (not for lists)
+    if (fetchExtras) {
       try {
-        const mfResponse = await this.fetch<PSResponse<{ id: number; name: string }[]>>(
-          `manufacturers/${p.id_manufacturer}?display=full`
+        const stockResponse = await this.fetch<PSResponse<PSStockAvailable[]>>(
+          `stock_availables?filter[id_product]=${p.id}&filter[id_product_attribute]=0&display=full`
         );
-        const manufacturer = mfResponse.manufacturers?.[0] || mfResponse.manufacturer;
-        if (manufacturer) {
-          manufacturerName = manufacturer.name;
+        const stocks = stockResponse.stock_availables || [];
+        if (stocks.length > 0) {
+          quantity = (stocks[0] as PSStockAvailable).quantity;
         }
       } catch {
-        // Manufacturer not available
+        // Stock not available
+      }
+
+      if (!manufacturerName && p.id_manufacturer && p.id_manufacturer > 0) {
+        try {
+          const mfResponse = await this.fetch<PSResponse<{ id: number; name: string }[]>>(
+            `manufacturers/${p.id_manufacturer}?display=full`
+          );
+          const manufacturer = mfResponse.manufacturers?.[0] || mfResponse.manufacturer;
+          if (manufacturer) {
+            manufacturerName = manufacturer.name;
+          }
+        } catch {
+          // Manufacturer not available
+        }
       }
     }
+
+    // Calculate gross price (with VAT)
+    const netPrice = parseFloat(p.price) || 0;
+    const taxRate = await this.getTaxRate(p.id_tax_rules_group);
+    const grossPrice = Math.round(netPrice * (1 + taxRate / 100) * 100) / 100;
 
     return {
       id: p.id,
       name: this.getMultiLangValue(p.name),
       description: this.getMultiLangValue(p.description),
       descriptionShort: this.getMultiLangValue(p.description_short),
-      price: parseFloat(p.price) || 0,
+      price: grossPrice,
       reference: p.reference,
+      ean13: p.ean13 || null,
       imageUrl: images.length > 0 ? images[0] : null,
       images,
       categoryId: p.id_category_default,
@@ -218,6 +331,17 @@ class PrestaShopClient {
       return this.mapCategory(category);
     } catch {
       return null;
+    }
+  }
+
+  async getCategoriesWithChildren(_rootParentId: number = 2): Promise<Category[]> {
+    // Load from static JSON file (run `npx tsx scripts/sync-categories.ts` to update)
+    try {
+      const categories = await import("@/data/categories.json");
+      return categories.default as Category[];
+    } catch {
+      console.error("Categories file not found. Run: npx tsx scripts/sync-categories.ts");
+      return [];
     }
   }
 

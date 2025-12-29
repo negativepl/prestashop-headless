@@ -1,0 +1,30 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// Konfiguracja kategorii w mega menu
+model MegaMenuCategory {
+  id                 Int      @id @default(autoincrement())
+  categoryId         Int      @unique // ID kategorii z PrestaShop
+  position           Int      @default(0)
+  isActive           Boolean  @default(true)
+  showProducts       Boolean  @default(true)
+  featuredProductIds String?  // JSON array of product IDs to feature
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+// Ogólna konfiguracja strony
+model SiteConfig {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
+}

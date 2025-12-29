@@ -123,9 +123,9 @@ export default function CheckoutPage() {
     <div className="min-h-[80vh] py-8 md:py-12">
       <div className="container">
         {/* Header */}
-        <div className="text-center mb-10">
-          <h1 className="text-3xl md:text-4xl font-bold">Finalizacja zamówienia</h1>
-          <p className="text-muted-foreground mt-2">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">Finalizacja zamówienia</h1>
+          <p className="text-muted-foreground mt-1">
             Wypełnij dane dostawy i złóż zamówienie
           </p>
         </div>

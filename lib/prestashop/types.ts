@@ -273,11 +273,12 @@ export interface Product {
   descriptionShort: string;
   price: number;
   reference: string;
+  ean13: string | null;
   imageUrl: string | null;
   images: string[];
   categoryId: number;
   active: boolean;
-  quantity: number;
+  quantity: number | null;
   weight: number;
   manufacturerId: number;
   manufacturerName: string | null;

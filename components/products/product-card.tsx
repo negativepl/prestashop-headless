@@ -36,7 +36,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const incrementQuantity = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setQuantity((q) => Math.min(q + 1, product.quantity || 99));
+    setQuantity((q) => Math.min(q + 1, product.quantity ?? 99));
   };
 
   const decrementQuantity = (e: React.MouseEvent) => {
@@ -45,19 +45,22 @@ export function ProductCard({ product }: ProductCardProps) {
     setQuantity((q) => Math.max(q - 1, 1));
   };
 
-  const isOutOfStock = product.quantity <= 0;
+  // Only show as out of stock if quantity is explicitly 0 (not unknown/null)
+  const isOutOfStock = product.quantity !== null && product.quantity <= 0;
 
   return (
-    <div className="group bg-card rounded-xl border overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-foreground/20 flex flex-col">
+    <div className="group bg-card rounded-xl border overflow-hidden transition-all duration-300 hover:border-foreground/20 flex flex-col">
       {/* Image */}
       <Link href={`/products/${product.id}`}>
-        <div className="relative aspect-square overflow-hidden bg-muted">
+        <div className="relative aspect-square overflow-hidden bg-white p-4">
           {product.imageUrl ? (
-            <img
-              src={product.imageUrl}
-              alt={product.name}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            />
+            <div className="w-full h-full flex items-center justify-center">
+              <img
+                src={product.imageUrl}
+                alt={product.name}
+                className="max-w-full max-h-full object-contain transition-transform duration-500 group-hover:scale-105"
+              />
+            </div>
           ) : (
             <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
               Brak zdjęcia
@@ -71,7 +74,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 Wyprzedane
               </Badge>
             )}
-            {!isOutOfStock && product.quantity <= 5 && (
+            {!isOutOfStock && product.quantity !== null && product.quantity <= 5 && (
               <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700 hover:bg-orange-100">
                 Ostatnie sztuki
               </Badge>
@@ -97,9 +100,9 @@ export function ProductCard({ product }: ProductCardProps) {
         <div className="mt-3 flex items-center justify-between">
           <span className="text-lg font-bold">{formatPrice(product.price)}</span>
           {!isOutOfStock && (
-            <span className="text-xs font-medium flex items-center gap-1.5">
+            <span className="text-xs font-medium flex items-center gap-1.5 text-muted-foreground">
               <span className="w-2 h-2 rounded-full bg-green-500"></span>
-              W magazynie
+              {product.quantity !== null ? `${product.quantity} szt.` : "Dostępny"}
             </span>
           )}
         </div>
@@ -125,7 +128,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 <button
                   onClick={incrementQuantity}
                   className="h-10 w-9 flex items-center justify-center hover:bg-muted transition-colors"
-                  disabled={quantity >= (product.quantity || 99)}
+                  disabled={quantity >= (product.quantity ?? 99)}
                 >
                   <Plus className="size-4" />
                 </button>

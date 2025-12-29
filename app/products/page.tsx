@@ -1,7 +1,9 @@
 import { ProductGrid } from "@/components/products/product-grid";
 import { prestashop } from "@/lib/prestashop/client";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 
-export const dynamic = "force-dynamic";
+// ISR - revalidate every 5 minutes
+export const revalidate = 300;
 
 export const metadata = {
   title: "Produkty | PrestaShop Headless",
@@ -13,13 +15,14 @@ export default async function ProductsPage() {
   let error = null;
 
   try {
-    products = await prestashop.getProducts({ limit: 100 });
+    products = await prestashop.getProducts({ limit: 100, withStock: true });
   } catch (e) {
     error = e instanceof Error ? e.message : "Błąd połączenia z API";
   }
 
   return (
     <div className="container py-8">
+      <Breadcrumbs items={[{ label: "Produkty" }]} />
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Produkty</h1>
         <p className="text-muted-foreground mt-2">

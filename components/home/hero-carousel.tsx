@@ -29,6 +29,11 @@ const slides = [
 export function HeroCarousel() {
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const onSelect = useCallback(() => {
     if (!api) return;
@@ -54,6 +59,9 @@ export function HeroCarousel() {
   return (
     <div className="container py-4 md:py-6">
       <div className="relative rounded-2xl md:rounded-3xl overflow-hidden">
+        {!mounted ? (
+          <div className="relative h-[280px] md:h-[350px] lg:h-[420px] bg-muted animate-pulse" />
+        ) : (
         <Carousel
           opts={{
             loop: true,
@@ -84,24 +92,27 @@ export function HeroCarousel() {
           <CarouselPrevious className="left-2 md:left-4 h-10 w-10 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 hover:text-white" />
           <CarouselNext className="right-2 md:right-4 h-10 w-10 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 hover:text-white" />
         </Carousel>
+        )}
 
         {/* Dots indicator */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
-          <div className="flex gap-2 px-3 py-2 rounded-full bg-black/20 backdrop-blur-md">
-            {slides.map((_, dotIndex) => (
-              <button
-                key={dotIndex}
-                onClick={() => scrollTo(dotIndex)}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  current === dotIndex
-                    ? "bg-white w-6"
-                    : "bg-white/50 hover:bg-white/70 w-2"
-                }`}
-                aria-label={`Go to slide ${dotIndex + 1}`}
-              />
-            ))}
+        {mounted && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
+            <div className="flex gap-2 px-3 py-2 rounded-full bg-black/20 backdrop-blur-md">
+              {slides.map((_, dotIndex) => (
+                <button
+                  key={dotIndex}
+                  onClick={() => scrollTo(dotIndex)}
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    current === dotIndex
+                      ? "bg-white w-6"
+                      : "bg-white/50 hover:bg-white/70 w-2"
+                  }`}
+                  aria-label={`Go to slide ${dotIndex + 1}`}
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

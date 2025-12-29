@@ -32,7 +32,8 @@ export function ProductCardMini({ product }: ProductCardMiniProps) {
     setDialogOpen(true);
   };
 
-  const isOutOfStock = product.quantity <= 0;
+  // Only show as out of stock if quantity is explicitly 0 (not unknown/null)
+  const isOutOfStock = product.quantity !== null && product.quantity <= 0;
 
   return (
     <div className="group relative bg-card rounded-xl border overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-foreground/20 flex flex-col">
@@ -58,7 +59,7 @@ export function ProductCardMini({ product }: ProductCardMiniProps) {
                 Wyprzedane
               </Badge>
             )}
-            {!isOutOfStock && product.quantity <= 5 && (
+            {!isOutOfStock && product.quantity !== null && product.quantity <= 5 && (
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5 bg-orange-100 text-orange-700 hover:bg-orange-100">
                 Ostatnie sztuki
               </Badge>
@@ -83,7 +84,7 @@ export function ProductCardMini({ product }: ProductCardMiniProps) {
 
         <div className="mt-auto pt-2 flex items-center justify-between">
           <span className="text-sm font-bold">{formatPrice(product.price)}</span>
-          {!isOutOfStock && (
+          {product.quantity !== null && product.quantity > 0 && (
             <span className="text-[10px] font-medium flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
               W magazynie

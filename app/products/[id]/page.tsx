@@ -1,10 +1,15 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import { prestashop } from "@/lib/prestashop/client";
 import { AddToCartButton } from "@/components/cart/add-to-cart-button";
 import { Badge } from "@/components/ui/badge";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { ProductGallery } from "@/components/products/product-gallery";
+import { ProductDetails } from "@/components/products/product-details";
+import { ProductReviews } from "@/components/products/product-reviews";
+import { Separator } from "@/components/ui/separator";
 
-export const dynamic = "force-dynamic";
+// ISR - revalidate every 5 minutes
+export const revalidate = 300;
 
 interface ProductPageProps {
   params: Promise<{ id: string }>;
@@ -32,6 +37,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound();
   }
 
+  // Get category for breadcrumbs
+  const category = product.categoryId
+    ? await prestashop.getCategory(product.categoryId)
+    : null;
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pl-PL", {
       style: "currency",
@@ -39,49 +49,38 @@ export default async function ProductPage({ params }: ProductPageProps) {
     }).format(price);
   };
 
+  const breadcrumbItems = [
+    { label: "Produkty", href: "/products" },
+    ...(category ? [{ label: category.name, href: `/categories/${category.id}` }] : []),
+    { label: product.name },
+  ];
+
+  // Prepare images array
+  const allImages = product.imageUrl
+    ? [product.imageUrl, ...product.images.filter((img) => img !== product.imageUrl)]
+    : product.images;
+
   return (
     <div className="container py-8">
-      <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-        {/* Images */}
-        <div className="space-y-4">
-          <div className="relative aspect-square bg-muted rounded-lg overflow-hidden">
-            {product.imageUrl ? (
-              <Image
-                src={product.imageUrl}
-                alt={product.name}
-                fill
-                className="object-cover"
-                priority
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                Brak zdjęcia
-              </div>
-            )}
-          </div>
-          {product.images.length > 1 && (
-            <div className="grid grid-cols-4 gap-2">
-              {product.images.slice(0, 4).map((img, index) => (
-                <div
-                  key={index}
-                  className="relative aspect-square bg-muted rounded-md overflow-hidden"
-                >
-                  <Image
-                    src={img}
-                    alt={`${product.name} ${index + 1}`}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      <Breadcrumbs items={breadcrumbItems} />
 
-        {/* Details */}
+      {/* Product main section */}
+      <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
+        {/* Left - Images */}
+        <ProductGallery images={allImages} productName={product.name} />
+
+        {/* Right - Product Info */}
         <div className="space-y-6">
+          {/* Title & SKU */}
           <div>
-            <h1 className="text-3xl font-bold">{product.name}</h1>
+            <div className="flex items-start justify-between gap-4">
+              <h1 className="text-2xl lg:text-3xl font-bold">{product.name}</h1>
+              {product.manufacturerName && (
+                <Badge variant="secondary" className="shrink-0">
+                  {product.manufacturerName}
+                </Badge>
+              )}
+            </div>
             {product.reference && (
               <p className="text-sm text-muted-foreground mt-1">
                 SKU: {product.reference}
@@ -89,15 +88,21 @@ export default async function ProductPage({ params }: ProductPageProps) {
             )}
           </div>
 
+          {/* Price & Stock */}
           <div className="flex items-center gap-4">
             <span className="text-3xl font-bold">{formatPrice(product.price)}</span>
-            {product.quantity > 0 ? (
-              <Badge variant="secondary">W magazynie: {product.quantity}</Badge>
-            ) : (
-              <Badge variant="destructive">Brak w magazynie</Badge>
+            {product.quantity !== null && (
+              product.quantity > 0 ? (
+                <Badge variant="secondary" className="bg-green-100 text-green-800">
+                  W magazynie: {product.quantity} szt.
+                </Badge>
+              ) : (
+                <Badge variant="destructive">Brak w magazynie</Badge>
+              )
             )}
           </div>
 
+          {/* Short description */}
           {product.descriptionShort && (
             <div
               className="prose prose-sm max-w-none text-muted-foreground"
@@ -105,18 +110,32 @@ export default async function ProductPage({ params }: ProductPageProps) {
             />
           )}
 
-          <AddToCartButton product={product} />
+          <Separator />
 
-          {product.description && (
-            <div className="pt-6 border-t">
-              <h2 className="text-lg font-semibold mb-4">Opis</h2>
-              <div
-                className="prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: product.description }}
-              />
-            </div>
-          )}
+          {/* Add to cart section with benefits */}
+          <AddToCartButton product={product} />
         </div>
+      </div>
+
+      {/* Description */}
+      {product.description && (
+        <div className="mt-12">
+          <h2 className="text-xl font-semibold mb-4">Opis produktu</h2>
+          <div
+            className="prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{ __html: product.description }}
+          />
+        </div>
+      )}
+
+      {/* Product details */}
+      <div className="mt-12">
+        <ProductDetails product={product} />
+      </div>
+
+      {/* Reviews */}
+      <div className="mt-12">
+        <ProductReviews productId={product.id} />
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { ProductCardMini } from "@/components/products/product-card-mini";
+import { ProductCard } from "@/components/products/product-card";
 import type { Product } from "@/lib/prestashop/types";
 
 interface WeeklyHitsProps {
@@ -9,19 +9,25 @@ export function WeeklyHits({ products }: WeeklyHitsProps) {
   if (products.length === 0) return null;
 
   return (
-    <div className="bg-card rounded-2xl border overflow-hidden h-full flex flex-col">
+    <div className="bg-card rounded-2xl p-6 md:p-10 border">
       {/* Header */}
-      <div className="p-4 md:p-6 pb-0">
-        <span className="font-bold text-lg">Polecane produkty</span>
+      <div className="mb-8">
+        <span className="text-primary font-semibold text-sm uppercase tracking-wider">
+          Polecane
+        </span>
+        <h2 className="text-3xl md:text-4xl font-bold mt-2">
+          Polecane produkty
+        </h2>
+        <p className="mt-2 text-muted-foreground">
+          Sprawdź nasze rekomendacje dla Ciebie
+        </p>
       </div>
 
-      {/* Products - 2 rows x 4 columns grid */}
-      <div className="p-4 md:p-6 pt-4 flex-1">
-        <div className="grid grid-cols-4 grid-rows-2 gap-3 h-full">
-          {products.slice(0, 8).map((product) => (
-            <ProductCardMini key={product.id} product={product} />
-          ))}
-        </div>
+      {/* Products grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+        {products.slice(0, 8).map((product) => (
+          <ProductCard key={product.id} product={product} />
+        ))}
       </div>
     </div>
   );

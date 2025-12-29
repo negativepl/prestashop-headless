@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prestashop } from "@/lib/prestashop/client";
 
+// ISR - revalidate every 5 minutes
+export const revalidate = 300;
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

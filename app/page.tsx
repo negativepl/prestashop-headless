@@ -3,44 +3,32 @@ import { ArrowRight, Truck, RotateCcw, Percent, Headphones, Calendar } from "luc
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/products/product-card";
 import { HeroCarousel } from "@/components/home/hero-carousel";
-import { HotShot } from "@/components/home/hot-shot";
 import { WeeklyHits } from "@/components/home/weekly-hits";
 import { prestashop } from "@/lib/prestashop/client";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60; // Revalidate every 60 seconds
 
 export default async function HomePage() {
   let products = [];
 
   try {
-    products = await prestashop.getProducts({ limit: 12 });
+    products = await prestashop.getProducts({ limit: 12, withImages: true, withStock: true });
   } catch (e) {
     console.error("Error fetching data:", e);
   }
 
-  // TODO: W przyszłości gorący strzał i hity tygodnia będą pobierane z dedykowanego API
-  const hotShotProduct = products[0];
-  const weeklyHitsProducts = products.slice(1, 9);
+  const weeklyHitsProducts = products.slice(0, 8);
 
   return (
     <div className="flex flex-col">
       {/* Hero Carousel */}
       <HeroCarousel />
 
-      {/* Hot Shot & Weekly Hits */}
+      {/* Weekly Hits */}
       {products.length > 0 && (
         <section className="py-8 md:py-12">
           <div className="container">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Hot Shot - Left */}
-              <div className="lg:col-span-1">
-                {hotShotProduct && <HotShot product={hotShotProduct} />}
-              </div>
-              {/* Weekly Hits - Right */}
-              <div className="lg:col-span-2">
-                <WeeklyHits products={weeklyHitsProducts} />
-              </div>
-            </div>
+            <WeeklyHits products={weeklyHitsProducts} />
           </div>
         </section>
       )}
@@ -231,37 +219,56 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Brands Section */}
+      <section>
+        <div className="container">
+          <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+        </div>
+        <div className="container py-8">
+          <div className="grid grid-cols-4 md:grid-cols-8 gap-3 md:gap-4">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+              <div
+                key={num}
+                className="h-12 md:h-14 bg-white rounded-lg flex items-center justify-center text-muted-foreground font-medium text-xs border border-border/50"
+              >
+                Marka {num}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Trust Section */}
       <section className="bg-white text-black dark:bg-black dark:text-white">
-        <div className="container py-8 md:py-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="container py-10 md:py-14">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
             <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 bg-black/10 dark:bg-white/10 rounded-full flex items-center justify-center mb-2">
-                <Truck className="h-6 w-6" />
+              <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mb-3">
+                <Truck className="h-7 w-7 text-primary" />
               </div>
-              <p className="font-semibold text-sm">Darmowa wysyłka</p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">Paczkomat® od 100 zł</p>
+              <p className="font-semibold">Darmowa wysyłka</p>
+              <p className="text-sm text-muted-foreground mt-0.5">Paczkomat® od 100 zł</p>
             </div>
             <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 bg-black/10 dark:bg-white/10 rounded-full flex items-center justify-center mb-2">
-                <RotateCcw className="h-6 w-6" />
+              <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mb-3">
+                <RotateCcw className="h-7 w-7 text-primary" />
               </div>
-              <p className="font-semibold text-sm">Zwrot</p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">do 30 dni</p>
+              <p className="font-semibold">Zwrot do 30 dni</p>
+              <p className="text-sm text-muted-foreground mt-0.5">Bez podawania przyczyny</p>
             </div>
             <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 bg-black/10 dark:bg-white/10 rounded-full flex items-center justify-center mb-2">
-                <Percent className="h-6 w-6" />
+              <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mb-3">
+                <Percent className="h-7 w-7 text-primary" />
               </div>
-              <p className="font-semibold text-sm">15% rabatu</p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">za zapisanie się do newslettera</p>
+              <p className="font-semibold">15% rabatu</p>
+              <p className="text-sm text-muted-foreground mt-0.5">Za zapis do newslettera</p>
             </div>
             <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 bg-black/10 dark:bg-white/10 rounded-full flex items-center justify-center mb-2">
-                <Headphones className="h-6 w-6" />
+              <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mb-3">
+                <Headphones className="h-7 w-7 text-primary" />
               </div>
-              <p className="font-semibold text-sm">Doradzamy Ci</p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">o każdej porze dnia</p>
+              <p className="font-semibold">Wsparcie 24/7</p>
+              <p className="text-sm text-muted-foreground mt-0.5">Zawsze chętnie pomożemy</p>
             </div>
           </div>
         </div>

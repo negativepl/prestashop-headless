@@ -34,10 +34,10 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-4 lg:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-                <span className="text-zinc-900 font-bold text-lg">PS</span>
+              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">HS</span>
               </div>
-              <span className="text-xl font-bold">Store</span>
+              <span className="text-xl font-bold font-lora">HomeScreen</span>
             </Link>
             <p className="text-sm text-zinc-400 mb-6">
               Najwyższa jakość produktów i wyjątkowa obsługa klienta.

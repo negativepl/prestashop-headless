@@ -1,12 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingCart, Menu, Search, User, ChevronDown, Phone, Star, Minus, Plus, Trash2, ShoppingBag, ArrowRight, Heart, LogIn, Package, LogOut, Truck } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
+import { ShoppingCart, Search, User, ChevronDown, Phone, Star, Minus, Plus, Trash2, ShoppingBag, ArrowRight, Heart, LogIn, LogOut, Truck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,29 +17,10 @@ import { useCart } from "@/hooks/use-cart";
 import { useFavorites } from "@/hooks/use-favorites";
 import { useUser } from "@/hooks/use-user";
 import { logoutUser } from "@/app/actions/auth";
+import { MegaMenu } from "@/components/layout/mega-menu";
+import { SearchModal, useSearchModal } from "@/components/search/search-modal";
+import type { Category } from "@/lib/prestashop/types";
 
-const searchPhrases = [
-  "etui do iPhone 16 Pro Max",
-  "szkło ochronne do Galaxy S25 Ultra",
-  "uchwyt samochodowy",
-  "ładowarka indukcyjna",
-  "kabel USB-C",
-  "powerbank 20000mAh",
-  "słuchawki bezprzewodowe",
-  "folia ochronna",
-];
-
-interface Category {
-  id: number;
-  name: string;
-}
-
-interface SearchProduct {
-  id: number;
-  name: string;
-  price: number;
-  imageUrl: string | null;
-}
 
 interface HeaderProps {
   categories?: Category[];
@@ -51,17 +30,8 @@ export function Header({ categories = [] }: HeaderProps) {
   const { items, itemCount, total, updateQuantity, removeItem, clearCart } = useCart();
   const { itemCount: favoritesCount } = useFavorites();
   const { user, isLoggedIn, refetch: refetchUser } = useUser();
-  const [phraseIndex, setPhraseIndex] = useState(0);
-  const [isFocused, setIsFocused] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<SearchProduct[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [showResults, setShowResults] = useState(false);
+  const searchModal = useSearchModal();
   const [mounted, setMounted] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const [categoriesMenuOpen, setCategoriesMenuOpen] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const [favoritesAnimating, setFavoritesAnimating] = useState(false);
   const prevFavoritesCount = useRef(favoritesCount);
   const [cartAnimating, setCartAnimating] = useState(false);
@@ -72,69 +42,6 @@ export function Header({ categories = [] }: HeaderProps) {
     refetchUser();
     window.location.href = "/";
   };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      setShowResults(false);
-      window.location.href = `/products?search=${encodeURIComponent(searchQuery.trim())}`;
-    }
-  };
-
-  const fetchSearchResults = useCallback(async (query: string) => {
-    if (query.trim().length < 2) {
-      setSearchResults([]);
-      setShowResults(false);
-      return;
-    }
-
-    setIsSearching(true);
-    try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=6`);
-      const data = await response.json();
-      setSearchResults(data.products || []);
-      setShowResults(true);
-    } catch (error) {
-      console.error("Search error:", error);
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
-  }, []);
-
-  // Debounced search
-  useEffect(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    if (searchQuery.trim().length >= 2) {
-      debounceRef.current = setTimeout(() => {
-        fetchSearchResults(searchQuery);
-      }, 300);
-    } else {
-      setSearchResults([]);
-      setShowResults(false);
-    }
-
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, [searchQuery, fetchSearchResults]);
-
-  // Click outside to close results
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setShowResults(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -158,27 +65,8 @@ export function Header({ categories = [] }: HeaderProps) {
     prevCartCount.current = itemCount;
   }, [itemCount, mounted]);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScroll = window.scrollY;
-      // Hysteresis: show hamburger at 120px, hide at 60px
-      if (currentScroll > 120 && !scrolled) {
-        setScrolled(true);
-      } else if (currentScroll < 60 && scrolled) {
-        setScrolled(false);
-      }
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [scrolled]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPhraseIndex((prev) => (prev + 1) % searchPhrases.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
+  
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pl-PL", {
       style: "currency",
@@ -187,184 +75,54 @@ export function Header({ categories = [] }: HeaderProps) {
   };
 
   return (
-    <header className={`sticky top-0 z-50 w-full shadow-sm transition-all duration-300 ${
-      scrolled ? "bg-white/80 dark:bg-black/80 backdrop-blur-md border-b" : "bg-white dark:bg-black"
-    }`}>
-      {/* Top bar */}
-      <div className={`bg-white text-black dark:bg-black dark:text-white overflow-hidden transition-all duration-300 ${
-        scrolled ? "max-h-0 opacity-0" : "max-h-12 opacity-100"
-      }`}>
-        <div className="container py-1.5 md:py-2 flex justify-center md:justify-between items-center text-xs relative">
-          <div className="hidden md:flex items-center gap-4">
-            <span className="flex items-center gap-1.5"><Phone className="h-3 w-3" /> +48 793 237 970</span>
-            <span className="flex items-center gap-1.5"><Truck className="h-3 w-3" /> Darmowa dostawa od 100 PLN</span>
-            <span className="flex items-center gap-1.5"><Star className="h-3 w-3" /> Na rynku od ponad 10 lat</span>
+    <>
+      {/* Top bar - scrolls away */}
+      <div className="bg-primary text-white">
+        <div className="container py-2.5 md:py-3 flex justify-center md:justify-between items-center text-sm relative">
+          <div className="hidden md:flex items-center gap-6">
+            <span className="flex items-center gap-2"><Phone className="h-4 w-4" /> +48 793 237 970</span>
           </div>
-          <p className="md:hidden">Darmowa dostawa od 100 PLN</p>
-          <div className="hidden md:flex items-center gap-4">
-            <a href="#" className="hover:underline">Pomoc</a>
-            <a href="#" className="hover:underline">Kontakt</a>
-            <a href="https://b2b.homescreen.pl" className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-medium hover:bg-secondary/80 transition-colors">Hurtownia</a>
+          <div className="hidden md:flex items-center gap-6 absolute left-1/2 -translate-x-1/2">
+            <span className="flex items-center gap-2"><Truck className="h-4 w-4" /> Darmowa dostawa od 100 PLN</span>
+            <span className="flex items-center gap-2"><Star className="h-4 w-4" /> Na rynku od ponad 10 lat</span>
+          </div>
+          <p className="md:hidden text-sm">Darmowa dostawa od 100 PLN</p>
+          <div className="hidden md:flex items-center gap-6">
+            <a href="https://b2b.homescreen.pl" className="hover:underline transition-colors">Hurtownia</a>
           </div>
         </div>
       </div>
 
-      {/* Main header */}
-      <div>
+      {/* Main header - sticky */}
+      <header className="sticky top-0 z-50 bg-white dark:bg-black shadow-sm">
         <div className="container py-2 md:py-2.5">
           <div className="flex items-center justify-between gap-4 md:gap-8">
-            {/* Left - Hamburger (when scrolled) + Logo */}
+            {/* Left - Logo */}
             <div className="flex items-center gap-2">
-              {/* Categories hamburger - appears on scroll */}
-              <Sheet open={categoriesMenuOpen} onOpenChange={setCategoriesMenuOpen}>
-                <SheetTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={`hidden md:flex h-10 w-10 transition-all duration-300 ${
-                      scrolled ? "opacity-100 scale-100" : "opacity-0 scale-75 pointer-events-none w-0 -mr-2"
-                    }`}
-                  >
-                    <Menu className="size-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-80">
-                  <SheetHeader>
-                    <SheetTitle>Kategorie</SheetTitle>
-                  </SheetHeader>
-                  <nav className="flex flex-col gap-1 mt-4">
-                    {categories.map((cat) => (
-                      <Link
-                        key={cat.id}
-                        href={`/categories/${cat.id}`}
-                        onClick={() => setCategoriesMenuOpen(false)}
-                        className="flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg hover:bg-muted transition-colors"
-                      >
-                        {cat.name}
-                        <ChevronDown className="size-4 -rotate-90" />
-                      </Link>
-                    ))}
-                  </nav>
-                </SheetContent>
-              </Sheet>
-
               <Link href="/" className="shrink-0 flex items-center gap-2">
-                <div className="w-8 h-8 md:w-10 md:h-10 bg-foreground rounded-lg flex items-center justify-center">
-                  <span className="text-background font-bold text-sm md:text-lg">PS</span>
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-primary rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm md:text-lg">HS</span>
                 </div>
-                <span className="text-lg md:text-xl font-bold">Store</span>
+                <span className="text-lg md:text-xl font-bold font-lora">HomeScreen</span>
               </Link>
             </div>
 
-            {/* Center - Search (hidden on mobile) */}
-            <div ref={searchRef} className="hidden md:block relative" style={{ flex: 1, maxWidth: "500px" }}>
-              <form onSubmit={handleSearch} className={`relative transition-transform duration-300 ${isFocused ? "scale-105" : "scale-100"}`}>
-                <input
-                  type="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={() => {
-                    setIsFocused(true);
-                    if (searchResults.length > 0) setShowResults(true);
-                  }}
-                  onBlur={() => setIsFocused(false)}
-                  className="w-full h-10 pl-4 pr-12 rounded-xl border border-border focus:border-primary focus:outline-none text-sm transition-all duration-300 bg-white dark:bg-zinc-900"
-                />
-                <button
-                  type="submit"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-muted transition-colors"
-                >
-                  <Search className="size-5 text-muted-foreground" />
-                </button>
-                {!isFocused && !searchQuery && (
-                  <div className="absolute left-4 right-12 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <span className="text-muted-foreground">Szukaj </span>
-                    <AnimatePresence mode="wait">
-                      <motion.span
-                        key={phraseIndex}
-                        initial={{ y: 20, opacity: 0, filter: "blur(8px)" }}
-                        animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
-                        exit={{ y: -20, opacity: 0, filter: "blur(8px)" }}
-                        transition={{ duration: 0.4 }}
-                        className="text-muted-foreground inline-block"
-                      >
-                        {searchPhrases[phraseIndex]}
-                      </motion.span>
-                    </AnimatePresence>
-                  </div>
-                )}
-              </form>
+            {/* Center - spacer */}
+            <div className="flex-1" />
 
-              {/* Search Results Dropdown */}
-              <AnimatePresence>
-                {showResults && (searchResults.length > 0 || isSearching) && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-zinc-900 rounded-xl border shadow-lg overflow-hidden z-50"
-                  >
-                    {isSearching ? (
-                      <div className="p-4 text-center text-muted-foreground">
-                        <div className="inline-block animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent mr-2" />
-                        Szukam...
-                      </div>
-                    ) : searchResults.length > 0 ? (
-                      <div className="max-h-[400px] overflow-y-auto">
-                        {searchResults.map((product) => (
-                          <Link
-                            key={product.id}
-                            href={`/products/${product.id}`}
-                            onClick={() => setShowResults(false)}
-                            className="flex items-center gap-3 p-3 hover:bg-muted transition-colors"
-                          >
-                            <div className="w-12 h-12 bg-muted rounded-lg overflow-hidden flex-shrink-0">
-                              {product.imageUrl ? (
-                                <img
-                                  src={product.imageUrl}
-                                  alt={product.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                                  Brak
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">{product.name}</p>
-                              <p className="text-sm text-primary font-semibold">
-                                {new Intl.NumberFormat("pl-PL", {
-                                  style: "currency",
-                                  currency: "PLN",
-                                }).format(product.price)}
-                              </p>
-                            </div>
-                          </Link>
-                        ))}
-                        <Link
-                          href={`/products?search=${encodeURIComponent(searchQuery)}`}
-                          onClick={() => setShowResults(false)}
-                          className="flex items-center justify-center gap-2 p-3 bg-muted/50 hover:bg-muted transition-colors text-sm font-medium"
-                        >
-                          Zobacz wszystkie wyniki
-                          <ArrowRight className="size-4" />
-                        </Link>
-                      </div>
-                    ) : (
-                      <div className="p-4 text-center text-muted-foreground">
-                        Brak wyników dla &quot;{searchQuery}&quot;
-                      </div>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            {/* Search - visible on mobile */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden h-10 w-10 cursor-pointer hover:bg-transparent! hover:text-primary"
+              onClick={searchModal.open}
+            >
+              <Search className="size-5" />
+            </Button>
 
             {/* Favorites - visible on mobile */}
             <Link href="/favorites" className="md:hidden">
-              <Button variant="ghost" size="icon" className="h-10 w-10 relative">
+              <Button variant="ghost" size="icon" className="h-10 w-10 relative cursor-pointer hover:bg-transparent! hover:text-primary">
                 <motion.div
                   animate={favoritesAnimating ? {
                     scale: [1, 1.3, 1],
@@ -388,8 +146,19 @@ export function Header({ categories = [] }: HeaderProps) {
 
             {/* Right - Actions (hidden on mobile) */}
             <div className="hidden md:flex items-center gap-3 shrink-0">
+              {/* Search button */}
+              <Button
+                variant="ghost"
+                size="default"
+                className="h-10 px-3 gap-2 cursor-pointer hover:bg-transparent! hover:text-primary"
+                onClick={searchModal.open}
+              >
+                <Search className="size-5" />
+                <span className="text-sm">Szukaj</span>
+              </Button>
+
               <Link href="/favorites">
-                <Button variant="ghost" size="default" className="h-10 px-3 gap-2">
+                <Button variant="ghost" size="default" className="h-10 px-3 gap-2 cursor-pointer hover:bg-transparent! hover:text-primary">
                   <motion.span
                     className="relative"
                     animate={favoritesAnimating ? {
@@ -414,9 +183,9 @@ export function Header({ categories = [] }: HeaderProps) {
                 </Button>
               </Link>
 
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="default" className="h-10 px-3 gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="default" className="h-10 px-3 gap-2 cursor-pointer hover:bg-transparent! hover:text-primary focus-visible:ring-0 focus-visible:ring-offset-0">
                     <motion.span
                       className="relative"
                       animate={cartAnimating ? {
@@ -439,123 +208,91 @@ export function Header({ categories = [] }: HeaderProps) {
                     </motion.span>
                     <span className="text-sm font-semibold">{formatPrice(total)}</span>
                   </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-full sm:w-[450px] flex flex-col">
-                  <SheetHeader>
-                    <SheetTitle>Koszyk ({itemCount})</SheetTitle>
-                  </SheetHeader>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-96 bg-white dark:bg-black p-0">
+                  <div className="p-3 border-b">
+                    <p className="font-semibold">Koszyk ({itemCount})</p>
+                  </div>
 
                   {items.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4">
-                      <ShoppingBag className="size-16 text-muted-foreground" />
-                      <p className="text-muted-foreground">Koszyk jest pusty</p>
+                    <div className="flex flex-col items-center justify-center gap-3 p-6">
+                      <ShoppingBag className="size-12 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">Koszyk jest pusty</p>
                       <Link href="/products">
-                        <Button>
+                        <Button size="sm">
                           Przeglądaj produkty
-                          <ArrowRight className="ml-2 size-4" />
                         </Button>
                       </Link>
                     </div>
                   ) : (
                     <>
-                      <div className="flex-1 overflow-y-auto py-4 px-4">
-                        <div className="space-y-4">
-                          {items.map((item) => (
-                            <div key={`${item.product.id}-${item.productAttributeId}`} className="flex gap-3">
-                              <div className="w-20 h-20 flex-shrink-0 bg-muted rounded-md overflow-hidden">
-                                {item.product.imageUrl ? (
-                                  <img
-                                    src={item.product.imageUrl}
-                                    alt={item.product.name}
-                                    className="object-cover w-full h-full"
-                                  />
-                                ) : (
-                                  <div className="flex items-center justify-center h-full text-xs text-muted-foreground">
-                                    Brak
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <Link href={`/products/${item.product.id}`} className="font-medium text-sm hover:text-primary line-clamp-2">
-                                  {item.product.name}
-                                </Link>
-                                <p className="text-sm text-muted-foreground">
-                                  {formatPrice(item.product.price)}
-                                </p>
-                                <div className="flex items-center gap-2 mt-2">
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-7 w-7"
-                                    onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.productAttributeId)}
-                                  >
-                                    <Minus className="size-3" />
-                                  </Button>
-                                  <span className="w-6 text-center text-sm">{item.quantity}</span>
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-7 w-7"
-                                    onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.productAttributeId)}
-                                  >
-                                    <Plus className="size-3" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 text-destructive ml-auto"
-                                    onClick={() => removeItem(item.product.id, item.productAttributeId)}
-                                  >
-                                    <Trash2 className="size-4" />
-                                  </Button>
+                      <div className="max-h-72 overflow-y-auto p-3 space-y-3">
+                        {items.slice(0, 3).map((item) => (
+                          <div key={`${item.product.id}-${item.productAttributeId}`} className="flex items-center gap-3">
+                            <div className="w-16 h-16 flex-shrink-0 bg-muted rounded-md overflow-hidden">
+                              {item.product.imageUrl ? (
+                                <img
+                                  src={item.product.imageUrl}
+                                  alt={item.product.name}
+                                  className="object-cover w-full h-full"
+                                />
+                              ) : (
+                                <div className="flex items-center justify-center h-full text-xs text-muted-foreground">
+                                  Brak
                                 </div>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-semibold text-sm">{formatPrice(item.product.price * item.quantity)}</p>
-                              </div>
+                              )}
                             </div>
-                          ))}
-                        </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium line-clamp-2">{item.product.name}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">{item.quantity} x {formatPrice(item.product.price)}</p>
+                            </div>
+                            <button
+                              onClick={() => removeItem(item.product.id, item.productAttributeId)}
+                              className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                            >
+                              <X className="size-4" />
+                            </button>
+                          </div>
+                        ))}
+                        {items.length > 3 && (
+                          <p className="text-xs text-muted-foreground text-center">
+                            + {items.length - 3} więcej produktów
+                          </p>
+                        )}
                       </div>
 
-                      <div className="border-t pt-4 px-4 pb-4 space-y-4">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Produkty</span>
-                          <span>{formatPrice(total)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Dostawa</span>
-                          <span>Do ustalenia</span>
-                        </div>
-                        <Separator />
-                        <div className="flex justify-between font-semibold text-lg">
+                      <div className="border-t p-3 space-y-3">
+                        <div className="flex justify-between font-semibold">
                           <span>Razem</span>
                           <span>{formatPrice(total)}</span>
                         </div>
-                        <Link href="/checkout" className="block">
-                          <Button className="w-full" size="lg">
-                            Przejdź do kasy
-                            <ArrowRight className="ml-2 size-4" />
-                          </Button>
-                        </Link>
-                        <Button variant="outline" className="w-full" onClick={clearCart}>
-                          Wyczyść koszyk
-                        </Button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Link href="/cart">
+                            <Button variant="ghost" className="w-full border hover:bg-transparent! hover:text-primary" size="sm">
+                              Zobacz koszyk
+                            </Button>
+                          </Link>
+                          <Link href="/checkout">
+                            <Button className="w-full" size="sm">
+                              Do kasy
+                            </Button>
+                          </Link>
+                        </div>
                       </div>
                     </>
                   )}
-                </SheetContent>
-              </Sheet>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="default" className="h-10 px-3 gap-2">
+                  <Button variant="ghost" size="default" className="h-10 px-3 gap-2 cursor-pointer hover:bg-transparent! hover:text-primary focus-visible:ring-0 focus-visible:ring-offset-0">
                     <User className="size-5" />
                     <span className="text-sm">{isLoggedIn && user?.firstName ? user.firstName : "Cześć, zaloguj się"}</span>
                     <ChevronDown className="size-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-black">
                   {isLoggedIn ? (
                     <>
                       <DropdownMenuLabel>{user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : "Moje konto"}</DropdownMenuLabel>
@@ -579,22 +316,46 @@ export function Header({ categories = [] }: HeaderProps) {
                       </DropdownMenuItem>
                     </>
                   ) : (
-                    <>
-                      <DropdownMenuLabel>Moje konto</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href="/login" className="flex items-center gap-2 cursor-pointer">
-                          <LogIn className="size-4" />
+                    <div className="p-3">
+                      <Link href="/login">
+                        <Button className="w-full mb-3">
                           Zaloguj się
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/register" className="flex items-center gap-2 cursor-pointer">
-                          <User className="size-4" />
-                          Zarejestruj się
-                        </Link>
-                      </DropdownMenuItem>
-                    </>
+                        </Button>
+                      </Link>
+
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="flex-1 h-px bg-border" />
+                        <span className="text-xs text-muted-foreground">lub kontynuuj przez</span>
+                        <div className="flex-1 h-px bg-border" />
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-2 mb-4">
+                        <Button variant="outline" size="icon" className="h-10 w-full" disabled>
+                          <svg className="size-4" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                        </Button>
+                        <Button variant="outline" size="icon" className="h-10 w-full" disabled>
+                          <svg className="size-4" viewBox="0 0 24 24"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                        </Button>
+                        <Button variant="outline" size="icon" className="h-10 w-full" disabled>
+                          <svg className="size-4" viewBox="0 0 24 24"><path fill="currentColor" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                        </Button>
+                        <Button variant="outline" size="icon" className="h-10 w-full" disabled>
+                          <svg className="size-4" viewBox="0 0 24 24"><path fill="currentColor" d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
+                        </Button>
+                      </div>
+
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="flex-1 h-px bg-border" />
+                        <span className="text-xs text-muted-foreground">Nie masz konta?</span>
+                        <div className="flex-1 h-px bg-border" />
+                      </div>
+
+                      <Link href="/register">
+                        <Button variant="outline" className="w-full">
+                          Załóż konto
+                        </Button>
+                      </Link>
+                    </div>
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -602,28 +363,26 @@ export function Header({ categories = [] }: HeaderProps) {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Category navigation bar (hidden on mobile, hides on scroll) */}
-      <div
-        className={`hidden md:block bg-white dark:bg-black border-b overflow-hidden transition-all duration-300 ${
-          scrolled ? "max-h-0 opacity-0" : "max-h-20 opacity-100"
-        }`}
-      >
+      </header>
+
+      {/* Mega Menu navigation bar - scrolls away (hidden on mobile) */}
+      <div className="hidden md:block bg-white dark:bg-black relative z-40">
+        {/* Fading divider line */}
         <div className="container">
-          <nav className="flex items-center gap-6 py-3">
-            {categories.slice(0, 8).map((cat) => (
-              <Link
-                key={cat.id}
-                href={`/categories/${cat.id}`}
-                className="px-4 py-2 text-sm font-medium rounded-lg hover:bg-muted transition-colors"
-              >
-                {cat.name}
-              </Link>
-            ))}
-          </nav>
+          <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+        </div>
+        <div className="container py-2">
+          <MegaMenu categories={categories} />
+        </div>
+        {/* Bottom fading divider */}
+        <div className="container">
+          <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
         </div>
       </div>
-    </header>
+
+      {/* Search Modal (Command Palette) */}
+      <SearchModal isOpen={searchModal.isOpen} onClose={searchModal.close} />
+    </>
   );
 }

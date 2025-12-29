@@ -36,7 +36,7 @@ export function ProductCardRow({ product }: ProductCardRowProps) {
   const incrementQuantity = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setQuantity((q) => Math.min(q + 1, product.quantity || 99));
+    setQuantity((q) => Math.min(q + 1, product.quantity ?? 99));
   };
 
   const decrementQuantity = (e: React.MouseEvent) => {
@@ -45,7 +45,8 @@ export function ProductCardRow({ product }: ProductCardRowProps) {
     setQuantity((q) => Math.max(q - 1, 1));
   };
 
-  const isOutOfStock = product.quantity <= 0;
+  // Only show as out of stock if quantity is explicitly 0 (not unknown/null)
+  const isOutOfStock = product.quantity !== null && product.quantity <= 0;
 
   return (
     <div className="group bg-card rounded-xl border overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-foreground/20">
@@ -72,7 +73,7 @@ export function ProductCardRow({ product }: ProductCardRowProps) {
                   Wyprzedane
                 </Badge>
               )}
-              {!isOutOfStock && product.quantity <= 5 && (
+              {!isOutOfStock && product.quantity !== null && product.quantity <= 5 && (
                 <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700 hover:bg-orange-100">
                   Ostatnie sztuki
                 </Badge>
@@ -138,7 +139,7 @@ export function ProductCardRow({ product }: ProductCardRowProps) {
               ) : (
                 <span className="text-xs font-medium flex items-center justify-end gap-1 text-green-600">
                   <span className="size-1 rounded-full bg-green-500"></span>
-                  {product.quantity > 99 ? "99+" : product.quantity} szt.
+                  {product.quantity !== null && product.quantity > 99 ? "99+" : product.quantity} szt.
                 </span>
               )}
             </div>
@@ -169,7 +170,7 @@ export function ProductCardRow({ product }: ProductCardRowProps) {
                     <button
                       onClick={incrementQuantity}
                       className="h-8 w-9 flex items-center justify-center hover:bg-muted transition-colors"
-                      disabled={quantity >= (product.quantity || 99)}
+                      disabled={quantity >= (product.quantity ?? 99)}
                     >
                       <Plus className="size-3" />
                     </button>

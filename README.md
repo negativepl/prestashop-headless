@@ -100,16 +100,15 @@ frontend/
 ## Roadmap / TODO
 
 ### High Priority
-- [ ] Product filters (price, attributes, availability)
-- [ ] Product variants support (size, color)
-- [ ] ISR caching for product/category pages
+- [x] Product filters (price, availability)
+- [x] ISR caching for product/category pages
 - [ ] Secure password verification (PrestaShop module or custom endpoint)
 - [ ] Payment integrations (Przelewy24, PayU, BLIK)
 - [ ] Shipping integrations (InPost, DPD, Poczta Polska)
 
 ### Medium Priority
 - [ ] Product search with filters
-- [ ] Breadcrumbs navigation
+- [x] Breadcrumbs navigation
 - [ ] Product reviews/ratings
 - [ ] Wishlist sync with PrestaShop
 - [ ] Order tracking page

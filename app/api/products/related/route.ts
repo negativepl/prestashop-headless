@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
     const products = await prestashop.getProducts({
       categoryId: parseInt(categoryId),
       limit: parseInt(limit) + 1, // Get one extra in case we exclude
+      withStock: true,
     });
 
     // Filter out the current product

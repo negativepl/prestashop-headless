@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Breadcrumbs, BreadcrumbItem } from "@/components/ui/breadcrumbs";
 import type { Product, Category } from "@/lib/prestashop/types";
 
 interface CategoryPageProps {
@@ -76,7 +77,7 @@ export default function CategoryPage({ params }: CategoryPageProps) {
     .filter((product) => {
       if (priceMin && product.price < parseFloat(priceMin)) return false;
       if (priceMax && product.price > parseFloat(priceMax)) return false;
-      if (inStock && product.quantity <= 0) return false;
+      if (inStock && product.quantity !== null && product.quantity <= 0) return false;
       return true;
     })
     .sort((a, b) => {
@@ -195,8 +196,16 @@ export default function CategoryPage({ params }: CategoryPageProps) {
     );
   }
 
+  const breadcrumbItems: BreadcrumbItem[] = [
+    { label: "Produkty", href: "/products" },
+    ...(category ? [{ label: category.name }] : []),
+  ];
+
   return (
     <div className="container py-8">
+      {/* Breadcrumbs */}
+      <Breadcrumbs items={breadcrumbItems} />
+
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold">{category?.name || "Kategoria"}</h1>
