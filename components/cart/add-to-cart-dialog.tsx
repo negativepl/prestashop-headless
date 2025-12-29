@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, ShoppingBag, ArrowRight, ShoppingCart } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Check, ShoppingCart } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -28,10 +27,9 @@ export function AddToCartDialog({
   product,
   quantity,
 }: AddToCartDialogProps) {
-  const { total, itemCount } = useCart();
+  const { addItem } = useCart();
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
-  const { addItem } = useCart();
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pl-PL", {
@@ -43,7 +41,7 @@ export function AddToCartDialog({
   useEffect(() => {
     if (open && product.categoryId) {
       setLoading(true);
-      fetch(`/api/products/related?categoryId=${product.categoryId}&excludeId=${product.id}&limit=4`)
+      fetch(`/api/products/related?categoryId=${product.categoryId}&excludeId=${product.id}&limit=3`)
         .then((res) => res.json())
         .then((data) => {
           if (Array.isArray(data)) {
@@ -61,14 +59,14 @@ export function AddToCartDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-hidden p-0">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-hidden p-0 bg-accent">
         <div className="flex flex-col md:flex-row">
           {/* Left side - Added product & actions */}
           <div className="flex-1 p-6 flex flex-col">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center">
-                  <Check className="size-5 text-background" />
+                <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                  <Check className="size-3.5 text-white" />
                 </div>
                 Dodano do koszyka
               </DialogTitle>
@@ -76,12 +74,12 @@ export function AddToCartDialog({
 
             {/* Added product */}
             <div className="flex gap-4 py-6">
-              <div className="w-24 h-24 flex-shrink-0 bg-muted rounded-lg overflow-hidden">
+              <div className="w-24 h-24 flex-shrink-0 bg-white rounded-lg overflow-hidden p-2">
                 {product.imageUrl ? (
                   <img
                     src={product.imageUrl}
                     alt={product.name}
-                    className="object-cover w-full h-full"
+                    className="object-contain w-full h-full"
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full text-xs text-muted-foreground">
@@ -98,23 +96,12 @@ export function AddToCartDialog({
               </div>
             </div>
 
-            {/* Cart summary */}
-            <div className="bg-muted/50 rounded-lg p-4 mt-auto">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <ShoppingBag className="size-4" />
-                  <span>W koszyku: {itemCount} {itemCount === 1 ? "produkt" : itemCount < 5 ? "produkty" : "produktów"}</span>
-                </div>
-                <span className="font-bold text-lg">{formatPrice(total)}</span>
-              </div>
-            </div>
-
             {/* Action buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-6">
+            <div className="flex flex-col sm:flex-row gap-3 pt-6 mt-auto">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="lg"
-                className="flex-1 h-12"
+                className="flex-1 h-12 hover:bg-transparent hover:text-primary"
                 onClick={() => onOpenChange(false)}
               >
                 Kontynuuj zakupy
@@ -133,34 +120,46 @@ export function AddToCartDialog({
             <>
               <Separator orientation="vertical" className="hidden md:block" />
               <Separator className="md:hidden" />
-              <div className="w-full md:w-[340px] bg-muted/30 p-6 overflow-y-auto max-h-[400px] md:max-h-none">
+              <div className="w-full md:w-[380px] bg-card p-6 overflow-y-auto max-h-[400px] md:max-h-none">
                 <h4 className="font-semibold mb-4">Może Ci się spodobać</h4>
 
-                {loading ? (
-                  <div className="text-center text-sm text-muted-foreground py-8">
-                    Ładowanie propozycji...
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <AnimatePresence>
-                      {relatedProducts.map((relatedProduct, index) => (
-                        <motion.div
-                          key={relatedProduct.id}
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                          className="flex gap-3 bg-background rounded-lg p-3 border hover:border-foreground/30 transition-colors"
-                        >
+                <div className="space-y-3">
+                  {loading ? (
+                    [1, 2, 3].map((i) => (
+                      <div key={i} className="bg-accent rounded-lg p-3 border h-[120px] animate-pulse">
+                        <div className="flex gap-3 h-full">
+                          <div className="w-20 h-20 flex-shrink-0 bg-muted rounded-md" />
+                          <div className="flex-1 flex flex-col">
+                            <div className="min-h-[54px]">
+                              <div className="h-4 bg-muted rounded w-full mb-2" />
+                              <div className="h-4 bg-muted rounded w-3/4 mb-2" />
+                              <div className="h-4 bg-muted rounded w-1/2" />
+                            </div>
+                            <div className="flex items-center justify-between mt-auto">
+                              <div className="h-5 bg-muted rounded w-16" />
+                              <div className="h-8 bg-muted rounded w-24" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    relatedProducts.map((relatedProduct) => (
+                      <div
+                        key={relatedProduct.id}
+                        className="bg-accent rounded-lg p-3 border h-[120px] hover:border-foreground/30 transition-colors"
+                      >
+                        <div className="flex gap-3 h-full">
                           <Link
                             href={`/products/${relatedProduct.id}`}
                             onClick={() => onOpenChange(false)}
-                            className="w-16 h-16 flex-shrink-0 bg-muted rounded-md overflow-hidden"
+                            className="w-20 h-20 flex-shrink-0 bg-white rounded-md overflow-hidden"
                           >
                             {relatedProduct.imageUrl ? (
                               <img
                                 src={relatedProduct.imageUrl}
                                 alt={relatedProduct.name}
-                                className="object-cover w-full h-full"
+                                className="object-contain w-full h-full p-1"
                               />
                             ) : (
                               <div className="flex items-center justify-center h-full text-xs text-muted-foreground">
@@ -172,26 +171,27 @@ export function AddToCartDialog({
                             <Link
                               href={`/products/${relatedProduct.id}`}
                               onClick={() => onOpenChange(false)}
-                              className="text-sm font-medium line-clamp-2 hover:text-primary transition-colors"
+                              className="text-sm font-medium line-clamp-3 min-h-[54px] hover:text-primary transition-colors"
                             >
                               {relatedProduct.name}
                             </Link>
-                            <div className="flex items-center justify-between mt-auto pt-1">
-                              <p className="font-bold text-sm">{formatPrice(relatedProduct.price)}</p>
+                            <div className="flex items-center justify-between mt-auto">
+                              <p className="font-bold">{formatPrice(relatedProduct.price)}</p>
                               <Button
-                                size="icon"
-                                className="h-8 w-8"
+                                size="sm"
+                                className="h-8 gap-1.5"
                                 onClick={() => handleAddRelated(relatedProduct)}
                               >
-                                <ShoppingCart className="size-4" />
+                                <ShoppingCart className="size-3.5" />
+                                Do koszyka
                               </Button>
                             </div>
                           </div>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                  </div>
-                )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </>
           )}

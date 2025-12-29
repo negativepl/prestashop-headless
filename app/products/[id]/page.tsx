@@ -74,7 +74,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           {/* Title & SKU */}
           <div>
             <div className="flex items-start justify-between gap-4">
-              <h1 className="text-2xl lg:text-3xl font-bold">{product.name}</h1>
+              <h1 className="text-2xl md:text-3xl font-bold">{product.name}</h1>
               {product.manufacturerName && (
                 <Badge variant="secondary" className="shrink-0">
                   {product.manufacturerName}

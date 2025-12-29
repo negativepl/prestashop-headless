@@ -37,7 +37,7 @@ export function FavoriteButton({ product, className = "" }: FavoriteButtonProps)
   return (
     <button
       onClick={handleClick}
-      className={`w-9 h-9 bg-background/90 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-300 hover:bg-background hover:scale-110 ${className}`}
+      className={`w-10 h-10 bg-white/70 backdrop-blur-md border border-white/50 rounded-full flex items-center justify-center transition-all duration-300 hover:bg-white/90 hover:scale-110 shadow-sm ${className}`}
     >
       <AnimatePresence mode="wait">
         <motion.div
@@ -54,8 +54,8 @@ export function FavoriteButton({ product, className = "" }: FavoriteButtonProps)
           }}
         >
           <Heart
-            className={`h-4 w-4 transition-colors ${
-              favorite ? "fill-red-500 text-red-500" : "text-muted-foreground"
+            className={`h-5 w-5 transition-colors ${
+              favorite ? "fill-red-500 text-red-500" : "text-foreground/60"
             }`}
           />
         </motion.div>

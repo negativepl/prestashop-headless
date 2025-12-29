@@ -208,7 +208,7 @@ export default function CategoryPage({ params }: CategoryPageProps) {
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">{category?.name || "Kategoria"}</h1>
+        <h1 className="text-3xl md:text-4xl font-bold">{category?.name || "Kategoria"}</h1>
         {category?.description && (
           <p className="text-muted-foreground mt-2">{category.description}</p>
         )}

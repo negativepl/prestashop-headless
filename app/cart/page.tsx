@@ -19,12 +19,12 @@ export default function CartPage() {
   const remainingForFreeShipping = freeShippingThreshold - total;
 
   return (
-    <div className="min-h-[80vh] py-8 md:py-12">
+    <div className="min-h-[80vh] py-8">
       <div className="container">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Koszyk</h1>
+            <h1 className="text-3xl md:text-4xl font-bold">Koszyk</h1>
             <p className="text-muted-foreground mt-1">
               {itemCount} {itemCount === 1 ? "produkt" : itemCount > 1 && itemCount < 5 ? "produkty" : "produktów"}
             </p>
@@ -216,7 +216,7 @@ export default function CartPage() {
                     {total >= freeShippingThreshold ? (
                       <span className="text-green-600 font-medium">Gratis</span>
                     ) : (
-                      <span>od 9,99 zł</span>
+                      <span>od 7,00 zł</span>
                     )}
                   </div>
                   <div className="flex justify-between font-semibold text-lg pt-3 border-t">

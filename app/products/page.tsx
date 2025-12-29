@@ -1,5 +1,6 @@
 import { ProductGrid } from "@/components/products/product-grid";
 import { prestashop } from "@/lib/prestashop/client";
+import type { Product } from "@/lib/prestashop/types";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 
 // ISR - revalidate every 5 minutes
@@ -11,8 +12,8 @@ export const metadata = {
 };
 
 export default async function ProductsPage() {
-  let products = [];
-  let error = null;
+  let products: Product[] = [];
+  let error: string | null = null;
 
   try {
     products = await prestashop.getProducts({ limit: 100, withStock: true });
@@ -24,7 +25,7 @@ export default async function ProductsPage() {
     <div className="container py-8">
       <Breadcrumbs items={[{ label: "Produkty" }]} />
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Produkty</h1>
+        <h1 className="text-3xl md:text-4xl font-bold">Produkty</h1>
         <p className="text-muted-foreground mt-2">
           Przeglądaj wszystkie dostępne produkty
         </p>

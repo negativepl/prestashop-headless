@@ -49,7 +49,7 @@ export function AddToCartButtonSmall({ product, variant = "default" }: AddToCart
       <Button
         size="sm"
         onClick={handleClick}
-        disabled={product.quantity <= 0}
+        disabled={product.quantity !== null && product.quantity <= 0}
         className="h-9"
       >
         <ShoppingCart className="h-4 w-4 mr-1.5" />

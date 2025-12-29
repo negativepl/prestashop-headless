@@ -13,7 +13,7 @@ export default function CheckoutSuccessPage() {
     <div className="container py-16">
       <div className="max-w-md mx-auto text-center">
         <CheckCircle className="h-20 w-20 mx-auto text-green-500" />
-        <h1 className="text-3xl font-bold mt-6">Dziękujemy za zamówienie!</h1>
+        <h1 className="text-xl md:text-2xl font-bold mt-6">Dziękujemy za zamówienie!</h1>
         <p className="text-muted-foreground mt-4">
           Twoje zamówienie zostało przyjęte do realizacji.
         </p>

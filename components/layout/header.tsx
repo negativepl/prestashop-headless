@@ -32,10 +32,12 @@ export function Header({ categories = [] }: HeaderProps) {
   const { user, isLoggedIn, refetch: refetchUser } = useUser();
   const searchModal = useSearchModal();
   const [mounted, setMounted] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [favoritesAnimating, setFavoritesAnimating] = useState(false);
   const prevFavoritesCount = useRef(favoritesCount);
   const [cartAnimating, setCartAnimating] = useState(false);
   const prevCartCount = useRef(itemCount);
+  const [cartOpen, setCartOpen] = useState(false);
 
   const handleLogout = async () => {
     await logoutUser();
@@ -45,6 +47,16 @@ export function Header({ categories = [] }: HeaderProps) {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Detect scroll for shadow
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Animate favorites icon when count increases
@@ -94,7 +106,7 @@ export function Header({ categories = [] }: HeaderProps) {
       </div>
 
       {/* Main header - sticky */}
-      <header className="sticky top-0 z-50 bg-white dark:bg-black shadow-sm">
+      <header className={`sticky top-0 z-50 bg-white dark:bg-black transition-shadow duration-300 ease-in-out ${isScrolled ? "shadow-sm" : "shadow-none"}`}>
         <div className="container py-2 md:py-2.5">
           <div className="flex items-center justify-between gap-4 md:gap-8">
             {/* Left - Logo */}
@@ -183,7 +195,7 @@ export function Header({ categories = [] }: HeaderProps) {
                 </Button>
               </Link>
 
-              <DropdownMenu>
+              <DropdownMenu open={cartOpen} onOpenChange={setCartOpen}>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="default" className="h-10 px-3 gap-2 cursor-pointer hover:bg-transparent! hover:text-primary focus-visible:ring-0 focus-visible:ring-offset-0">
                     <motion.span
@@ -267,12 +279,12 @@ export function Header({ categories = [] }: HeaderProps) {
                           <span>{formatPrice(total)}</span>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                          <Link href="/cart">
+                          <Link href="/cart" onClick={() => setCartOpen(false)}>
                             <Button variant="ghost" className="w-full border hover:bg-transparent! hover:text-primary" size="sm">
                               Zobacz koszyk
                             </Button>
                           </Link>
-                          <Link href="/checkout">
+                          <Link href="/checkout" onClick={() => setCartOpen(false)}>
                             <Button className="w-full" size="sm">
                               Do kasy
                             </Button>

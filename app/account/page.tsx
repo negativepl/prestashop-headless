@@ -71,7 +71,7 @@ export default async function AccountPage() {
   const recentOrders = orders.slice(0, 3);
 
   return (
-    <div className="min-h-[80vh] py-8 md:py-12">
+    <div className="min-h-[80vh] py-8">
       <div className="container">
         {/* Header */}
         <div className="mb-10">

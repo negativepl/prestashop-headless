@@ -291,6 +291,18 @@ export function MegaMenu({ categories }: MegaMenuProps) {
     setDirection("none");
   }, []);
 
+  // Close menu on scroll
+  useEffect(() => {
+    if (!openCategory) return;
+
+    const handleScroll = () => {
+      handleClose();
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [openCategory, handleClose]);
+
   const activeCategory = categories.find((c) => c.id === openCategory);
 
   return (

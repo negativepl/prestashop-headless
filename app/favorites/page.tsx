@@ -16,10 +16,11 @@ export default function FavoritesPage() {
   };
 
   return (
-    <div className="container py-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="min-h-[80vh] py-8">
+      <div className="container">
+        <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Ulubione</h1>
+          <h1 className="text-3xl md:text-4xl font-bold">Ulubione</h1>
           <p className="text-muted-foreground mt-1">
             {items.length} {items.length === 1 ? "produkt" : items.length > 1 && items.length < 5 ? "produkty" : "produktów"}
           </p>
@@ -89,6 +90,7 @@ export default function FavoritesPage() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

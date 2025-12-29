@@ -5,14 +5,20 @@ import { ProductCard } from "@/components/products/product-card";
 import { HeroCarousel } from "@/components/home/hero-carousel";
 import { WeeklyHits } from "@/components/home/weekly-hits";
 import { prestashop } from "@/lib/prestashop/client";
+import type { Product } from "@/lib/prestashop/types";
+import { wordpress, type BlogPost } from "@/lib/wordpress/client";
 
 export const revalidate = 60; // Revalidate every 60 seconds
 
 export default async function HomePage() {
-  let products = [];
+  let products: Product[] = [];
+  let blogPosts: BlogPost[] = [];
 
   try {
-    products = await prestashop.getProducts({ limit: 12, withImages: true, withStock: true });
+    [products, blogPosts] = await Promise.all([
+      prestashop.getProducts({ limit: 12, withImages: true, withStock: true }),
+      wordpress.getPosts({ limit: 3 }),
+    ]);
   } catch (e) {
     console.error("Error fetching data:", e);
   }
@@ -26,7 +32,7 @@ export default async function HomePage() {
 
       {/* Weekly Hits */}
       {products.length > 0 && (
-        <section className="py-8 md:py-12">
+        <section className="py-8">
           <div className="container">
             <WeeklyHits products={weeklyHitsProducts} />
           </div>
@@ -35,7 +41,7 @@ export default async function HomePage() {
 
 
       {/* Featured Products */}
-      <section className="py-8 md:py-12">
+      <section className="py-8">
         <div className="container">
           <div className="bg-card rounded-2xl p-6 md:p-10 border">
             <div className="flex items-end justify-between mb-8">
@@ -86,7 +92,7 @@ export default async function HomePage() {
 
       {/* New Arrivals */}
       {products.length > 4 && (
-        <section className="py-8 md:py-12">
+        <section className="py-8">
           <div className="container">
             <div className="bg-card rounded-2xl p-6 md:p-10 border">
               <div className="flex items-end justify-between mb-8">
@@ -113,111 +119,76 @@ export default async function HomePage() {
       )}
 
       {/* Blog Section */}
-      <section className="py-8 md:py-12">
-        <div className="container">
-          <div className="bg-card rounded-2xl p-6 md:p-10 border">
-            <div className="flex items-end justify-between mb-8">
-              <div>
-                <span className="text-primary font-semibold text-sm uppercase tracking-wider">
-                  Blog
-                </span>
-                <h2 className="text-3xl md:text-4xl font-bold mt-2">
-                  Najnowsze wpisy
-                </h2>
-                <p className="mt-2 text-muted-foreground">
-                  Porady, nowości i inspiracje
-                </p>
+      {blogPosts.length > 0 && (
+        <section className="py-8">
+          <div className="container">
+            <div className="bg-card rounded-2xl p-6 md:p-10 border">
+              <div className="flex items-end justify-between mb-8">
+                <div>
+                  <span className="text-primary font-semibold text-sm uppercase tracking-wider">
+                    Blog
+                  </span>
+                  <h2 className="text-3xl md:text-4xl font-bold mt-2">
+                    Najnowsze wpisy
+                  </h2>
+                  <p className="mt-2 text-muted-foreground">
+                    Porady, nowości i inspiracje
+                  </p>
+                </div>
+                <Link href="/blog" className="hidden sm:block">
+                  <Button variant="ghost">
+                    Wszystkie wpisy
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
               </div>
-              <Link href="/blog" className="hidden sm:block">
-                <Button variant="ghost">
-                  Wszystkie wpisy
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Blog Post 1 */}
-              <article className="group">
-                <Link href="/blog/1">
-                  <div className="aspect-video bg-muted rounded-xl overflow-hidden mb-4">
-                    <img
-                      src="https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=600&h=400&fit=crop"
-                      alt="iPhone etui"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                    <Calendar className="h-3 w-3" />
-                    <span>15 grudnia 2024</span>
-                  </div>
-                  <h3 className="font-semibold text-lg group-hover:text-primary transition-colors line-clamp-2 mb-2">
-                    Jak wybrać idealne etui do iPhone 16 Pro Max?
-                  </h3>
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.
-                  </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {blogPosts.map((post) => (
+                  <article key={post.id} className="group bg-accent rounded-xl border overflow-hidden hover:border-foreground/20 transition-colors">
+                    <Link href={`/blog/${post.slug}`}>
+                      <div className="aspect-video bg-muted overflow-hidden">
+                        {post.image ? (
+                          <img
+                            src={post.image}
+                            alt={post.imageAlt || post.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                            Brak zdjęcia
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                          <Calendar className="h-3 w-3" />
+                          <span>{post.date}</span>
+                        </div>
+                        <h3 className="font-semibold text-lg group-hover:text-primary transition-colors line-clamp-2 mb-2">
+                          {post.title}
+                        </h3>
+                        <p className="text-sm text-muted-foreground line-clamp-3">
+                          {post.excerpt}
+                        </p>
+                      </div>
+                    </Link>
+                  </article>
+                ))}
+              </div>
+
+              <div className="mt-8 text-center sm:hidden">
+                <Link href="/blog">
+                  <Button>
+                    Wszystkie wpisy
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
                 </Link>
-              </article>
-
-              {/* Blog Post 2 */}
-              <article className="group">
-                <Link href="/blog/2">
-                  <div className="aspect-video bg-muted rounded-xl overflow-hidden mb-4">
-                    <img
-                      src="https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=600&h=400&fit=crop"
-                      alt="Szkło ochronne"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                    <Calendar className="h-3 w-3" />
-                    <span>12 grudnia 2024</span>
-                  </div>
-                  <h3 className="font-semibold text-lg group-hover:text-primary transition-colors line-clamp-2 mb-2">
-                    Szkło hartowane vs folia ochronna - co wybrać?
-                  </h3>
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident.
-                  </p>
-                </Link>
-              </article>
-
-              {/* Blog Post 3 */}
-              <article className="group">
-                <Link href="/blog/3">
-                  <div className="aspect-video bg-muted rounded-xl overflow-hidden mb-4">
-                    <img
-                      src="https://images.unsplash.com/photo-1585060544812-6b45742d762f?w=600&h=400&fit=crop"
-                      alt="Akcesoria do smartfona"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                    <Calendar className="h-3 w-3" />
-                    <span>8 grudnia 2024</span>
-                  </div>
-                  <h3 className="font-semibold text-lg group-hover:text-primary transition-colors line-clamp-2 mb-2">
-                    Top 10 akcesoriów do smartfona na 2025 rok
-                  </h3>
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam eaque ipsa.
-                  </p>
-                </Link>
-              </article>
-            </div>
-
-            <div className="mt-8 text-center sm:hidden">
-              <Link href="/blog">
-                <Button>
-                  Wszystkie wpisy
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Brands Section */}
       <section>

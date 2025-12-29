@@ -49,7 +49,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const isOutOfStock = product.quantity !== null && product.quantity <= 0;
 
   return (
-    <div className="group bg-card rounded-xl border overflow-hidden transition-all duration-300 hover:border-foreground/20 flex flex-col">
+    <div className="group bg-accent rounded-xl border overflow-hidden transition-all duration-300 hover:border-foreground/20 flex flex-col">
       {/* Image */}
       <Link href={`/products/${product.id}`}>
         <div className="relative aspect-square overflow-hidden bg-white p-4">
@@ -58,7 +58,7 @@ export function ProductCard({ product }: ProductCardProps) {
               <img
                 src={product.imageUrl}
                 alt={product.name}
-                className="max-w-full max-h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                className={`max-w-full max-h-full object-contain transition-transform duration-500 group-hover:scale-105 ${isOutOfStock ? "grayscale opacity-60" : ""}`}
               />
             </div>
           ) : (
@@ -108,18 +108,20 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
 
         {/* Add to cart section - always visible */}
-        <div className="mt-3 pt-3 border-t">
+        <div className="mt-3 pt-3 border-t min-h-[72px] flex flex-col justify-center">
           {isOutOfStock ? (
-            <Button disabled className="w-full h-10" variant="secondary">
-              Niedostępny
-            </Button>
+            <div className="flex items-center justify-center">
+              <Button disabled className="h-10 px-8" variant="secondary">
+                Niedostępny
+              </Button>
+            </div>
           ) : (
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-stretch">
               {/* Quantity selector */}
-              <div className="flex items-center border rounded-lg overflow-hidden bg-muted/50">
+              <div className="flex items-center border rounded-lg overflow-hidden bg-muted/50 h-11">
                 <button
                   onClick={decrementQuantity}
-                  className="h-10 w-9 flex items-center justify-center hover:bg-muted transition-colors"
+                  className="h-full w-9 flex items-center justify-center hover:bg-muted transition-colors"
                   disabled={quantity <= 1}
                 >
                   <Minus className="size-4" />
@@ -127,7 +129,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 <span className="w-8 text-center text-sm font-medium">{quantity}</span>
                 <button
                   onClick={incrementQuantity}
-                  className="h-10 w-9 flex items-center justify-center hover:bg-muted transition-colors"
+                  className="h-full w-9 flex items-center justify-center hover:bg-muted transition-colors"
                   disabled={quantity >= (product.quantity ?? 99)}
                 >
                   <Plus className="size-4" />
@@ -137,7 +139,7 @@ export function ProductCard({ product }: ProductCardProps) {
               {/* Add to cart button */}
               <Button
                 onClick={handleAddToCart}
-                className="flex-1 h-10 gap-2"
+                className="flex-1 h-11 gap-2"
               >
                 <ShoppingCart className="size-4" />
                 <span className="hidden sm:inline">Dodaj do koszyka</span>

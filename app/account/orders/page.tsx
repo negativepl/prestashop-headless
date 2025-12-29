@@ -60,7 +60,7 @@ export default async function OrdersPage() {
   }
 
   return (
-    <div className="min-h-[80vh] py-8 md:py-12">
+    <div className="min-h-[80vh] py-8">
       <div className="container">
         {/* Header */}
         <div className="text-center mb-10">

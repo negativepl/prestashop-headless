@@ -151,11 +151,11 @@ class PrestaShopClient {
     endpoint += "&display=full";
 
     const response = await this.fetch<PSResponse<PSProduct[]>>(endpoint);
-    let products = response.products || [];
+    let products: PSProduct[] = (response.products as PSProduct[]) || [];
 
     // Filter products with images if requested
     if (params?.withImages) {
-      products = products.filter(p => p.associations?.images?.length > 0);
+      products = products.filter(p => (p.associations?.images?.length ?? 0) > 0);
       // Limit to requested amount
       if (params?.limit) {
         products = products.slice(0, params.limit);
@@ -170,7 +170,7 @@ class PrestaShopClient {
         const stockResponse = await this.fetch<PSResponse<PSStockAvailable[]>>(
           `stock_availables?filter[id_product]=[${productIds.join("|")}]&filter[id_product_attribute]=0&display=full`
         );
-        const stocks = stockResponse.stock_availables || [];
+        const stocks = (stockResponse.stock_availables as PSStockAvailable[]) || [];
         for (const stock of stocks) {
           stockMap.set(stock.id_product, stock.quantity);
         }
@@ -203,7 +203,7 @@ class PrestaShopClient {
           const stockResponse = await this.fetch<PSResponse<PSStockAvailable[]>>(
             `stock_availables?filter[id_product]=[${productIds.join("|")}]&filter[id_product_attribute]=0&display=full`
           );
-          const stocks = stockResponse.stock_availables || [];
+          const stocks = (stockResponse.stock_availables as PSStockAvailable[]) || [];
           for (const stock of stocks) {
             stockMap.set(stock.id_product, stock.quantity);
           }
@@ -253,7 +253,7 @@ class PrestaShopClient {
         const stockResponse = await this.fetch<PSResponse<PSStockAvailable[]>>(
           `stock_availables?filter[id_product]=${p.id}&filter[id_product_attribute]=0&display=full`
         );
-        const stocks = stockResponse.stock_availables || [];
+        const stocks = (stockResponse.stock_availables as PSStockAvailable[]) || [];
         if (stocks.length > 0) {
           quantity = (stocks[0] as PSStockAvailable).quantity;
         }

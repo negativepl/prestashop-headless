@@ -1,0 +1,438 @@
+/* WordPress Gutenberg Block Styles */
+.wp-content {
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: var(--foreground);
+}
+
+.wp-content p {
+  margin: 1.5rem 0;
+}
+
+.wp-content a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.wp-content a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.wp-content strong,
+.wp-content b {
+  font-weight: 600;
+}
+
+/* Headings */
+.wp-content h2,
+.wp-content .wp-block-heading {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  line-height: 1.3;
+  color: var(--foreground);
+}
+
+.wp-content h3 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+  color: var(--foreground);
+}
+
+.wp-content h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--foreground);
+}
+
+/* Images */
+.wp-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+}
+
+.wp-content figure {
+  margin: 2rem 0;
+}
+
+.wp-content figure.wp-block-image {
+  margin: 2rem 0;
+}
+
+.wp-content figcaption {
+  margin-top: 0.75rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+/* Gallery */
+.wp-content .wp-block-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.wp-content .wp-block-gallery figure.wp-block-image {
+  margin: 0;
+  flex: 1 1 calc(50% - 0.5rem);
+  min-width: 200px;
+  width: 100%;
+}
+
+.wp-content .wp-block-gallery figure.wp-block-image:only-child {
+  flex: 1 1 100%;
+}
+
+.wp-content .wp-block-gallery figure.wp-block-image img {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+/* 2 images side by side */
+.wp-content .wp-block-gallery figure.wp-block-image:first-child:nth-last-child(2),
+.wp-content .wp-block-gallery figure.wp-block-image:first-child:nth-last-child(2) ~ figure.wp-block-image {
+  flex: 1 1 calc(50% - 0.5rem);
+}
+
+/* 3 images in a row */
+.wp-content .wp-block-gallery figure.wp-block-image:first-child:nth-last-child(3),
+.wp-content .wp-block-gallery figure.wp-block-image:first-child:nth-last-child(3) ~ figure.wp-block-image {
+  flex: 1 1 calc(33.333% - 0.67rem);
+  min-width: 150px;
+}
+
+/* 4 images - 2x2 grid */
+.wp-content .wp-block-gallery figure.wp-block-image:first-child:nth-last-child(4),
+.wp-content .wp-block-gallery figure.wp-block-image:first-child:nth-last-child(4) ~ figure.wp-block-image {
+  flex: 1 1 calc(50% - 0.5rem);
+}
+
+/* Columns */
+.wp-content .wp-block-columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.wp-content .wp-block-column {
+  flex: 1;
+  min-width: 280px;
+}
+
+/* Separator */
+.wp-content hr,
+.wp-content .wp-block-separator {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2.5rem 0;
+}
+
+/* Quote */
+.wp-content blockquote,
+.wp-content .wp-block-quote {
+  border-left: 4px solid var(--primary);
+  padding: 1rem 1.5rem;
+  margin: 2rem 0;
+  background: var(--muted);
+  border-radius: 0 0.75rem 0.75rem 0;
+}
+
+.wp-content blockquote p,
+.wp-content .wp-block-quote p {
+  margin: 0;
+  font-style: italic;
+}
+
+.wp-content blockquote cite {
+  display: block;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  font-style: normal;
+}
+
+/* Lists */
+.wp-content ul,
+.wp-content ol {
+  margin: 1.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.wp-content li {
+  margin: 0.5rem 0;
+}
+
+.wp-content ul li {
+  list-style-type: disc;
+}
+
+.wp-content ol li {
+  list-style-type: decimal;
+}
+
+/* Table */
+.wp-content .wp-block-table {
+  overflow-x: auto;
+  margin: 2rem 0;
+}
+
+.wp-content table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 500px;
+}
+
+.wp-content th,
+.wp-content td {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.wp-content th {
+  background: var(--muted);
+  font-weight: 600;
+}
+
+/* Code */
+.wp-content code {
+  background: var(--muted);
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.9em;
+  font-family: var(--font-mono);
+}
+
+.wp-content pre {
+  background: var(--muted);
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  overflow-x: auto;
+  margin: 2rem 0;
+}
+
+.wp-content pre code {
+  background: transparent;
+  padding: 0;
+}
+
+/* Embed / Video */
+.wp-content .wp-block-embed,
+.wp-content .wp-block-video {
+  margin: 2rem 0;
+}
+
+.wp-content .wp-block-embed__wrapper {
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+  overflow: hidden;
+  border-radius: 0.75rem;
+}
+
+.wp-content .wp-block-embed__wrapper iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.wp-content video {
+  max-width: 100%;
+  border-radius: 0.75rem;
+}
+
+/* Button */
+.wp-content .wp-block-button__link {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-radius: 0.5rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.wp-content .wp-block-button__link:hover {
+  opacity: 0.9;
+  text-decoration: none;
+}
+
+/* Text alignment */
+.wp-content .has-text-align-center {
+  text-align: center;
+}
+
+.wp-content .has-text-align-left {
+  text-align: left;
+}
+
+.wp-content .has-text-align-right {
+  text-align: right;
+}
+
+/* Font sizes from WordPress */
+.wp-content .has-small-font-size {
+  font-size: 0.875rem;
+}
+
+.wp-content .has-medium-font-size {
+  font-size: 1.25rem;
+}
+
+.wp-content .has-large-font-size {
+  font-size: 1.5rem;
+}
+
+.wp-content .has-x-large-font-size {
+  font-size: 2rem;
+}
+
+/* Clear floats */
+.wp-content::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Product widget placeholder */
+.wp-content .wp-product-widget {
+  margin: 2rem 0;
+  min-height: 200px;
+}
+
+.wp-content .wp-product-widget a {
+  text-decoration: none;
+}
+
+.wp-content .wp-product-widget a:hover {
+  text-decoration: none;
+}
+
+/* Mobile styles */
+@media (max-width: 640px) {
+  .wp-content {
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+
+  .wp-content p {
+    margin: 1rem 0;
+  }
+
+  .wp-content h2,
+  .wp-content .wp-block-heading {
+    font-size: 1.375rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .wp-content h3 {
+    font-size: 1.125rem;
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .wp-content h4 {
+    font-size: 1rem;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .wp-content figure {
+    margin: 1rem 0;
+  }
+
+  .wp-content figure.wp-block-image {
+    margin: 1rem 0;
+  }
+
+  .wp-content .wp-block-gallery {
+    gap: 0.5rem;
+    margin: 1rem 0;
+  }
+
+  .wp-content .wp-block-gallery figure.wp-block-image {
+    flex: 1 1 100%;
+    min-width: unset;
+  }
+
+  .wp-content .wp-block-gallery figure.wp-block-image:first-child:nth-last-child(2),
+  .wp-content .wp-block-gallery figure.wp-block-image:first-child:nth-last-child(2) ~ figure.wp-block-image {
+    flex: 1 1 calc(50% - 0.25rem);
+  }
+
+  .wp-content .wp-block-columns {
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+
+  .wp-content .wp-block-column {
+    min-width: 100%;
+  }
+
+  .wp-content hr,
+  .wp-content .wp-block-separator {
+    margin: 1.5rem 0;
+  }
+
+  .wp-content blockquote,
+  .wp-content .wp-block-quote {
+    padding: 0.75rem 1rem;
+    margin: 1rem 0;
+  }
+
+  .wp-content ul,
+  .wp-content ol {
+    margin: 1rem 0;
+    padding-left: 1.25rem;
+  }
+
+  .wp-content .wp-block-table {
+    margin: 1rem 0;
+  }
+
+  .wp-content th,
+  .wp-content td {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .wp-content pre {
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+
+  .wp-content .wp-block-embed,
+  .wp-content .wp-block-video {
+    margin: 1rem 0;
+  }
+
+  .wp-content .wp-product-widget {
+    margin: 1rem 0;
+    min-height: 150px;
+  }
+
+  .wp-content .has-large-font-size {
+    font-size: 1.25rem;
+  }
+
+  .wp-content .has-x-large-font-size {
+    font-size: 1.5rem;
+  }
+}
