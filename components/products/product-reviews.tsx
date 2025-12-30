@@ -38,21 +38,28 @@ const placeholderReviews = [
 function StarRating({ rating, onRate, interactive = false }: { rating: number; onRate?: (r: number) => void; interactive?: boolean }) {
   return (
     <div className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <button
-          key={star}
-          type="button"
-          disabled={!interactive}
-          onClick={() => onRate?.(star)}
-          className={interactive ? "cursor-pointer hover:scale-110 transition-transform" : "cursor-default"}
-        >
-          <Star
-            className={`size-5 ${
-              star <= rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"
-            }`}
-          />
-        </button>
-      ))}
+      {[1, 2, 3, 4, 5].map((star) => {
+        const fillPercent = interactive
+          ? (star <= rating ? 100 : 0)
+          : Math.min(100, Math.max(0, (rating - star + 1) * 100));
+
+        return (
+          <button
+            key={star}
+            type="button"
+            disabled={!interactive}
+            onClick={() => onRate?.(star)}
+            className={interactive ? "cursor-pointer hover:scale-110 transition-transform" : "cursor-default"}
+          >
+            <div className="relative size-5">
+              <Star className="size-5 text-muted-foreground/30 absolute" />
+              <div className="overflow-hidden absolute" style={{ width: `${fillPercent}%` }}>
+                <Star className="size-5 fill-yellow-400 text-yellow-400" />
+              </div>
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -77,7 +84,7 @@ export function ProductReviewsContent({ productId }: ProductReviewsProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <StarRating rating={Math.round(averageRating)} />
+          <StarRating rating={averageRating} />
           <span className="text-sm text-muted-foreground">
             {averageRating.toFixed(1)} ({placeholderReviews.length} opinii)
           </span>

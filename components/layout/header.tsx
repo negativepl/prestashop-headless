@@ -233,7 +233,7 @@ export function Header({ categories = [] }: HeaderProps) {
 
               <DropdownMenu open={cartOpen} onOpenChange={setCartOpen}>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="default" className="h-10 px-3 gap-2 cursor-pointer hover:bg-transparent! hover:text-primary focus-visible:ring-0 focus-visible:ring-offset-0">
+                  <Button variant="ghost" size="default" className="h-10 px-3 gap-2 cursor-pointer hover:bg-transparent! hover:text-primary focus-visible:ring-0 focus-visible:ring-offset-0 group">
                     <motion.span
                       className="relative"
                       animate={cartAnimating ? {
@@ -255,6 +255,7 @@ export function Header({ categories = [] }: HeaderProps) {
                       )}
                     </motion.span>
                     <span className="text-sm font-semibold">{formatPrice(total)}</span>
+                    <ChevronDown className="size-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-96 bg-white dark:bg-black p-0">
@@ -334,10 +335,10 @@ export function Header({ categories = [] }: HeaderProps) {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="default" className="h-10 px-3 gap-2 cursor-pointer hover:bg-transparent! hover:text-primary focus-visible:ring-0 focus-visible:ring-offset-0">
+                  <Button variant="ghost" size="default" className="h-10 px-3 gap-2 cursor-pointer hover:bg-transparent! hover:text-primary focus-visible:ring-0 focus-visible:ring-offset-0 group">
                     <User className="size-5" />
                     <span className="text-sm">{isLoggedIn && user?.firstName ? user.firstName : "Cześć, zaloguj się"}</span>
-                    <ChevronDown className="size-4" />
+                    <ChevronDown className="size-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-black">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ShoppingCart, Minus, Plus, Truck, Package, RotateCcw, Star, ShieldCheck, Gift } from "lucide-react";
+import { ShoppingCart, Minus, Plus, Truck, Package, RotateCcw, Star, ShieldCheck, Gift, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/use-cart";
 import { AddToCartDialog } from "./add-to-cart-dialog";
@@ -87,7 +87,10 @@ export function AddToCartButton({ product }: AddToCartButtonProps) {
 
         {/* Quick buy section */}
         <div className="space-y-3">
-          <p className="text-sm text-muted-foreground text-center">Szybkie zakupy 1-Click, bez rejestracji</p>
+          <p className="text-sm text-foreground/70 text-center flex items-center justify-center gap-1.5">
+            <Zap className="size-4" />
+            Szybkie zakupy 1-Click, bez rejestracji
+          </p>
           <Button
             variant="outline"
             className="w-full h-11 !bg-[#FFCD00] hover:!bg-[#FFD633] !text-black !border-[#FFCD00] hover:!border-[#FFD633] font-semibold"

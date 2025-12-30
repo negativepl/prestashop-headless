@@ -228,34 +228,45 @@ export default async function HomePage() {
       {/* Trust Section */}
       <section className="bg-card">
         <div className="container py-10 md:py-14">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mb-3">
-                <Truck className="h-7 w-7 text-primary" />
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 md:gap-0">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+                <Truck className="h-6 w-6 text-primary" />
               </div>
-              <p className="font-semibold">Darmowa wysyłka</p>
-              <p className="text-sm text-muted-foreground mt-0.5">Paczkomat® od 100 zł</p>
+              <div>
+                <p className="font-semibold">Darmowa wysyłka</p>
+                <p className="text-sm text-muted-foreground">Paczkomat® od 100 zł</p>
+              </div>
             </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mb-3">
-                <RotateCcw className="h-7 w-7 text-primary" />
+            <div className="hidden md:block w-px h-12 bg-border" />
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+                <RotateCcw className="h-6 w-6 text-primary" />
               </div>
-              <p className="font-semibold">Zwrot do 30 dni</p>
-              <p className="text-sm text-muted-foreground mt-0.5">Bez podawania przyczyny</p>
+              <div>
+                <p className="font-semibold">Zwrot do 30 dni</p>
+                <p className="text-sm text-muted-foreground">Bez podawania przyczyny</p>
+              </div>
             </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mb-3">
-                <Percent className="h-7 w-7 text-primary" />
+            <div className="hidden md:block w-px h-12 bg-border" />
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+                <Percent className="h-6 w-6 text-primary" />
               </div>
-              <p className="font-semibold">15% rabatu</p>
-              <p className="text-sm text-muted-foreground mt-0.5">Za zapis do newslettera</p>
+              <div>
+                <p className="font-semibold">15% rabatu</p>
+                <p className="text-sm text-muted-foreground">Za zapisanie się do newslettera</p>
+              </div>
             </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mb-3">
-                <Headphones className="h-7 w-7 text-primary" />
+            <div className="hidden md:block w-px h-12 bg-border" />
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+                <Headphones className="h-6 w-6 text-primary" />
               </div>
-              <p className="font-semibold">Wsparcie 24/7</p>
-              <p className="text-sm text-muted-foreground mt-0.5">Zawsze chętnie pomożemy</p>
+              <div>
+                <p className="font-semibold">Wsparcie 24/7</p>
+                <p className="text-sm text-muted-foreground">Zawsze chętnie pomożemy</p>
+              </div>
             </div>
           </div>
         </div>
