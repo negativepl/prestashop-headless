@@ -43,7 +43,7 @@ export function ProductAccordion({ product }: ProductAccordionProps) {
               <table className="w-full text-sm">
                 <tbody className="divide-y">
                   {product.features.map((feature, index) => (
-                    <tr key={feature.id} className={index % 2 === 0 ? "bg-muted/30" : ""}>
+                    <tr key={`${feature.id}-${index}`} className={index % 2 === 0 ? "bg-muted/30" : ""}>
                       <td className="px-4 py-3 text-muted-foreground font-medium w-1/3">{feature.name}</td>
                       <td className="px-4 py-3">{feature.value}</td>
                     </tr>
