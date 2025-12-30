@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import Autoplay from "embla-carousel-autoplay";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-  type CarouselApi,
-} from "@/components/ui/carousel";
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Autoplay, Navigation, Pagination } from "swiper/modules";
+import type { Swiper as SwiperType } from "swiper";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
 
 const slides = [
   {
@@ -27,91 +27,103 @@ const slides = [
 ];
 
 export function HeroCarousel() {
-  const [api, setApi] = useState<CarouselApi>();
-  const [current, setCurrent] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [swiper, setSwiper] = useState<SwiperType | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const onSelect = useCallback(() => {
-    if (!api) return;
-    setCurrent(api.selectedScrollSnap());
-  }, [api]);
-
-  useEffect(() => {
-    if (!api) return;
-    onSelect();
-    api.on("select", onSelect);
-    return () => {
-      api.off("select", onSelect);
-    };
-  }, [api, onSelect]);
-
-  const scrollTo = useCallback(
-    (index: number) => {
-      api?.scrollTo(index);
-    },
-    [api]
-  );
-
   return (
     <div className="container py-4 md:py-6">
-      <div className="relative rounded-2xl md:rounded-3xl overflow-hidden">
+      <div className="relative rounded-2xl md:rounded-3xl overflow-hidden group h-[280px] md:h-[350px] lg:h-[420px]">
         {!mounted ? (
-          <div className="relative h-[280px] md:h-[350px] lg:h-[420px] bg-muted animate-pulse" />
+          // Static placeholder for SSR - same structure as first slide
+          <div className="relative w-full h-full bg-muted">
+            <Image
+              src={slides[0].image}
+              alt="Slide 1"
+              fill
+              className="object-cover"
+              priority
+              loading="eager"
+              fetchPriority="high"
+              sizes="100vw"
+            />
+          </div>
         ) : (
-        <Carousel
-          opts={{
-            loop: true,
-          }}
-          plugins={[
-            Autoplay({
+          <Swiper
+            modules={[Autoplay, Navigation, Pagination]}
+            onSwiper={setSwiper}
+            onSlideChange={(s) => setActiveIndex(s.realIndex)}
+            autoplay={{
               delay: 5000,
-              stopOnInteraction: false,
-              stopOnMouseEnter: true,
-            }),
-          ]}
-          setApi={setApi}
-          className="w-full"
-        >
-          <CarouselContent className="-ml-0">
+              disableOnInteraction: false,
+              pauseOnMouseEnter: true,
+            }}
+            loop
+            className="h-full"
+          >
             {slides.map((slide, index) => (
-              <CarouselItem key={index} className="pl-0">
-                <div className="relative h-[280px] md:h-[350px] lg:h-[420px]">
-                  <img
+              <SwiperSlide key={index}>
+                <div className="relative w-full h-full bg-muted">
+                  <Image
                     src={slide.image}
                     alt={`Slide ${index + 1}`}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
+                    priority={index === 0}
+                    loading={index === 0 ? "eager" : "lazy"}
+                    fetchPriority={index === 0 ? "high" : "auto"}
+                    sizes="100vw"
                   />
                 </div>
-              </CarouselItem>
+              </SwiperSlide>
             ))}
-          </CarouselContent>
-          <CarouselPrevious className="left-2 md:left-4 h-10 w-10 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 hover:text-white" />
-          <CarouselNext className="right-2 md:right-4 h-10 w-10 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 hover:text-white" />
-        </Carousel>
+          </Swiper>
         )}
 
-        {/* Dots indicator */}
+        {/* Custom navigation buttons - only show when mounted */}
         {mounted && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
-            <div className="flex gap-2 px-3 py-2 rounded-full bg-black/20 backdrop-blur-md">
-              {slides.map((_, dotIndex) => (
-                <button
-                  key={dotIndex}
-                  onClick={() => scrollTo(dotIndex)}
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    current === dotIndex
-                      ? "bg-white w-6"
-                      : "bg-white/50 hover:bg-white/70 w-2"
-                  }`}
-                  aria-label={`Go to slide ${dotIndex + 1}`}
-                />
-              ))}
+          <>
+            <button
+              onClick={() => swiper?.slidePrev()}
+              className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 h-11 w-11 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 flex items-center justify-center transition-colors"
+              aria-label="Poprzedni slajd"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => swiper?.slideNext()}
+              className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 h-11 w-11 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 flex items-center justify-center transition-colors"
+              aria-label="Następny slajd"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+
+            {/* Dots indicator */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+              <div className="flex gap-1 px-2 py-2 rounded-full bg-black/20 backdrop-blur-md">
+                {slides.map((_, dotIndex) => (
+                  <button
+                    key={dotIndex}
+                    onClick={() => swiper?.slideToLoop(dotIndex)}
+                    className="min-w-[44px] min-h-[44px] flex items-center justify-center"
+                    aria-label={`Przejdź do slajdu ${dotIndex + 1}`}
+                  >
+                    <span
+                      className={`h-2.5 rounded-full transition-all duration-300 ${
+                        activeIndex === dotIndex
+                          ? "bg-white w-6"
+                          : "bg-white/50 hover:bg-white/70 w-2.5"
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          </>
         )}
       </div>
     </div>

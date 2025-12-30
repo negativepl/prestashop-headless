@@ -10,6 +10,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { useCart } from "@/hooks/use-cart";
 
 interface CheckoutForm {
@@ -92,10 +98,6 @@ export default function CheckoutPage() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const toggleSection = (section: AccordionSection) => {
-    setOpenSection(openSection === section ? section : section);
-  };
-
   const markSectionComplete = (section: AccordionSection, nextSection?: AccordionSection) => {
     setCompletedSections((prev) => new Set([...prev, section]));
     if (nextSection) {
@@ -172,39 +174,14 @@ export default function CheckoutPage() {
     );
   }
 
-  const AccordionHeader = ({
-    section,
-    icon: Icon,
-    title,
-    subtitle
-  }: {
-    section: AccordionSection;
-    icon: React.ElementType;
-    title: string;
-    subtitle?: string;
-  }) => {
-    const isOpen = openSection === section;
+  const renderSectionIcon = (section: AccordionSection, Icon: React.ElementType) => {
     const isCompleted = completedSections.has(section);
-
     return (
-      <button
-        type="button"
-        onClick={() => toggleSection(section)}
-        className={`w-full flex items-center gap-4 p-4 md:p-6 text-left transition-colors ${
-          isOpen ? "bg-card" : "bg-card/50 hover:bg-card"
-        }`}
-      >
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-          isCompleted ? "bg-green-500 text-white" : "bg-primary/10"
-        }`}>
-          {isCompleted ? <Check className="size-5" /> : <Icon className="size-5 text-primary" />}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="font-semibold">{title}</h2>
-          {subtitle && <p className="text-sm text-muted-foreground truncate">{subtitle}</p>}
-        </div>
-        <ChevronDown className={`size-5 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
-      </button>
+      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+        isCompleted ? "bg-green-500 text-white" : "bg-primary/10"
+      }`}>
+        {isCompleted ? <Check className="size-5" /> : <Icon className="size-5 text-primary" />}
+      </div>
     );
   };
 
@@ -222,18 +199,30 @@ export default function CheckoutPage() {
         <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
           {/* Accordion Form - 2 columns */}
           <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit} className="space-y-3">
-              {/* 1. Contact info */}
-              <div className="bg-card rounded-xl border overflow-hidden">
-                <AccordionHeader
-                  section="contact"
-                  icon={User}
-                  title="1. Dane kontaktowe"
-                  subtitle={completedSections.has("contact") ? `${form.firstName} ${form.lastName}, ${form.email}` : undefined}
-                />
-                {openSection === "contact" && (
-                  <div className="p-4 md:p-6 pt-0 md:pt-0 border-t">
-                    <div className="grid md:grid-cols-2 gap-4 mt-4">
+            <form onSubmit={handleSubmit}>
+              <Accordion
+                type="single"
+                collapsible
+                value={openSection}
+                onValueChange={(value) => setOpenSection(value as AccordionSection)}
+                className="space-y-3"
+              >
+                {/* 1. Contact info */}
+                <AccordionItem value="contact" className="bg-card rounded-xl border overflow-hidden">
+                  <AccordionTrigger className="group px-4 md:px-6 py-4 md:py-5 hover:no-underline [&>svg]:hidden">
+                    <div className="flex items-center gap-4 w-full">
+                      {renderSectionIcon("contact", User)}
+                      <div className="flex-1 min-w-0 text-left">
+                        <h2 className="font-semibold">1. Dane kontaktowe</h2>
+                        {completedSections.has("contact") && (
+                          <p className="text-sm text-muted-foreground truncate">{form.firstName} {form.lastName}, {form.email}</p>
+                        )}
+                      </div>
+                      <ChevronDown className="size-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 md:px-6 pb-4 md:pb-6">
+                    <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="firstName">Imię</Label>
                         <Input
@@ -299,21 +288,25 @@ export default function CheckoutPage() {
                     >
                       Dalej
                     </Button>
-                  </div>
-                )}
-              </div>
+                  </AccordionContent>
+                </AccordionItem>
 
-              {/* 2. Shipping address */}
-              <div className="bg-card rounded-xl border overflow-hidden">
-                <AccordionHeader
-                  section="shipping"
-                  icon={MapPin}
-                  title="2. Adres dostawy"
-                  subtitle={completedSections.has("shipping") ? `${form.address}, ${form.postcode} ${form.city}` : undefined}
-                />
-                {openSection === "shipping" && (
-                  <div className="p-4 md:p-6 pt-0 md:pt-0 border-t">
-                    <div className="space-y-4 mt-4">
+                {/* 2. Shipping address */}
+                <AccordionItem value="shipping" className="bg-card rounded-xl border overflow-hidden">
+                  <AccordionTrigger className="group px-4 md:px-6 py-4 md:py-5 hover:no-underline [&>svg]:hidden">
+                    <div className="flex items-center gap-4 w-full">
+                      {renderSectionIcon("shipping", MapPin)}
+                      <div className="flex-1 min-w-0 text-left">
+                        <h2 className="font-semibold">2. Adres dostawy</h2>
+                        {completedSections.has("shipping") && (
+                          <p className="text-sm text-muted-foreground truncate">{form.address}, {form.postcode} {form.city}</p>
+                        )}
+                      </div>
+                      <ChevronDown className="size-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 md:px-6 pb-4 md:pb-6">
+                    <div className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="address">Ulica i numer</Label>
                         <Input
@@ -361,21 +354,25 @@ export default function CheckoutPage() {
                     >
                       Dalej
                     </Button>
-                  </div>
-                )}
-              </div>
+                  </AccordionContent>
+                </AccordionItem>
 
-              {/* 3. Delivery method */}
-              <div className="bg-card rounded-xl border overflow-hidden">
-                <AccordionHeader
-                  section="delivery"
-                  icon={Truck}
-                  title="3. Sposób dostawy"
-                  subtitle={completedSections.has("delivery") ? selectedShippingMethod?.name : undefined}
-                />
-                {openSection === "delivery" && (
-                  <div className="p-4 md:p-6 pt-0 md:pt-0 border-t">
-                    <div className="space-y-3 mt-4">
+                {/* 3. Delivery method */}
+                <AccordionItem value="delivery" className="bg-card rounded-xl border overflow-hidden">
+                  <AccordionTrigger className="group px-4 md:px-6 py-4 md:py-5 hover:no-underline [&>svg]:hidden">
+                    <div className="flex items-center gap-4 w-full">
+                      {renderSectionIcon("delivery", Truck)}
+                      <div className="flex-1 min-w-0 text-left">
+                        <h2 className="font-semibold">3. Sposób dostawy</h2>
+                        {completedSections.has("delivery") && (
+                          <p className="text-sm text-muted-foreground truncate">{selectedShippingMethod?.name}</p>
+                        )}
+                      </div>
+                      <ChevronDown className="size-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 md:px-6 pb-4 md:pb-6">
+                    <div className="space-y-3">
                       {SHIPPING_METHODS.map((method) => {
                         const Icon = method.icon;
                         const isSelected = selectedShipping === method.id;
@@ -424,21 +421,25 @@ export default function CheckoutPage() {
                     >
                       Dalej
                     </Button>
-                  </div>
-                )}
-              </div>
+                  </AccordionContent>
+                </AccordionItem>
 
-              {/* 4. Payment method */}
-              <div className="bg-card rounded-xl border overflow-hidden">
-                <AccordionHeader
-                  section="payment"
-                  icon={CreditCard}
-                  title="4. Metoda płatności"
-                  subtitle={completedSections.has("payment") ? PAYMENT_METHODS.find(m => m.id === selectedPayment)?.name : undefined}
-                />
-                {openSection === "payment" && (
-                  <div className="p-4 md:p-6 pt-0 md:pt-0 border-t">
-                    <div className="space-y-3 mt-4">
+                {/* 4. Payment method */}
+                <AccordionItem value="payment" className="bg-card rounded-xl border overflow-hidden">
+                  <AccordionTrigger className="group px-4 md:px-6 py-4 md:py-5 hover:no-underline [&>svg]:hidden">
+                    <div className="flex items-center gap-4 w-full">
+                      {renderSectionIcon("payment", CreditCard)}
+                      <div className="flex-1 min-w-0 text-left">
+                        <h2 className="font-semibold">4. Metoda płatności</h2>
+                        {completedSections.has("payment") && (
+                          <p className="text-sm text-muted-foreground truncate">{PAYMENT_METHODS.find(m => m.id === selectedPayment)?.name}</p>
+                        )}
+                      </div>
+                      <ChevronDown className="size-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 md:px-6 pb-4 md:pb-6">
+                    <div className="space-y-3">
                       {PAYMENT_METHODS.map((method) => {
                         const Icon = method.icon;
                         const isSelected = selectedPayment === method.id;
@@ -482,9 +483,9 @@ export default function CheckoutPage() {
                     >
                       Gotowe
                     </Button>
-                  </div>
-                )}
-              </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
 
               {/* Error message */}
               {error && (
@@ -597,7 +598,7 @@ export default function CheckoutPage() {
                 {!isFreeShipping && (
                   <div className="mt-2">
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-muted-foreground">Do darmowej dostawy brakuje {formatPrice(FREE_SHIPPING_THRESHOLD - total)}</span>
+                      <span className="text-muted-foreground">Do darmowej dostawy brakuje Ci {formatPrice(FREE_SHIPPING_THRESHOLD - total)}</span>
                       <span className="text-muted-foreground">{formatPrice(FREE_SHIPPING_THRESHOLD)}</span>
                     </div>
                     <div className="h-2 bg-muted rounded-full overflow-hidden">

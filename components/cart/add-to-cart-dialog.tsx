@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Check, ShoppingCart } from "lucide-react";
 import {
   Dialog,
@@ -74,12 +75,14 @@ export function AddToCartDialog({
 
             {/* Added product */}
             <div className="flex gap-4 py-6">
-              <div className="w-24 h-24 flex-shrink-0 bg-white rounded-lg overflow-hidden p-2">
+              <div className="relative w-24 h-24 flex-shrink-0 bg-white rounded-lg overflow-hidden p-2">
                 {product.imageUrl ? (
-                  <img
+                  <Image
                     src={product.imageUrl}
                     alt={product.name}
-                    className="object-contain w-full h-full"
+                    fill
+                    sizes="96px"
+                    className="object-contain"
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full text-xs text-muted-foreground">
@@ -100,15 +103,14 @@ export function AddToCartDialog({
             <div className="flex flex-col sm:flex-row gap-3 pt-6 mt-auto">
               <Button
                 variant="ghost"
-                size="lg"
-                className="flex-1 h-12 hover:bg-transparent hover:text-primary"
+                className="flex-1 hover:bg-transparent hover:text-primary"
                 onClick={() => onOpenChange(false)}
               >
                 Kontynuuj zakupy
               </Button>
               <Link href="/checkout" className="flex-1">
-                <Button size="lg" className="w-full h-12 gap-2">
-                  <ShoppingCart className="size-5" />
+                <Button className="w-full gap-2">
+                  <ShoppingCart className="size-4" />
                   Przejdź do koszyka
                 </Button>
               </Link>
@@ -153,13 +155,15 @@ export function AddToCartDialog({
                           <Link
                             href={`/products/${relatedProduct.id}`}
                             onClick={() => onOpenChange(false)}
-                            className="w-20 h-20 flex-shrink-0 bg-white rounded-md overflow-hidden"
+                            className="relative w-20 h-20 flex-shrink-0 bg-white rounded-md overflow-hidden"
                           >
                             {relatedProduct.imageUrl ? (
-                              <img
+                              <Image
                                 src={relatedProduct.imageUrl}
                                 alt={relatedProduct.name}
-                                className="object-contain w-full h-full p-1"
+                                fill
+                                sizes="80px"
+                                className="object-contain p-1"
                               />
                             ) : (
                               <div className="flex items-center justify-center h-full text-xs text-muted-foreground">

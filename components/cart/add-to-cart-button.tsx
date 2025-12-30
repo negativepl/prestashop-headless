@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ShoppingCart, Minus, Plus, Truck, Package, RotateCcw, Star, ShieldCheck } from "lucide-react";
+import { ShoppingCart, Minus, Plus, Truck, Package, RotateCcw, Star, ShieldCheck, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { useCart } from "@/hooks/use-cart";
 import { AddToCartDialog } from "./add-to-cart-dialog";
 import type { Product } from "@/lib/prestashop/types";
@@ -13,9 +11,10 @@ interface AddToCartButtonProps {
   product: Product;
 }
 
+const FREE_SHIPPING_THRESHOLD = 100;
+
 const benefits = [
   { icon: Truck, title: "Wysyłka jutro", desc: "Zamów do 14:00" },
-  { icon: Package, title: "Darmowa dostawa", desc: "Od 200 zł" },
   { icon: RotateCcw, title: "30 dni na zwrot", desc: "Bez podania przyczyny" },
   { icon: Star, title: "Wysokie oceny", desc: "4.8/5 na platformach" },
   { icon: ShieldCheck, title: "Bezpieczne płatności", desc: "Szybkie transakcje" },
@@ -24,35 +23,33 @@ const benefits = [
 export function AddToCartButton({ product }: AddToCartButtonProps) {
   const [quantity, setQuantity] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [quickBuyData, setQuickBuyData] = useState({
-    name: "",
-    phone: "",
-  });
-  const { addItem } = useCart();
+  const { addItem, total } = useCart();
 
   const handleAddToCart = () => {
     addItem(product, quantity);
     setDialogOpen(true);
   };
 
-  const handleQuickBuy = () => {
-    if (!quickBuyData.name || !quickBuyData.phone) return;
-    // TODO: Implement quick buy logic
-    console.log("Quick buy:", { product, quantity, ...quickBuyData });
-    alert("Zamówienie zostało złożone! Skontaktujemy się z Tobą.");
-    setQuickBuyData({ name: "", phone: "" });
-  };
-
-  // Only show as out of stock if quantity is explicitly 0 (not unknown/null)
   const isOutOfStock = product.quantity !== null && product.quantity <= 0;
+
+  // Calculate free shipping progress (based on cart only)
+  const amountToFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - total);
+  const hasFreeShipping = total >= FREE_SHIPPING_THRESHOLD;
+  const progressPercent = Math.min(100, (total / FREE_SHIPPING_THRESHOLD) * 100);
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("pl-PL", {
+      style: "currency",
+      currency: "PLN",
+    }).format(price);
+  };
 
   return (
     <>
       <div className="space-y-4">
-        {/* Quantity selector */}
+        {/* Quantity selector + Add to cart - single line */}
         <div className="flex items-center gap-3">
-          <span className="text-sm font-medium shrink-0">Ilość:</span>
-          <div className="flex items-center border rounded-lg overflow-hidden">
+          <div className="flex items-center border rounded-lg overflow-hidden shrink-0 bg-card">
             <button
               onClick={() => setQuantity(Math.max(1, quantity - 1))}
               disabled={quantity <= 1}
@@ -77,56 +74,85 @@ export function AddToCartButton({ product }: AddToCartButtonProps) {
               <Plus className="size-4" />
             </button>
           </div>
-        </div>
-
-        {/* Add to cart button */}
-        <Button
-          size="lg"
-          className="w-full h-12 text-base"
-          onClick={handleAddToCart}
-          disabled={isOutOfStock}
-        >
-          <ShoppingCart className="size-5 mr-2" />
-          Dodaj do koszyka
-        </Button>
-
-        <Separator />
-
-        {/* Quick buy section */}
-        <div className="space-y-3">
-          <p className="text-sm font-medium">Szybkie zakupy bez rejestracji</p>
-          <Input
-            placeholder="Imię i nazwisko"
-            value={quickBuyData.name}
-            onChange={(e) => setQuickBuyData({ ...quickBuyData, name: e.target.value })}
-          />
-          <Input
-            placeholder="Numer telefonu"
-            type="tel"
-            value={quickBuyData.phone}
-            onChange={(e) => setQuickBuyData({ ...quickBuyData, phone: e.target.value })}
-          />
           <Button
-            variant="outline"
-            className="w-full"
-            onClick={handleQuickBuy}
-            disabled={isOutOfStock || !quickBuyData.name || !quickBuyData.phone}
+            size="lg"
+            className="flex-1 h-11"
+            onClick={handleAddToCart}
+            disabled={isOutOfStock}
           >
-            Zamów telefonicznie
+            <ShoppingCart className="size-5 mr-2" />
+            Dodaj do koszyka
           </Button>
         </div>
 
-        <Separator />
+        {/* Quick buy section */}
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground text-center">Szybkie zakupy 1-Click, bez rejestracji</p>
+          <Button
+            variant="outline"
+            className="w-full h-11 !bg-[#FFCD00] hover:!bg-[#FFD633] !text-black !border-[#FFCD00] hover:!border-[#FFD633] font-semibold"
+            disabled={isOutOfStock}
+          >
+            InPost Pay
+          </Button>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="outline"
+              className="h-11 !bg-[#00D66F] hover:!bg-[#00C062] !text-black !border-[#00D66F] hover:!border-[#00C062] font-semibold"
+              disabled={isOutOfStock}
+            >
+              Zapłać z Link
+            </Button>
+            <Button
+              variant="outline"
+              className="h-11 !bg-black hover:!bg-neutral-800 !text-white !border-black hover:!border-neutral-800 font-semibold dark:!bg-white dark:hover:!bg-neutral-200 dark:!text-black dark:!border-white dark:hover:!border-neutral-200"
+              disabled={isOutOfStock}
+            >
+              Klarna
+            </Button>
+          </div>
+        </div>
+
+        {/* Free shipping progress */}
+        <div className="rounded-lg border bg-muted/30 p-3">
+          {hasFreeShipping ? (
+            <div className="flex items-center gap-2 text-sm">
+              <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
+                <Gift className="size-4 text-green-600" />
+              </div>
+              <div>
+                <p className="font-medium text-green-600">Darmowa dostawa!</p>
+                <p className="text-xs text-muted-foreground">Twoje zamówienie kwalifikuje się do darmowej dostawy</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <Package className="size-4 text-primary" />
+                  <span className="font-medium">Darmowa dostawa od {formatPrice(FREE_SHIPPING_THRESHOLD)}</span>
+                </div>
+                <span className="text-xs text-muted-foreground">Brakuje Ci {formatPrice(amountToFreeShipping)}</span>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-300"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Benefits */}
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-4 gap-2">
           {benefits.map((benefit) => (
             <div
               key={benefit.title}
-              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg border bg-muted/30 text-xs"
+              className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border bg-muted/30 text-center"
             >
-              <benefit.icon className="size-3.5 text-primary shrink-0" />
-              <span className="font-medium whitespace-nowrap">{benefit.title}</span>
+              <benefit.icon className="size-8 text-primary" />
+              <span className="text-xs font-medium leading-tight">{benefit.title}</span>
             </div>
           ))}
         </div>

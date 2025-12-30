@@ -57,7 +57,7 @@ function StarRating({ rating, onRate, interactive = false }: { rating: number; o
   );
 }
 
-export function ProductReviews({ productId }: ProductReviewsProps) {
+export function ProductReviewsContent({ productId }: ProductReviewsProps) {
   const [showForm, setShowForm] = useState(false);
   const [newReview, setNewReview] = useState({ author: "", rating: 5, content: "" });
 
@@ -76,14 +76,11 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold text-lg">Opinie klientów</h3>
-          <div className="flex items-center gap-2 mt-1">
-            <StarRating rating={Math.round(averageRating)} />
-            <span className="text-sm text-muted-foreground">
-              {averageRating.toFixed(1)} ({placeholderReviews.length} opinii)
-            </span>
-          </div>
+        <div className="flex items-center gap-2">
+          <StarRating rating={Math.round(averageRating)} />
+          <span className="text-sm text-muted-foreground">
+            {averageRating.toFixed(1)} ({placeholderReviews.length} opinii)
+          </span>
         </div>
         {!showForm && (
           <Button variant="outline" onClick={() => setShowForm(true)}>

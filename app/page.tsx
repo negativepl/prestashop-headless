@@ -1,9 +1,11 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight, Truck, RotateCcw, Percent, Headphones, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/products/product-card";
 import { HeroCarousel } from "@/components/home/hero-carousel";
 import { WeeklyHits } from "@/components/home/weekly-hits";
+import { NewArrivals } from "@/components/home/new-arrivals";
 import { prestashop } from "@/lib/prestashop/client";
 import type { Product } from "@/lib/prestashop/types";
 import { wordpress, type BlogPost } from "@/lib/wordpress/client";
@@ -12,18 +14,29 @@ export const revalidate = 60; // Revalidate every 60 seconds
 
 export default async function HomePage() {
   let products: Product[] = [];
+  let newArrivalsProducts: Product[] = [];
   let blogPosts: BlogPost[] = [];
 
   try {
-    [products, blogPosts] = await Promise.all([
-      prestashop.getProducts({ limit: 12, withImages: true, withStock: true }),
+    [products, newArrivalsProducts, blogPosts] = await Promise.all([
+      prestashop.getProducts({ limit: 20, withImages: true, withStock: true }),
+      prestashop.getProducts({ limit: 30, withImages: true, withStock: true }),
       wordpress.getPosts({ limit: 3 }),
     ]);
   } catch (e) {
     console.error("Error fetching data:", e);
   }
 
-  const weeklyHitsProducts = products.slice(0, 8);
+  // Filter out of stock products first, then take 10
+  const availableProducts = products.filter(
+    (product) => product.quantity === null || product.quantity > 0
+  );
+  const weeklyHitsProducts = availableProducts.slice(0, 10);
+
+  // Filter and take 20 products for new arrivals
+  const availableNewArrivals = newArrivalsProducts.filter(
+    (product) => product.quantity === null || product.quantity > 0
+  ).slice(0, 20);
 
   return (
     <div className="flex flex-col">
@@ -64,10 +77,10 @@ export default async function HomePage() {
               </Link>
             </div>
 
-            {products.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                {products.slice(0, 4).map((product) => (
-                  <ProductCard key={product.id} product={product} />
+            {availableProducts.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-5">
+                {availableProducts.slice(0, 5).map((product, index) => (
+                  <ProductCard key={product.id} product={product} priority={index < 5} />
                 ))}
               </div>
             ) : (
@@ -91,27 +104,27 @@ export default async function HomePage() {
       </section>
 
       {/* New Arrivals */}
-      {products.length > 4 && (
+      {availableNewArrivals.length > 0 && (
         <section className="py-8">
           <div className="container">
-            <div className="bg-card rounded-2xl p-6 md:p-10 border">
-              <div className="flex items-end justify-between mb-8">
-                <div>
-                  <span className="text-primary font-semibold text-sm uppercase tracking-wider">
-                    Nowości
-                  </span>
-                  <h2 className="text-3xl md:text-4xl font-bold mt-2">
-                    Właśnie dodane
-                  </h2>
-                  <p className="mt-2 text-muted-foreground">
-                    Sprawdź najnowsze produkty w naszej ofercie
-                  </p>
+            <div className="bg-card rounded-2xl border overflow-hidden">
+              <div className="p-6 md:p-10 pb-0 md:pb-0">
+                <div className="flex items-end justify-between mb-8">
+                  <div>
+                    <span className="text-primary font-semibold text-sm uppercase tracking-wider">
+                      Nowości
+                    </span>
+                    <h2 className="text-3xl md:text-4xl font-bold mt-2">
+                      Właśnie dodane
+                    </h2>
+                    <p className="mt-2 text-muted-foreground">
+                      Sprawdź najnowsze produkty w naszej ofercie
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                {products.slice(4, 8).map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
+              <div className="pb-6 md:pb-10">
+                <NewArrivals initialProducts={availableNewArrivals} />
               </div>
             </div>
           </div>
@@ -147,12 +160,15 @@ export default async function HomePage() {
                 {blogPosts.map((post) => (
                   <article key={post.id} className="group bg-accent rounded-xl border overflow-hidden hover:border-foreground/20 transition-colors">
                     <Link href={`/blog/${post.slug}`}>
-                      <div className="aspect-video bg-muted overflow-hidden">
+                      <div className="relative aspect-video bg-muted overflow-hidden">
                         {post.image ? (
-                          <img
+                          <Image
                             src={post.image}
                             alt={post.imageAlt || post.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            fill
+                            sizes="(max-width: 768px) 100vw, 33vw"
+                            loading="lazy"
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-muted-foreground">
@@ -200,7 +216,7 @@ export default async function HomePage() {
             {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
               <div
                 key={num}
-                className="h-12 md:h-14 bg-white rounded-lg flex items-center justify-center text-muted-foreground font-medium text-xs border border-border/50"
+                className="h-12 md:h-14 bg-card rounded-lg flex items-center justify-center text-foreground font-medium text-xs border border-border/50"
               >
                 Marka {num}
               </div>
@@ -210,7 +226,7 @@ export default async function HomePage() {
       </section>
 
       {/* Trust Section */}
-      <section className="bg-white text-black dark:bg-black dark:text-white">
+      <section className="bg-card">
         <div className="container py-10 md:py-14">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
             <div className="flex flex-col items-center text-center">

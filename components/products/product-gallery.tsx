@@ -24,25 +24,25 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
   return (
     <div className="space-y-3">
       {/* Main image */}
-      <div className="relative aspect-square bg-muted rounded-xl overflow-hidden">
+      <div className="relative aspect-square bg-white rounded-xl overflow-hidden p-6">
         <Image
           src={displayImages[selectedIndex]}
           alt={`${productName} - zdjęcie ${selectedIndex + 1}`}
           fill
-          className="object-cover"
+          className="object-contain p-4"
           priority
         />
       </div>
 
       {/* Thumbnails */}
       {displayImages.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-2">
+        <div className="flex gap-2 overflow-x-auto py-1 px-1">
           {displayImages.map((image, index) => (
             <button
               key={index}
               onClick={() => setSelectedIndex(index)}
               className={cn(
-                "relative size-16 sm:size-20 shrink-0 rounded-lg overflow-hidden border-2 transition-all",
+                "relative size-16 sm:size-20 shrink-0 rounded-lg overflow-hidden border-2 transition-all bg-white",
                 selectedIndex === index
                   ? "border-primary ring-2 ring-primary/20"
                   : "border-transparent hover:border-muted-foreground/30"
@@ -52,7 +52,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
                 src={image}
                 alt={`${productName} - miniatura ${index + 1}`}
                 fill
-                className="object-cover"
+                className="object-contain p-1.5"
               />
             </button>
           ))}

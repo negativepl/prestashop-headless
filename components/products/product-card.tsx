@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import { ShoppingCart, Minus, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -12,12 +13,16 @@ import type { Product } from "@/lib/prestashop/types";
 
 interface ProductCardProps {
   product: Product;
+  priority?: boolean;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, priority = false }: ProductCardProps) {
   const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
+  const [inputValue, setInputValue] = useState("1");
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  const maxQuantity = product.quantity !== null && product.quantity > 0 ? product.quantity : 99;
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pl-PL", {
@@ -36,29 +41,66 @@ export function ProductCard({ product }: ProductCardProps) {
   const incrementQuantity = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setQuantity((q) => Math.min(q + 1, product.quantity ?? 99));
+    const newVal = Math.min(quantity + 1, maxQuantity);
+    setQuantity(newVal);
+    setInputValue(newVal.toString());
   };
 
   const decrementQuantity = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setQuantity((q) => Math.max(q - 1, 1));
+    const newVal = Math.max(quantity - 1, 1);
+    setQuantity(newVal);
+    setInputValue(newVal.toString());
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    const value = e.target.value;
+
+    if (value === "") {
+      setInputValue("");
+      return;
+    }
+
+    if (/^\d+$/.test(value)) {
+      let val = parseInt(value);
+      val = Math.max(1, Math.min(val, maxQuantity));
+      setQuantity(val);
+      setInputValue(val.toString());
+    }
+  };
+
+  const handleInputBlur = () => {
+    if (inputValue === "") {
+      setQuantity(1);
+      setInputValue("1");
+    }
+  };
+
+  const handleInputClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
   };
 
   // Only show as out of stock if quantity is explicitly 0 (not unknown/null)
   const isOutOfStock = product.quantity !== null && product.quantity <= 0;
 
   return (
-    <div className="group bg-accent rounded-xl border overflow-hidden transition-all duration-300 hover:border-foreground/20 flex flex-col">
+    <div className="group bg-accent rounded-xl border overflow-hidden transition-all duration-300 hover:border-foreground/20 flex flex-col h-full">
       {/* Image */}
       <Link href={`/products/${product.id}`}>
         <div className="relative aspect-square overflow-hidden bg-white p-4">
           {product.imageUrl ? (
-            <div className="w-full h-full flex items-center justify-center">
-              <img
+            <div className="relative w-full h-full">
+              <Image
                 src={product.imageUrl}
                 alt={product.name}
-                className={`max-w-full max-h-full object-contain transition-transform duration-500 group-hover:scale-105 ${isOutOfStock ? "grayscale opacity-60" : ""}`}
+                fill
+                sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                priority={priority}
+                loading={priority ? "eager" : "lazy"}
+                className={`object-contain transition-transform duration-500 group-hover:scale-105 ${isOutOfStock ? "grayscale opacity-60" : ""}`}
               />
             </div>
           ) : (
@@ -92,23 +134,25 @@ export function ProductCard({ product }: ProductCardProps) {
       {/* Content */}
       <div className="p-4 flex flex-col flex-1">
         <Link href={`/products/${product.id}`}>
-          <h3 className="font-medium text-sm md:text-base line-clamp-2 hover:text-primary transition-colors leading-tight">
+          <h3 className="font-medium text-sm md:text-base line-clamp-3 hover:text-primary transition-colors leading-tight">
             {product.name}
           </h3>
         </Link>
 
-        <div className="mt-3 flex items-center justify-between">
-          <span className="text-lg font-bold">{formatPrice(product.price)}</span>
-          {!isOutOfStock && (
-            <span className="text-xs font-medium flex items-center gap-1.5 text-muted-foreground">
-              <span className="w-2 h-2 rounded-full bg-green-500"></span>
-              {product.quantity !== null ? `${product.quantity} szt.` : "Dostępny"}
-            </span>
-          )}
-        </div>
+        {/* Price and cart section - pushed to bottom */}
+        <div className="mt-auto pt-3">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-lg font-bold">{formatPrice(product.price)}</span>
+            {!isOutOfStock && (
+              <span className="text-xs font-medium flex items-center gap-1.5 text-muted-foreground">
+                <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                {product.quantity !== null ? `${product.quantity} szt.` : "Dostępny"}
+              </span>
+            )}
+          </div>
 
-        {/* Add to cart section - always visible */}
-        <div className="mt-3 pt-3 border-t min-h-[72px] flex flex-col justify-center">
+          {/* Add to cart section */}
+          <div className="pt-3 border-t min-h-[72px] flex flex-col justify-center">
           {isOutOfStock ? (
             <div className="flex items-center justify-center">
               <Button disabled className="h-10 px-8" variant="secondary">
@@ -118,31 +162,43 @@ export function ProductCard({ product }: ProductCardProps) {
           ) : (
             <div className="flex gap-2 items-stretch">
               {/* Quantity selector */}
-              <div className="flex items-center border rounded-lg overflow-hidden bg-muted/50 h-11">
+              <div className="flex items-center border rounded-lg bg-muted/50 h-9">
                 <button
                   onClick={decrementQuantity}
-                  className="h-full w-9 flex items-center justify-center hover:bg-muted transition-colors"
+                  className="h-full w-8 flex items-center justify-center hover:bg-muted transition-colors rounded-l-lg"
                   disabled={quantity <= 1}
+                  aria-label="Zmniejsz ilość"
                 >
-                  <Minus className="size-4" />
+                  <Minus className="size-3.5" />
                 </button>
-                <span className="w-8 text-center text-sm font-medium">{quantity}</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={inputValue}
+                  onChange={handleInputChange}
+                  onBlur={handleInputBlur}
+                  onClick={handleInputClick}
+                  className="w-8 text-center text-sm font-medium bg-transparent focus:outline-none"
+                  aria-label="Ilość produktu"
+                />
                 <button
                   onClick={incrementQuantity}
-                  className="h-full w-9 flex items-center justify-center hover:bg-muted transition-colors"
-                  disabled={quantity >= (product.quantity ?? 99)}
+                  className="h-full w-8 flex items-center justify-center hover:bg-muted transition-colors rounded-r-lg"
+                  disabled={quantity >= maxQuantity}
+                  aria-label="Zwiększ ilość"
                 >
-                  <Plus className="size-4" />
+                  <Plus className="size-3.5" />
                 </button>
               </div>
 
               {/* Add to cart button */}
               <Button
                 onClick={handleAddToCart}
-                className="flex-1 h-11 gap-2"
+                size="sm"
+                className="flex-1 h-9 gap-1.5"
               >
-                <ShoppingCart className="size-4" />
-                <span className="hidden sm:inline">Dodaj do koszyka</span>
+                <ShoppingCart className="size-3.5" />
+                <span className="hidden sm:inline">Do koszyka</span>
               </Button>
             </div>
           )}
@@ -152,6 +208,7 @@ export function ProductCard({ product }: ProductCardProps) {
               Zamów do 16:00 - wysyłka dziś
             </p>
           )}
+          </div>
         </div>
       </div>
 

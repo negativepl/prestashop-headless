@@ -177,7 +177,7 @@ function MegaMenuPanel({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className="fixed left-0 right-0 bg-white dark:bg-zinc-900 border-b shadow-xl z-30"
+      className="fixed left-0 right-0 bg-card border-b shadow-xl z-30"
       style={{ top }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}

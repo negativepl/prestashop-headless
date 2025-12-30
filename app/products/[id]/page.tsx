@@ -1,12 +1,10 @@
 import { notFound } from "next/navigation";
+import { Star } from "lucide-react";
 import { prestashop } from "@/lib/prestashop/client";
 import { AddToCartButton } from "@/components/cart/add-to-cart-button";
-import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ProductGallery } from "@/components/products/product-gallery";
-import { ProductDetails } from "@/components/products/product-details";
-import { ProductReviews } from "@/components/products/product-reviews";
-import { Separator } from "@/components/ui/separator";
+import { ProductAccordion } from "@/components/products/product-accordion";
 
 // ISR - revalidate every 5 minutes
 export const revalidate = 300;
@@ -37,10 +35,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound();
   }
 
-  // Get category for breadcrumbs
-  const category = product.categoryId
-    ? await prestashop.getCategory(product.categoryId)
-    : null;
+  // Get category path for breadcrumbs
+  const categoryPath = product.categoryId
+    ? await prestashop.getCategoryPath(product.categoryId)
+    : [];
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pl-PL", {
@@ -50,8 +48,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   };
 
   const breadcrumbItems = [
-    { label: "Produkty", href: "/products" },
-    ...(category ? [{ label: category.name, href: `/categories/${category.id}` }] : []),
+    ...categoryPath.map((cat) => ({ label: cat.name, href: `/categories/${cat.id}` })),
     { label: product.name },
   ];
 
@@ -71,36 +68,24 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
         {/* Right - Product Info */}
         <div className="space-y-6">
-          {/* Title & SKU */}
+          {/* Title */}
           <div>
-            <div className="flex items-start justify-between gap-4">
-              <h1 className="text-2xl md:text-3xl font-bold">{product.name}</h1>
-              {product.manufacturerName && (
-                <Badge variant="secondary" className="shrink-0">
-                  {product.manufacturerName}
-                </Badge>
-              )}
+            <h1 className="text-2xl md:text-3xl font-bold">{product.name}</h1>
+            <div className="flex items-center gap-2 mt-2">
+              <div className="flex">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className="size-4 text-muted-foreground/60"
+                  />
+                ))}
+              </div>
+              <span className="text-sm text-muted-foreground">Recenzje (0)</span>
             </div>
-            {product.reference && (
-              <p className="text-sm text-muted-foreground mt-1">
-                SKU: {product.reference}
-              </p>
-            )}
           </div>
 
-          {/* Price & Stock */}
-          <div className="flex items-center gap-4">
-            <span className="text-3xl font-bold">{formatPrice(product.price)}</span>
-            {product.quantity !== null && (
-              product.quantity > 0 ? (
-                <Badge variant="secondary" className="bg-green-100 text-green-800">
-                  W magazynie: {product.quantity} szt.
-                </Badge>
-              ) : (
-                <Badge variant="destructive">Brak w magazynie</Badge>
-              )
-            )}
-          </div>
+          {/* Price */}
+          <span className="text-3xl font-bold">{formatPrice(product.price)}</span>
 
           {/* Short description */}
           {product.descriptionShort && (
@@ -110,32 +95,16 @@ export default async function ProductPage({ params }: ProductPageProps) {
             />
           )}
 
-          <Separator />
-
           {/* Add to cart section with benefits */}
-          <AddToCartButton product={product} />
+          <div className="pt-6">
+            <AddToCartButton product={product} />
+          </div>
         </div>
       </div>
 
-      {/* Description */}
-      {product.description && (
-        <div className="mt-12">
-          <h2 className="text-xl font-semibold mb-4">Opis produktu</h2>
-          <div
-            className="prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: product.description }}
-          />
-        </div>
-      )}
-
-      {/* Product details */}
+      {/* Accordion sections */}
       <div className="mt-12">
-        <ProductDetails product={product} />
-      </div>
-
-      {/* Reviews */}
-      <div className="mt-12">
-        <ProductReviews productId={product.id} />
+        <ProductAccordion product={product} />
       </div>
     </div>
   );

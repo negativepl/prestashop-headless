@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { ShoppingCart, Search, User, ChevronDown, Phone, Star, Minus, Plus, Trash2, ShoppingBag, ArrowRight, Heart, LogIn, LogOut, Truck, X } from "lucide-react";
+import { ShoppingCart, Search, User, ChevronDown, Phone, Star, Minus, Plus, Trash2, ShoppingBag, ArrowRight, Heart, LogIn, LogOut, Truck, X, Globe, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -89,7 +89,7 @@ export function Header({ categories = [] }: HeaderProps) {
   return (
     <>
       {/* Top bar - scrolls away */}
-      <div className="bg-primary text-white">
+      <div className="bg-muted text-foreground">
         <div className="container py-2.5 md:py-3 flex justify-center md:justify-between items-center text-sm relative">
           <div className="hidden md:flex items-center gap-6">
             <span className="flex items-center gap-2"><Phone className="h-4 w-4" /> +48 793 237 970</span>
@@ -99,14 +99,50 @@ export function Header({ categories = [] }: HeaderProps) {
             <span className="flex items-center gap-2"><Star className="h-4 w-4" /> Na rynku od ponad 10 lat</span>
           </div>
           <p className="md:hidden text-sm">Darmowa dostawa od 100 PLN</p>
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-4">
+            {/* Currency selector */}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-1.5 hover:text-primary transition-colors cursor-pointer outline-none">
+                <Coins className="size-3.5" />
+                <span>PLN</span>
+                <ChevronDown className="size-3" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[100px] bg-white dark:bg-black">
+                <DropdownMenuItem className="cursor-pointer">
+                  <span className="font-medium">PLN</span>
+                  <span className="text-muted-foreground ml-2">zł</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">
+                  <span className="font-medium">EUR</span>
+                  <span className="text-muted-foreground ml-2">€</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Language selector */}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-1.5 hover:text-primary transition-colors cursor-pointer outline-none">
+                <Globe className="size-3.5" />
+                <span>PL</span>
+                <ChevronDown className="size-3" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[120px] bg-white dark:bg-black">
+                <DropdownMenuItem className="cursor-pointer">Polski</DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">English</DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">Deutsch</DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">Română</DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">Čeština</DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">Magyar</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <a href="https://b2b.homescreen.pl" className="hover:underline transition-colors">Hurtownia</a>
           </div>
         </div>
       </div>
 
       {/* Main header - sticky */}
-      <header className={`sticky top-0 z-50 bg-white dark:bg-black transition-shadow duration-300 ease-in-out ${isScrolled ? "shadow-sm" : "shadow-none"}`}>
+      <header className={`sticky top-0 z-50 bg-card transition-shadow duration-300 ease-in-out ${isScrolled ? "shadow-sm" : "shadow-none"}`}>
         <div className="container py-2 md:py-2.5">
           <div className="flex items-center justify-between gap-4 md:gap-8">
             {/* Left - Logo */}
@@ -379,7 +415,7 @@ export function Header({ categories = [] }: HeaderProps) {
       </header>
 
       {/* Mega Menu navigation bar - scrolls away (hidden on mobile) */}
-      <div className="hidden md:block bg-white dark:bg-black relative z-40">
+      <div className="hidden md:block bg-card relative z-40">
         {/* Fading divider line */}
         <div className="container">
           <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />

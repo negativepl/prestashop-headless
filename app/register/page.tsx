@@ -85,7 +85,7 @@ export default function RegisterPage() {
                   name="firstName"
                   type="text"
                   placeholder="Jan"
-                  className="pl-10 h-12 bg-white dark:bg-zinc-900"
+                  className="pl-10 h-12 bg-white dark:bg-neutral-900"
                   required
                 />
               </div>
@@ -97,7 +97,7 @@ export default function RegisterPage() {
                 name="lastName"
                 type="text"
                 placeholder="Kowalski"
-                className="h-12 bg-white dark:bg-zinc-900"
+                className="h-12 bg-white dark:bg-neutral-900"
                 required
               />
             </div>
@@ -112,7 +112,7 @@ export default function RegisterPage() {
                 name="email"
                 type="email"
                 placeholder="twoj@email.pl"
-                className="pl-10 h-12 bg-white dark:bg-zinc-900"
+                className="pl-10 h-12 bg-white dark:bg-neutral-900"
                 required
               />
             </div>
@@ -127,7 +127,7 @@ export default function RegisterPage() {
                 name="password"
                 type={showPassword ? "text" : "password"}
                 placeholder="Min. 8 znaków"
-                className="pl-10 pr-10 h-12 bg-white dark:bg-zinc-900"
+                className="pl-10 pr-10 h-12 bg-white dark:bg-neutral-900"
                 required
                 minLength={8}
               />
@@ -150,7 +150,7 @@ export default function RegisterPage() {
                 name="confirmPassword"
                 type={showConfirmPassword ? "text" : "password"}
                 placeholder="Powtórz hasło"
-                className="pl-10 pr-10 h-12 bg-white dark:bg-zinc-900"
+                className="pl-10 pr-10 h-12 bg-white dark:bg-neutral-900"
                 required
               />
               <button

@@ -6,7 +6,12 @@ interface ProductGridProps {
 }
 
 export function ProductGrid({ products }: ProductGridProps) {
-  if (products.length === 0) {
+  // Filter out products that are out of stock
+  const availableProducts = products.filter(
+    (product) => product.quantity === null || product.quantity > 0
+  );
+
+  if (availableProducts.length === 0) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">Brak produktów do wyświetlenia</p>
@@ -15,8 +20,8 @@ export function ProductGrid({ products }: ProductGridProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      {products.map((product) => (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-5">
+      {availableProducts.map((product) => (
         <ProductCard key={product.id} product={product} />
       ))}
     </div>

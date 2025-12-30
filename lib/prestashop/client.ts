@@ -276,6 +276,36 @@ class PrestaShopClient {
       }
     }
 
+    // Fetch product features
+    const features: { id: number; name: string; value: string }[] = [];
+    if (fetchExtras && p.associations?.product_features?.length) {
+      try {
+        for (const feature of p.associations.product_features) {
+          // Fetch feature name
+          const featureResponse = await this.fetch<PSResponse<{ product_feature: { id: number; name: PSMultiLang[] } }>>(
+            `product_features/${feature.id}?display=full`
+          );
+          const featureData = (featureResponse as any).product_feature || (featureResponse as any).product_features?.[0];
+
+          // Fetch feature value
+          const valueResponse = await this.fetch<PSResponse<{ product_feature_value: { id: number; value: PSMultiLang[] } }>>(
+            `product_feature_values/${feature.id_feature_value}?display=full`
+          );
+          const valueData = (valueResponse as any).product_feature_value || (valueResponse as any).product_feature_values?.[0];
+
+          if (featureData && valueData) {
+            features.push({
+              id: parseInt(feature.id),
+              name: this.getMultiLangValue(featureData.name),
+              value: this.getMultiLangValue(valueData.value),
+            });
+          }
+        }
+      } catch {
+        // Features not available
+      }
+    }
+
     // Calculate gross price (with VAT)
     const netPrice = parseFloat(p.price) || 0;
     const taxRate = await this.getTaxRate(p.id_tax_rules_group);
@@ -297,6 +327,7 @@ class PrestaShopClient {
       weight: parseFloat(p.weight) || 0,
       manufacturerId: p.id_manufacturer,
       manufacturerName,
+      features,
     };
   }
 
@@ -326,12 +357,31 @@ class PrestaShopClient {
 
   async getCategory(id: number): Promise<Category | null> {
     try {
-      const response = await this.fetch<PSResponse<PSCategory>>(`categories/${id}?display=full`);
-      const category = response.category as PSCategory;
+      const response = await this.fetch<PSResponse<PSCategory | PSCategory[]>>(`categories/${id}?display=full`);
+      // API returns either { category: {...} } or { categories: [{...}] }
+      const category = response.category
+        ? (response.category as PSCategory)
+        : (response.categories as PSCategory[])?.[0];
+      if (!category) return null;
       return this.mapCategory(category);
     } catch {
       return null;
     }
+  }
+
+  async getCategoryPath(categoryId: number): Promise<Category[]> {
+    const path: Category[] = [];
+    let currentId = categoryId;
+
+    // Root category in PrestaShop is usually id=2, stop there
+    while (currentId > 2) {
+      const category = await this.getCategory(currentId);
+      if (!category) break;
+      path.unshift(category); // Add at beginning to get correct order
+      currentId = category.parentId;
+    }
+
+    return path;
   }
 
   async getCategoriesWithChildren(_rootParentId: number = 2): Promise<Category[]> {

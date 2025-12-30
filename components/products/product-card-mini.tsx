@@ -98,7 +98,7 @@ export function ProductCardMini({ product }: ProductCardMiniProps) {
         <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent opacity-0 translate-y-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0">
           <Button
             onClick={handleAddToCart}
-            className="w-full h-8 text-xs gap-1.5 bg-white text-zinc-900 hover:bg-zinc-100"
+            className="w-full h-8 text-xs gap-1.5 bg-white text-neutral-900 hover:bg-neutral-100"
           >
             <ShoppingCart className="size-3" />
             Dodaj do koszyka

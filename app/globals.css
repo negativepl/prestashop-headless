@@ -57,7 +57,7 @@
   --card-foreground: oklch(0.18 0 0);
   --popover: oklch(0.98 0 0);
   --popover-foreground: oklch(0.18 0 0);
-  --primary: oklch(0.30 0.12 300);
+  --primary: oklch(0.45 0.22 285);
   --primary-foreground: oklch(0.98 0 0);
   --secondary: oklch(0.99 0 0);
   --secondary-foreground: oklch(0.25 0 0);
@@ -68,55 +68,56 @@
   --destructive: oklch(0.577 0.2 25);
   --border: oklch(0.92 0 0);
   --input: oklch(0.92 0 0);
-  --ring: oklch(0.30 0.12 300);
-  --chart-1: oklch(0.30 0.12 300);
+  --ring: oklch(0.45 0.22 285);
+  --chart-1: oklch(0.45 0.22 285);
   --chart-2: oklch(0.6 0.15 230);
   --chart-3: oklch(0.65 0.15 180);
   --chart-4: oklch(0.7 0.15 100);
   --chart-5: oklch(0.6 0.16 330);
   --sidebar: oklch(0.97 0 0);
   --sidebar-foreground: oklch(0.18 0 0);
-  --sidebar-primary: oklch(0.30 0.12 300);
+  --sidebar-primary: oklch(0.45 0.22 285);
   --sidebar-primary-foreground: oklch(0.98 0 0);
   --sidebar-accent: oklch(1 0 0);
   --sidebar-accent-foreground: oklch(0.25 0 0);
   --sidebar-border: oklch(0.92 0 0);
-  --sidebar-ring: oklch(0.30 0.12 300);
+  --sidebar-ring: oklch(0.45 0.22 285);
 }
 
 .dark {
-  /* Dark mode hierarchy: background -> card -> muted -> accent (dark to black) */
-  --background: oklch(0.16 0 0);
-  --foreground: oklch(0.92 0 0);
-  --card: oklch(0.12 0 0);
-  --card-foreground: oklch(0.92 0 0);
-  --popover: oklch(0.12 0 0);
-  --popover-foreground: oklch(0.92 0 0);
-  --primary: oklch(0.55 0.15 300);
+  /* Dark mode hierarchy: background (darkest) -> card -> muted -> accent (lightest) */
+  /* Purple tint: hue 295, subtle chroma */
+  --background: oklch(0.18 0.02 295);
+  --foreground: oklch(0.92 0.01 295);
+  --card: oklch(0.20 0.02 295);
+  --card-foreground: oklch(0.92 0.01 295);
+  --popover: oklch(0.20 0.02 295);
+  --popover-foreground: oklch(0.92 0.01 295);
+  --primary: oklch(0.68 0.20 285);
   --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.09 0 0);
-  --secondary-foreground: oklch(0.92 0 0);
-  --muted: oklch(0.09 0 0);
-  --muted-foreground: oklch(0.55 0 0);
-  --accent: oklch(0.06 0 0);
-  --accent-foreground: oklch(0.92 0 0);
+  --secondary: oklch(0.22 0.015 295);
+  --secondary-foreground: oklch(0.92 0.01 295);
+  --muted: oklch(0.22 0.015 295);
+  --muted-foreground: oklch(0.55 0.02 295);
+  --accent: oklch(0.24 0.01 295);
+  --accent-foreground: oklch(0.92 0.01 295);
   --destructive: oklch(0.65 0.2 25);
-  --border: oklch(0.22 0 0);
-  --input: oklch(0.18 0 0);
-  --ring: oklch(0.55 0.15 300);
-  --chart-1: oklch(0.55 0.15 300);
+  --border: oklch(0.28 0.02 295);
+  --input: oklch(0.22 0.02 295);
+  --ring: oklch(0.68 0.20 285);
+  --chart-1: oklch(0.68 0.20 285);
   --chart-2: oklch(0.7 0.15 230);
   --chart-3: oklch(0.75 0.15 180);
   --chart-4: oklch(0.8 0.15 100);
   --chart-5: oklch(0.7 0.16 330);
-  --sidebar: oklch(0.16 0 0);
-  --sidebar-foreground: oklch(0.92 0 0);
-  --sidebar-primary: oklch(0.55 0.15 300);
+  --sidebar: oklch(0.18 0.02 295);
+  --sidebar-foreground: oklch(0.92 0.01 295);
+  --sidebar-primary: oklch(0.68 0.20 285);
   --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.06 0 0);
-  --sidebar-accent-foreground: oklch(0.92 0 0);
-  --sidebar-border: oklch(0.22 0 0);
-  --sidebar-ring: oklch(0.55 0.15 300);
+  --sidebar-accent: oklch(0.24 0.01 295);
+  --sidebar-accent-foreground: oklch(0.92 0.01 295);
+  --sidebar-border: oklch(0.28 0.02 295);
+  --sidebar-ring: oklch(0.68 0.20 285);
 }
 
 @layer base {
@@ -155,6 +156,7 @@
 ::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
+  will-change: clip-path;
 }
 
 ::view-transition-old(root) {
@@ -163,7 +165,43 @@
 
 ::view-transition-new(root) {
   z-index: 9999;
-  animation: clip-reveal 0.7s ease-out;
+  animation: clip-reveal 1.2s cubic-bezier(0.45, 0, 0.55, 1);
+}
+
+/* Exclude theme toggle button from view transition */
+[aria-label="Przełącz motyw"] {
+  view-transition-name: theme-toggle;
+}
+
+::view-transition-old(theme-toggle) {
+  animation: theme-icon-out 0.4s ease-in forwards;
+}
+
+::view-transition-new(theme-toggle) {
+  animation: theme-icon-in 0.4s ease-out 0.3s forwards;
+  opacity: 0;
+}
+
+@keyframes theme-icon-out {
+  from {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.5) rotate(-90deg);
+  }
+}
+
+@keyframes theme-icon-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5) rotate(90deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
 }
 
 @keyframes clip-reveal {
@@ -173,4 +211,31 @@
   to {
     clip-path: circle(var(--r, 100%) at var(--x, 50%) var(--y, 50%));
   }
+}
+
+/* Accordion animations */
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+.animate-accordion-down {
+  animation: accordion-down 0.2s ease-out;
+}
+
+.animate-accordion-up {
+  animation: accordion-up 0.2s ease-out;
 }

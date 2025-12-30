@@ -15,6 +15,13 @@ interface ProductCarouselProps {
 }
 
 export function ProductCarousel({ products }: ProductCarouselProps) {
+  // Filter out products that are out of stock
+  const availableProducts = products.filter(
+    (product) => product.quantity === null || product.quantity > 0
+  );
+
+  if (availableProducts.length === 0) return null;
+
   return (
     <Carousel
       opts={{
@@ -23,8 +30,8 @@ export function ProductCarousel({ products }: ProductCarouselProps) {
       }}
       className="w-full"
     >
-      <CarouselContent className="-ml-4">
-        {products.map((product) => (
+      <CarouselContent className="-ml-4 items-stretch">
+        {availableProducts.map((product) => (
           <CarouselItem key={product.id} className="pl-4 basis-1/2 md:basis-1/3 lg:basis-1/4">
             <ProductCard product={product} />
           </CarouselItem>

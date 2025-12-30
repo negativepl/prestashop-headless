@@ -38,6 +38,7 @@ export function FavoriteButton({ product, className = "" }: FavoriteButtonProps)
     <button
       onClick={handleClick}
       className={`w-10 h-10 bg-white/70 backdrop-blur-md border border-white/50 rounded-full flex items-center justify-center transition-all duration-300 hover:bg-white/90 hover:scale-110 shadow-sm ${className}`}
+      aria-label={favorite ? "Usuń z ulubionych" : "Dodaj do ulubionych"}
     >
       <AnimatePresence mode="wait">
         <motion.div

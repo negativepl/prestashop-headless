@@ -5,7 +5,7 @@ const brands = [
     name: "Apple",
     slug: "apple",
     logo: "https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg",
-    bgColor: "bg-zinc-100 dark:bg-zinc-800",
+    bgColor: "bg-neutral-100 dark:bg-neutral-800",
   },
   {
     name: "Samsung",
@@ -35,7 +35,7 @@ const brands = [
     name: "Google",
     slug: "google",
     logo: "https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg",
-    bgColor: "bg-zinc-50 dark:bg-zinc-800",
+    bgColor: "bg-neutral-50 dark:bg-neutral-800",
   },
 ];
 

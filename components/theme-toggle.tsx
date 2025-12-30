@@ -44,7 +44,7 @@ export function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <button className="w-9 h-9 rounded-full bg-zinc-700 flex items-center justify-center text-white">
+      <button className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-foreground">
         <Sun className="h-4 w-4" />
       </button>
     );
@@ -54,7 +54,7 @@ export function ThemeToggle() {
     <button
       ref={buttonRef}
       onClick={toggleTheme}
-      className="w-9 h-9 rounded-full bg-zinc-700 hover:bg-zinc-600 flex items-center justify-center text-white transition-colors"
+      className="w-9 h-9 rounded-full bg-muted hover:bg-accent flex items-center justify-center text-foreground transition-colors"
       aria-label="Przełącz motyw"
     >
       {resolvedTheme === "dark" ? (

@@ -266,6 +266,12 @@ export interface PSCustomer {
 }
 
 // Simplified types for frontend use
+export interface ProductFeature {
+  id: number;
+  name: string;
+  value: string;
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -282,6 +288,7 @@ export interface Product {
   weight: number;
   manufacturerId: number;
   manufacturerName: string | null;
+  features: ProductFeature[];
 }
 
 export interface Category {

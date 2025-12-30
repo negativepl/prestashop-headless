@@ -168,7 +168,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
             transition={{ duration: 0.2, ease: "easeOut" }}
             className="fixed left-1/2 top-[15%] -translate-x-1/2 w-full max-w-2xl z-[100] px-4"
           >
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border overflow-hidden">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border overflow-hidden">
               {/* Search input */}
               <form onSubmit={handleSubmit}>
                 <div className="flex items-center gap-3 px-4 border-b">
@@ -290,19 +290,19 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
               <div className="flex items-center justify-between gap-4 px-4 py-3 border-t bg-muted/30 text-xs text-muted-foreground">
                 <div className="flex items-center gap-4">
                   <span className="flex items-center gap-1">
-                    <kbd className="px-1.5 py-0.5 rounded border bg-white dark:bg-zinc-800 font-mono">↑</kbd>
-                    <kbd className="px-1.5 py-0.5 rounded border bg-white dark:bg-zinc-800 font-mono">↓</kbd>
+                    <kbd className="px-1.5 py-0.5 rounded border bg-white dark:bg-neutral-800 font-mono">↑</kbd>
+                    <kbd className="px-1.5 py-0.5 rounded border bg-white dark:bg-neutral-800 font-mono">↓</kbd>
                     <span className="ml-1">nawigacja</span>
                   </span>
                   <span className="flex items-center gap-1">
-                    <kbd className="px-1.5 py-0.5 rounded border bg-white dark:bg-zinc-800 font-mono flex items-center">
+                    <kbd className="px-1.5 py-0.5 rounded border bg-white dark:bg-neutral-800 font-mono flex items-center">
                       <CornerDownLeft className="size-3" />
                     </kbd>
                     <span className="ml-1">wybierz</span>
                   </span>
                 </div>
                 <span className="flex items-center gap-1">
-                  <kbd className="px-1.5 py-0.5 rounded border bg-white dark:bg-zinc-800 font-mono">ESC</kbd>
+                  <kbd className="px-1.5 py-0.5 rounded border bg-white dark:bg-neutral-800 font-mono">ESC</kbd>
                   <span className="ml-1">zamknij</span>
                 </span>
               </div>

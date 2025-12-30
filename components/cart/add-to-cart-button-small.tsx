@@ -29,7 +29,7 @@ export function AddToCartButtonSmall({ product, variant = "default" }: AddToCart
         <button
           onClick={handleClick}
           disabled={product.quantity !== null && product.quantity <= 0}
-          className="w-full py-2.5 px-4 bg-white text-zinc-900 rounded-lg font-medium text-sm flex items-center justify-center gap-2 hover:bg-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-2.5 px-4 bg-white text-neutral-900 rounded-lg font-medium text-sm flex items-center justify-center gap-2 hover:bg-neutral-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <ShoppingCart className="h-4 w-4" />
           Dodaj do koszyka
