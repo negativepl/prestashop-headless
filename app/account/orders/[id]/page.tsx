@@ -64,13 +64,12 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     notFound();
   }
 
-  // TODO: Re-enable security check in production
   // SECURITY: Verify order belongs to logged-in user
-  // const customerOrders = await prestashop.getCustomerOrders(session.customerId);
-  // const orderBelongsToUser = customerOrders.some((o) => o.id === order.id);
-  // if (!orderBelongsToUser) {
-  //   notFound();
-  // }
+  const customerOrders = await prestashop.getCustomerOrders(session.customerId);
+  const orderBelongsToUser = customerOrders.some((o) => o.id === order.id);
+  if (!orderBelongsToUser) {
+    notFound();
+  }
 
   return (
     <div className="min-h-[80vh] py-8">

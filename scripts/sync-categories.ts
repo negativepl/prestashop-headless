@@ -20,8 +20,14 @@ interface Category {
   children?: Category[];
 }
 
-const PRESTASHOP_URL = process.env.PRESTASHOP_URL || "https://presta.trkhspl.com";
-const PRESTASHOP_API_KEY = process.env.PRESTASHOP_API_KEY || "J22LUV76Y1WTAUE37B9Q6P77G5XPXMDY";
+const PRESTASHOP_URL = process.env.PRESTASHOP_URL;
+const PRESTASHOP_API_KEY = process.env.PRESTASHOP_API_KEY;
+
+if (!PRESTASHOP_URL || !PRESTASHOP_API_KEY) {
+  throw new Error(
+    "Missing required environment variables: PRESTASHOP_URL and PRESTASHOP_API_KEY must be set"
+  );
+}
 
 async function fetchCategories(): Promise<PSCategory[]> {
   const url = `${PRESTASHOP_URL}/api/categories?filter[active]=1&display=full&output_format=JSON`;

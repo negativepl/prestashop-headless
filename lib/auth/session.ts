@@ -1,7 +1,18 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-const SECRET_KEY = process.env.AUTH_SECRET || "your-secret-key-change-in-production";
+const SECRET_KEY = process.env.AUTH_SECRET;
+
+if (!SECRET_KEY) {
+  throw new Error(
+    "AUTH_SECRET environment variable is required. Generate one with: openssl rand -base64 32"
+  );
+}
+
+if (SECRET_KEY.length < 32) {
+  throw new Error("AUTH_SECRET must be at least 32 characters long");
+}
+
 const key = new TextEncoder().encode(SECRET_KEY);
 
 export interface SessionPayload {

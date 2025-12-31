@@ -34,8 +34,12 @@ async function getClientIP(): Promise<string> {
  * Jeśli endpoint nie istnieje, logowanie NIE powiedzie się.
  */
 
-const PRESTASHOP_URL = process.env.PRESTASHOP_URL || "http://localhost:8080";
-const API_KEY = process.env.PRESTASHOP_API_KEY || "";
+const PRESTASHOP_URL = process.env.PRESTASHOP_URL;
+const API_KEY = process.env.PRESTASHOP_API_KEY;
+
+if (!PRESTASHOP_URL || !API_KEY) {
+  throw new Error("PRESTASHOP_URL and PRESTASHOP_API_KEY environment variables are required");
+}
 
 // Funkcja do weryfikacji hasła przez PrestaShop
 // Wymaga modułu PrestaShop lub custom endpointu
@@ -57,35 +61,12 @@ async function verifyPassword(email: string, password: string): Promise<{ valid:
       return { valid: true, customer: data.customer };
     }
 
-    // Fallback: Jeśli custom endpoint nie istnieje,
-    // sprawdź czy użytkownik istnieje i zaloguj (TYLKO DEV!)
-    if (process.env.NODE_ENV === "development" && process.env.UNSAFE_DEV_AUTH === "true") {
-      console.warn("⚠️  UNSAFE_DEV_AUTH is enabled - password not verified!");
-      const searchRes = await fetch(
-        `${PRESTASHOP_URL}/api/customers?filter[email]=${encodeURIComponent(email)}&display=full&output_format=JSON`,
-        {
-          headers: {
-            Authorization: `Basic ${Buffer.from(API_KEY + ":").toString("base64")}`,
-          },
-        }
-      );
-
-      if (searchRes.ok) {
-        const data = await searchRes.json();
-        const customers = data.customers || [];
-        if (customers.length > 0) {
-          return {
-            valid: true,
-            customer: {
-              id: customers[0].id,
-              email: customers[0].email,
-              firstname: customers[0].firstname,
-              lastname: customers[0].lastname,
-            }
-          };
-        }
-      }
-    }
+    // Custom endpoint nie istnieje lub zwrócił błąd
+    // Wymaga zainstalowania modułu PrestaShop do autentykacji
+    console.error(
+      "Password verification failed. Make sure you have a PrestaShop auth module installed " +
+      "that provides POST /api/auth/login endpoint."
+    );
 
     return { valid: false };
   } catch (error) {
