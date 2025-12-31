@@ -4,27 +4,53 @@ Next.js 16 headless frontend for PrestaShop e-commerce.
 
 ## Requirements
 
-- Node.js 18+
+- Node.js 18+ (recommended: 20+)
+- npm 9+
 - PrestaShop 8.x/9.x with Webservice API enabled
 
-## Installation
+## Quick Start
 
 ```bash
+# 1. Clone the repository
+git clone https://github.com/your-repo/prestashop-headless.git
+cd prestashop-headless
+
+# 2. Install dependencies
 npm install
+
+# 3. Copy environment variables
+cp .env.example .env.local
+
+# 4. Edit .env.local with your values (see Configuration section below)
+
+# 5. Generate Prisma client and create database
+npx prisma generate
+npx prisma db push
+
+# 6. Start development server
+npm run dev
 ```
+
+App will be available at: http://localhost:3000
 
 ## Configuration
 
-Create a `.env.local` file in the root directory:
+Edit the `.env.local` file with your values:
 
 ```env
 # PrestaShop API
-PRESTASHOP_URL=http://your-prestashop.com
-PRESTASHOP_API_KEY=YOUR_API_KEY
+PRESTASHOP_URL=https://your-prestashop.com
+PRESTASHOP_API_KEY=YOUR_PRESTASHOP_API_KEY
 
-# App
+# App URLs
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_PRESTASHOP_URL=http://your-prestashop.com
+NEXT_PUBLIC_PRESTASHOP_URL=https://your-prestashop.com
+
+# Auth Secret (REQUIRED - generate with: openssl rand -base64 32)
+AUTH_SECRET=your-generated-secret-here
+
+# InPost Geowidget (optional - for InPost parcel lockers)
+NEXT_PUBLIC_INPOST_TOKEN=your-inpost-token
 ```
 
 ### How to get PrestaShop API key?
@@ -59,6 +85,35 @@ npm run dev
 ```
 
 App available at: http://localhost:3000
+
+## Troubleshooting
+
+### "Cannot find module '@prisma/client'"
+```bash
+npx prisma generate
+```
+
+### "Database not found" or Prisma errors
+```bash
+npx prisma db push
+```
+
+### Native module errors (better-sqlite3)
+```bash
+npm rebuild better-sqlite3
+```
+
+### Peer dependency warnings during npm install
+Use the legacy flag if you get peer dependency conflicts:
+```bash
+npm install --legacy-peer-deps
+```
+
+### Missing environment variables
+Make sure you have `.env.local` file with all required variables. Copy from `.env.example`:
+```bash
+cp .env.example .env.local
+```
 
 ## Production Build
 

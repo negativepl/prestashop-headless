@@ -49,16 +49,16 @@ export function ProductCardRow({ product }: ProductCardRowProps) {
   const isOutOfStock = product.quantity !== null && product.quantity <= 0;
 
   return (
-    <div className="group bg-card rounded-xl border overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-foreground/20">
+    <div className="group bg-accent rounded-xl border overflow-hidden transition-all duration-300 hover:border-foreground/20">
       <div className="flex flex-col sm:flex-row">
         {/* Image */}
         <Link href={`/products/${product.id}`} className="sm:w-40 md:w-48 shrink-0">
-          <div className="relative aspect-square sm:aspect-auto sm:h-full overflow-hidden bg-muted">
+          <div className="relative aspect-square sm:aspect-auto sm:h-full overflow-hidden bg-muted p-3">
             {product.imageUrl ? (
               <img
                 src={product.imageUrl}
                 alt={product.name}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
               />
             ) : (
               <div className="flex items-center justify-center h-full min-h-[160px] text-muted-foreground text-sm">
@@ -86,7 +86,7 @@ export function ProductCardRow({ product }: ProductCardRowProps) {
         <div className="flex-1 p-4 flex flex-col sm:flex-row gap-4">
           {/* Info */}
           <div className="flex-1 min-w-0">
-            {/* Favorite button - top right */}
+            {/* Title & Favorite button */}
             <div className="flex items-start justify-between gap-2">
               <Link href={`/products/${product.id}`} className="flex-1">
                 <h3 className="font-semibold text-base line-clamp-2 hover:text-primary transition-colors leading-tight">
@@ -102,25 +102,22 @@ export function ProductCardRow({ product }: ProductCardRowProps) {
             {/* Details - vertical list */}
             <div className="mt-3 space-y-1 text-sm">
               <div>
-                <span className="text-muted-foreground">Wysyłka:</span>
-                <br />
                 <span className={isOutOfStock ? "text-destructive" : "text-green-600 font-medium"}>
-                  {isOutOfStock ? "Niedostępny" : "Wysyłka jutro"}
+                  {isOutOfStock ? "Niedostępny" : "Zamów do 16:00 - wysyłka dziś"}
                 </span>
               </div>
               {product.reference && (
                 <div>
                   <span className="text-muted-foreground">SKU:</span>
-                  <br />
-                  <span>{product.reference}</span>
+                  <span className="ml-1">{product.reference}</span>
                 </div>
               )}
             </div>
           </div>
 
           {/* Price & Actions */}
-          <div className="sm:w-44 md:w-48 shrink-0 flex flex-col justify-end gap-2 sm:border-l sm:pl-4">
-            {/* Manufacturer badge */}
+          <div className="sm:w-44 md:w-48 shrink-0 flex flex-col gap-2 sm:border-l sm:pl-4">
+            {/* Manufacturer badge - top right */}
             {product.manufacturerName && (
               <div className="text-right">
                 <span className="inline-block text-[10px] font-medium px-2 py-0.5 bg-muted rounded-full text-muted-foreground">
@@ -128,6 +125,8 @@ export function ProductCardRow({ product }: ProductCardRowProps) {
                 </span>
               </div>
             )}
+
+            <div className="flex-1" />
 
             {/* Stock */}
             <div className="text-right">

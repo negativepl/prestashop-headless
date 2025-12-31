@@ -172,6 +172,14 @@ export default function CheckoutPage() {
   const [pickupPointSearch, setPickupPointSearch] = useState("");
   const [showInPostWidget, setShowInPostWidget] = useState(false);
 
+  // Delivery address option
+  const [useDifferentDeliveryAddress, setUseDifferentDeliveryAddress] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState({
+    address: "",
+    city: "",
+    postcode: "",
+  });
+
   // Handle InPost point selection
   const handleInPostPointSelect = (point: {
     id: string;
@@ -345,8 +353,8 @@ export default function CheckoutPage() {
                       <User className="size-5 text-primary" />
                     </div>
                     <div>
-                      <h2 className="font-semibold text-lg">Dane do wysyłki</h2>
-                      <p className="text-sm text-muted-foreground">Podaj dane odbiorcy przesyłki</p>
+                      <h2 className="font-semibold text-lg">Dane klienta</h2>
+                      <p className="text-sm text-muted-foreground">Dane do kontaktu i faktury</p>
                     </div>
                   </div>
                 </div>
@@ -429,7 +437,7 @@ export default function CheckoutPage() {
                   {/* Address */}
                   <div className="space-y-2 pt-1">
                     <Label htmlFor="address" className="text-sm font-medium">
-                      Adres dostawy <span className="text-destructive">*</span>
+                      Adres zamieszkania <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="address"
@@ -473,6 +481,7 @@ export default function CheckoutPage() {
                       />
                     </div>
                   </div>
+
                 </div>
               </motion.div>
 
@@ -691,6 +700,97 @@ export default function CheckoutPage() {
                                           ))}
                                             </div>
                                           </>
+                                        )}
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+
+                                {/* Courier Address Form - directly under tile */}
+                                <AnimatePresence>
+                                  {isSelected && method.id === "inpost_courier" && (
+                                    <motion.div
+                                      initial={{ opacity: 0, height: 0 }}
+                                      animate={{ opacity: 1, height: "auto" }}
+                                      exit={{ opacity: 0, height: 0 }}
+                                      className="overflow-hidden"
+                                    >
+                                      <div className="mt-3 p-4 bg-muted/50 rounded-xl border space-y-4">
+                                        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                                          <MapPin className="size-4" />
+                                          Adres dostawy
+                                        </div>
+
+                                        {/* Address toggle */}
+                                        <div className="flex gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={() => setUseDifferentDeliveryAddress(false)}
+                                            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                                              !useDifferentDeliveryAddress
+                                                ? "bg-primary text-primary-foreground"
+                                                : "bg-background border hover:bg-muted"
+                                            }`}
+                                          >
+                                            Wyślij pod mój adres
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => setUseDifferentDeliveryAddress(true)}
+                                            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                                              useDifferentDeliveryAddress
+                                                ? "bg-primary text-primary-foreground"
+                                                : "bg-background border hover:bg-muted"
+                                            }`}
+                                          >
+                                            Wyślij pod inny adres
+                                          </button>
+                                        </div>
+
+                                        {/* Customer address display */}
+                                        {!useDifferentDeliveryAddress && (
+                                          <div className="p-3 bg-background rounded-lg border">
+                                            {form.address && form.city ? (
+                                              <div className="flex items-start gap-2">
+                                                <MapPin className="size-4 text-primary flex-shrink-0 mt-0.5" />
+                                                <div>
+                                                  <p className="text-sm font-medium">{form.address}</p>
+                                                  <p className="text-xs text-muted-foreground">{form.postcode} {form.city}</p>
+                                                </div>
+                                              </div>
+                                            ) : (
+                                              <p className="text-sm text-muted-foreground">
+                                                Uzupełnij adres w sekcji &quot;Dane klienta&quot; powyżej
+                                              </p>
+                                            )}
+                                          </div>
+                                        )}
+
+                                        {/* Different delivery address form */}
+                                        {useDifferentDeliveryAddress && (
+                                          <div className="space-y-3">
+                                            <Input
+                                              placeholder="ul. Przykładowa 123/4"
+                                              value={deliveryAddress.address}
+                                              onChange={(e) => setDeliveryAddress(prev => ({ ...prev, address: e.target.value }))}
+                                              className="h-11 bg-background"
+                                            />
+
+                                            <div className="grid grid-cols-5 gap-3">
+                                              <Input
+                                                placeholder="00-000"
+                                                value={deliveryAddress.postcode}
+                                                onChange={(e) => setDeliveryAddress(prev => ({ ...prev, postcode: e.target.value }))}
+                                                className="col-span-2 h-11 bg-background"
+                                              />
+                                              <Input
+                                                placeholder="Miasto"
+                                                value={deliveryAddress.city}
+                                                onChange={(e) => setDeliveryAddress(prev => ({ ...prev, city: e.target.value }))}
+                                                className="col-span-3 h-11 bg-background"
+                                              />
+                                            </div>
+                                          </div>
                                         )}
                                       </div>
                                     </motion.div>

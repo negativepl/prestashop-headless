@@ -124,6 +124,7 @@ class PrestaShopClient {
     active?: boolean;
     withImages?: boolean;
     withStock?: boolean;
+    sortByStock?: boolean;
   }): Promise<Product[]> {
     const filters: string[] = [];
 
@@ -139,15 +140,27 @@ class PrestaShopClient {
       endpoint += `?${filters.join("&")}`;
     }
 
-    // Fetch more products if filtering by images (to ensure we get enough after filtering)
-    const fetchLimit = params?.withImages ? (params?.limit || 12) * 3 : params?.limit;
-    if (fetchLimit) {
-      const separator = endpoint.includes("?") ? "&" : "?";
-      endpoint += `${separator}limit=${params?.offset || 0},${fetchLimit}`;
+    const requestedLimit = params?.limit || 24;
+    const requestedOffset = params?.offset || 0;
+
+    // When sorting by stock, fetch more to have a better pool to sort from
+    // This ensures first pages have mostly in-stock products
+    let fetchMultiplier = 1;
+    if (params?.sortByStock) {
+      fetchMultiplier = 4; // fetch 4x more products to sort properly
+    }
+    if (params?.withImages) {
+      fetchMultiplier = fetchMultiplier * 3;
     }
 
+    const fetchLimit = requestedLimit * fetchMultiplier;
+    const fetchOffset = requestedOffset;
+
+    const separator = endpoint.includes("?") ? "&" : "?";
+    endpoint += `${separator}limit=${fetchOffset},${fetchLimit}`;
+
     // Sort by ID descending (newest first)
-    endpoint += `${endpoint.includes("?") ? "&" : "?"}sort=[id_DESC]`;
+    endpoint += "&sort=[id_DESC]";
     endpoint += "&display=full";
 
     const response = await this.fetch<PSResponse<PSProduct[]>>(endpoint);
@@ -156,10 +169,6 @@ class PrestaShopClient {
     // Filter products with images if requested
     if (params?.withImages) {
       products = products.filter(p => (p.associations?.images?.length ?? 0) > 0);
-      // Limit to requested amount
-      if (params?.limit) {
-        products = products.slice(0, params.limit);
-      }
     }
 
     // Fetch stock for all products if requested
@@ -179,7 +188,89 @@ class PrestaShopClient {
       }
     }
 
+    // Sort by stock if requested (in-stock first, out-of-stock last)
+    if (params?.sortByStock) {
+      products.sort((a, b) => {
+        const aQty = stockMap.get(a.id) ?? 999;
+        const bQty = stockMap.get(b.id) ?? 999;
+        const aInStock = aQty > 0 ? 0 : 1;
+        const bInStock = bQty > 0 ? 0 : 1;
+        return aInStock - bInStock;
+      });
+    }
+
+    // Limit to requested amount
+    if (params?.limit) {
+      products = products.slice(0, requestedLimit);
+    }
+
     return Promise.all(products.map((p) => this.mapProduct(p, false, stockMap.get(p.id))));
+  }
+
+  // Lightweight method - returns only product IDs with stock quantities
+  async getProductIdsWithStock(categoryId: number): Promise<{ id: number; quantity: number }[]> {
+    // Fetch all product IDs for category (just IDs, minimal data)
+    const endpoint = `products?filter[id_category_default]=${categoryId}&filter[active]=1&display=[id]&limit=1000`;
+    const response = await this.fetch<PSResponse<{ id: number }[]>>(endpoint);
+    const products = (response.products || []) as { id: number }[];
+
+    if (products.length === 0) return [];
+
+    // Fetch stock for all products in one request
+    const productIds = products.map(p => p.id);
+    let stockMap: Map<number, number> = new Map();
+
+    try {
+      const stockResponse = await this.fetch<PSResponse<PSStockAvailable[]>>(
+        `stock_availables?filter[id_product]=[${productIds.join("|")}]&filter[id_product_attribute]=0&display=[id_product,quantity]&limit=1000`
+      );
+      const stocks = (stockResponse.stock_availables as PSStockAvailable[]) || [];
+      for (const stock of stocks) {
+        stockMap.set(stock.id_product, stock.quantity);
+      }
+    } catch {
+      // Stock not available - assume all in stock
+    }
+
+    return products.map(p => ({
+      id: p.id,
+      quantity: stockMap.get(p.id) ?? 999,
+    }));
+  }
+
+  // Fetch multiple products by IDs
+  async getProductsByIds(ids: number[]): Promise<Product[]> {
+    if (ids.length === 0) return [];
+
+    const endpoint = `products?filter[id]=[${ids.join("|")}]&filter[active]=1&display=full`;
+    const response = await this.fetch<PSResponse<PSProduct[]>>(endpoint);
+    const products = (response.products as PSProduct[]) || [];
+
+    // Fetch stock
+    let stockMap: Map<number, number> = new Map();
+    if (products.length > 0) {
+      try {
+        const stockResponse = await this.fetch<PSResponse<PSStockAvailable[]>>(
+          `stock_availables?filter[id_product]=[${ids.join("|")}]&filter[id_product_attribute]=0&display=full`
+        );
+        const stocks = (stockResponse.stock_availables as PSStockAvailable[]) || [];
+        for (const stock of stocks) {
+          stockMap.set(stock.id_product, stock.quantity);
+        }
+      } catch {
+        // Stock not available
+      }
+    }
+
+    // Map products and maintain the order of input IDs
+    const productMap = new Map<number, PSProduct>();
+    products.forEach(p => productMap.set(p.id, p));
+
+    const orderedProducts = ids
+      .map(id => productMap.get(id))
+      .filter((p): p is PSProduct => p !== undefined);
+
+    return Promise.all(orderedProducts.map((p) => this.mapProduct(p, false, stockMap.get(p.id))));
   }
 
   async searchProducts(query: string, limit: number = 10): Promise<Product[]> {

@@ -203,7 +203,14 @@ export default function LeafletMap({
 
                 {/* Content - right side */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontWeight: 700, fontSize: "15px", color: "#111", marginBottom: "4px", margin: 0 }}>{point.name}</p>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                    <p style={{ fontWeight: 700, fontSize: "15px", color: "#111", margin: 0 }}>{point.name}</p>
+                    {point.distance && (
+                      <span style={{ fontSize: "11px", color: "#666", backgroundColor: "#f3f4f6", padding: "2px 8px", borderRadius: "12px", whiteSpace: "nowrap" }}>
+                        {point.distance < 1000 ? `${Math.round(point.distance)} m` : `${(point.distance / 1000).toFixed(1)} km`}
+                      </span>
+                    )}
+                  </div>
                   <p style={{ fontSize: "13px", color: "#444", margin: "4px 0 0 0" }}>
                     {point.address_details.street} {point.address_details.building_number}
                   </p>
