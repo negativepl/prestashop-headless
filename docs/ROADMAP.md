@@ -29,8 +29,9 @@ if (!PRESTASHOP_URL || !PRESTASHOP_API_KEY) {
 - Stworzono moduł PHP `headlessauth` dla PrestaShop
 - Endpoint: `POST /modules/headlessauth/api.php`
 - Bezpieczna weryfikacja hasła przez PrestaShop (bcrypt + legacy MD5)
-- Wymaga instalacji modułu w PrestaShop (patrz `prestashop-modules/README.md`)
-**Status:** ✅ NAPRAWIONE - moduł gotowy do instalacji
+- Moduł zainstalowany na serwerze: `presta.trkhspl.com`
+- Autor modułu: Home Screen Distribution sp. z o.o.
+**Status:** ✅ NAPRAWIONE - moduł zainstalowany i działający
 
 ### 3. ~~Słaby domyślny SECRET_KEY~~ (NAPRAWIONE)
 **Plik:** `lib/auth/session.ts:4-14`
@@ -418,13 +419,15 @@ Obecnie zarządzanie przez backend PrestaShop. Opcjonalnie:
 
 ```
 ✅ UKOŃCZONE:
-└── FAZA 1: Bezpieczeństwo
+└── FAZA 1: Bezpieczeństwo + Autentykacja
     ├── ✅ Usunięto hardkodowany API key
     ├── ✅ Wymuszono AUTH_SECRET (min. 32 znaki)
     ├── ✅ Utworzono proxy.ts z rate limiting
     ├── ✅ Włączono security check zamówień
     ├── ✅ Usunięto UNSAFE_DEV_AUTH
-    └── ✅ Dodano CSP i security headers
+    ├── ✅ Dodano CSP i security headers
+    ├── ✅ Moduł headlessauth zainstalowany (logowanie działa!)
+    └── ✅ UI: user menu, social login tiles (Google, Apple, Facebook, TikTok)
 
 NASTĘPNE (przed produkcją):
 ├── Checkout
@@ -466,6 +469,9 @@ NISKI (nice-to-have):
 | `proxy.ts` | NOWY - rate limiting | ✅ |
 | `.env.local` | Dodano AUTH_SECRET | ✅ |
 | `prestashop-modules/headlessauth/` | NOWY - moduł PHP do logowania | ✅ |
+| `components/layout/header.tsx` | User menu zamyka się po nawigacji | ✅ |
+| `app/login/page.tsx` | Social login jako kafelki (Google, Apple, Facebook, TikTok) | ✅ |
+| `app/register/page.tsx` | Social login jako kafelki (Google, Apple, Facebook, TikTok) | ✅ |
 
 ## PLIKI DO MODYFIKACJI (NASTĘPNE)
 
@@ -492,6 +498,7 @@ NISKI (nice-to-have):
 
 | Data | Wersja | Zmiany |
 |------|--------|--------|
+| 2025-12-31 | 3.1 | Moduł `headlessauth` zainstalowany na serwerze, logowanie działa, UI improvements (user menu, social login tiles) |
 | 2025-12-31 | 3.0 | **FAZA 1 UKOŃCZONA** - wszystkie problemy bezpieczeństwa naprawione, utworzono proxy.ts, dodano security headers |
 | 2025-12-31 | 2.0 | Pełna weryfikacja przez 4 agentów AI, dodano sekcję o desynchronizacji checkout, zaktualizowano ścieżki plików, dodano szczegóły Footer.tsx |
 | 2025-12-30 | 1.0 | Pierwsza wersja roadmapy |
