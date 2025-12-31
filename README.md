@@ -68,11 +68,14 @@ NEXT_PUBLIC_INPOST_TOKEN=your-inpost-token
 | `categories` | ✅ | | | | | |
 | `countries` | ✅ | | | | | |
 | `customers` | ✅ | ✅ | ✅ | | | |
+| `images` | ✅ | | | | | |
 | `manufacturers` | ✅ | | | | | |
 | `order_states` | ✅ | | | | | |
 | `orders` | ✅ | | ✅ | | | |
 | `products` | ✅ | | | | | |
 | `stock_availables` | ✅ | | | | | |
+| `taxes` | ✅ | | | | | |
+| `tax_rules` | ✅ | | | | | |
 
 6. Save and copy the generated key to `.env.local`
 
