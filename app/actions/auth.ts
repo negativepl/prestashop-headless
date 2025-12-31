@@ -42,12 +42,11 @@ if (!PRESTASHOP_URL || !API_KEY) {
 }
 
 // Funkcja do weryfikacji hasła przez PrestaShop
-// Wymaga modułu PrestaShop lub custom endpointu
+// Używa modułu headlessauth zainstalowanego w PrestaShop
 async function verifyPassword(email: string, password: string): Promise<{ valid: boolean; customer?: any }> {
   try {
-    // Próba weryfikacji przez custom endpoint PrestaShop
-    // Jeśli masz moduł PrestaShop, zmień ten endpoint
-    const response = await fetch(`${PRESTASHOP_URL}/api/auth/login`, {
+    // Wywołanie endpointu modułu headlessauth
+    const response = await fetch(`${PRESTASHOP_URL}/modules/headlessauth/api.php`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -56,17 +55,19 @@ async function verifyPassword(email: string, password: string): Promise<{ valid:
       body: JSON.stringify({ email, password }),
     });
 
-    if (response.ok) {
-      const data = await response.json();
+    const data = await response.json();
+
+    if (response.ok && data.success) {
       return { valid: true, customer: data.customer };
     }
 
-    // Custom endpoint nie istnieje lub zwrócił błąd
-    // Wymaga zainstalowania modułu PrestaShop do autentykacji
-    console.error(
-      "Password verification failed. Make sure you have a PrestaShop auth module installed " +
-      "that provides POST /api/auth/login endpoint."
-    );
+    // Logowanie błędu dla debugowania (nie ujawniaj szczegółów użytkownikowi)
+    if (!response.ok) {
+      console.error(
+        `Auth verification failed (${response.status}): ${data.error || 'Unknown error'}. ` +
+        "Make sure headlessauth module is installed in PrestaShop."
+      );
+    }
 
     return { valid: false };
   } catch (error) {

@@ -24,11 +24,13 @@ if (!PRESTASHOP_URL || !PRESTASHOP_API_KEY) {
 **Status:** ✅ NAPRAWIONE - usunięto fallback, wymuszono zmienne środowiskowe
 
 ### 2. ~~Brak weryfikacji hasła przy logowaniu~~ (NAPRAWIONE)
-**Plik:** `app/actions/auth.ts`
+**Plik:** `app/actions/auth.ts` + `prestashop-modules/headlessauth/`
 - Usunięto niebezpieczny fallback `UNSAFE_DEV_AUTH`
-- Logowanie wymaga teraz działającego endpointu PrestaShop `/api/auth/login`
-- Wymaga zainstalowania modułu PHP w PrestaShop
-**Status:** ✅ NAPRAWIONE - usunięto niebezpieczny kod
+- Stworzono moduł PHP `headlessauth` dla PrestaShop
+- Endpoint: `POST /modules/headlessauth/api.php`
+- Bezpieczna weryfikacja hasła przez PrestaShop (bcrypt + legacy MD5)
+- Wymaga instalacji modułu w PrestaShop (patrz `prestashop-modules/README.md`)
+**Status:** ✅ NAPRAWIONE - moduł gotowy do instalacji
 
 ### 3. ~~Słaby domyślny SECRET_KEY~~ (NAPRAWIONE)
 **Plik:** `lib/auth/session.ts:4-14`
@@ -257,7 +259,8 @@ const SHIPPING_METHODS = [
 
 #### ~~1.2 Implementuj weryfikację hasła~~ ✅
 - [x] Usuń kod `UNSAFE_DEV_AUTH` z `app/actions/auth.ts`
-- [ ] Stwórz custom moduł PHP w PrestaShop dla `/api/auth/login` (osobne zadanie)
+- [x] Stwórz moduł PHP `headlessauth` w PrestaShop (`prestashop-modules/headlessauth/`)
+- [x] Endpoint `POST /modules/headlessauth/api.php` z weryfikacją hasła
 
 #### ~~1.3 Wymuś AUTH_SECRET~~ ✅
 - [x] Usuń domyślny secret z `lib/auth/session.ts:4`
@@ -457,11 +460,12 @@ NISKI (nice-to-have):
 |------|--------|--------|
 | `scripts/sync-categories.ts` | Usunięto hardkodowany API key | ✅ |
 | `lib/auth/session.ts` | Wymuszono AUTH_SECRET min. 32 znaki | ✅ |
-| `app/actions/auth.ts` | Usunięto UNSAFE_DEV_AUTH | ✅ |
+| `app/actions/auth.ts` | Usunięto UNSAFE_DEV_AUTH, endpoint headlessauth | ✅ |
 | `app/account/orders/[id]/page.tsx` | Włączono weryfikację właściciela | ✅ |
 | `next.config.ts` | Dodano security headers | ✅ |
 | `proxy.ts` | NOWY - rate limiting | ✅ |
 | `.env.local` | Dodano AUTH_SECRET | ✅ |
+| `prestashop-modules/headlessauth/` | NOWY - moduł PHP do logowania | ✅ |
 
 ## PLIKI DO MODYFIKACJI (NASTĘPNE)
 
