@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
+import { getPrestaShopCarrierId, calculateShippingCost } from "@/lib/shipping";
 
 const PRESTASHOP_URL = process.env.PRESTASHOP_URL || "http://localhost:8080";
 const API_KEY = process.env.PRESTASHOP_API_KEY || "";
@@ -27,6 +28,8 @@ async function psGet(endpoint: string) {
 async function psPost(endpoint: string, xml: string) {
   const url = `${PRESTASHOP_URL}/api/${endpoint}?output_format=JSON`;
 
+  console.log(`POST ${endpoint} - XML:`, xml.substring(0, 500));
+
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -37,6 +40,8 @@ async function psPost(endpoint: string, xml: string) {
   });
 
   const text = await response.text();
+
+  console.log(`POST ${endpoint} - Status: ${response.status}, Response:`, text.substring(0, 1000));
 
   if (!response.ok) {
     console.error(`POST ${endpoint} error:`, text);
@@ -65,12 +70,21 @@ interface CheckoutRequest {
     quantity: number;
     productAttributeId: number;
   }[];
+  // Shipping options
+  shippingMethod?: string; // kod metody dostawy np. "inpost_locker", "dpd_courier"
+  shippingPoint?: {
+    id: string;        // np. "KRA123"
+    name: string;      // np. "Paczkomat KRA123"
+    address: string;   // Adres paczkomatu
+  };
+  // Payment options
+  paymentMethod?: string; // kod metody płatności np. "blik", "card", "cod"
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: CheckoutRequest = await request.json();
-    const { customer, items } = body;
+    const { customer, items, shippingMethod, shippingPoint, paymentMethod } = body;
 
     // Check if user is logged in via JWT session
     const session = await getSession();
@@ -195,33 +209,95 @@ export async function POST(request: NextRequest) {
       throw new Error("Nie udało się utworzyć koszyka");
     }
 
-    // 4. Calculate totals
+    // 4. Fetch product details and calculate totals
+    interface ProductDetail {
+      id: number;
+      attributeId: number;
+      quantity: number;
+      name: string;
+      reference: string;
+      ean13: string;
+      price: number;
+    }
+
+    const productDetails: ProductDetail[] = [];
     let totalProducts = 0;
+
     for (const item of items) {
       try {
         const productRes = await psGet(`products/${item.productId}?display=full`);
         const product = productRes.product || productRes.products?.[0];
         if (product) {
-          totalProducts += parseFloat(product.price) * item.quantity;
+          const price = parseFloat(product.price) || 0;
+          const name = Array.isArray(product.name)
+            ? product.name.find((n: { id: number; value: string }) => n.id === 1)?.value || product.name[0]?.value || ''
+            : product.name || '';
+
+          productDetails.push({
+            id: item.productId,
+            attributeId: item.productAttributeId || 0,
+            quantity: item.quantity,
+            name: name,
+            reference: product.reference || '',
+            ean13: product.ean13 || '',
+            price: price,
+          });
+
+          totalProducts += price * item.quantity;
         }
-      } catch {
-        // Skip if product not found
+      } catch (err) {
+        console.error(`Failed to fetch product ${item.productId}:`, err);
       }
     }
 
-    // 5. Create order
+    // 5. Calculate shipping and get carrier ID
+    const selectedShipping = shippingMethod || "dpd_courier"; // domyślny kurier
+    const carrierId = await getPrestaShopCarrierId(selectedShipping);
+    const shippingCost = await calculateShippingCost(selectedShipping, totalProducts);
+
+    // Calculate totals
+    const totalShipping = shippingCost;
+    const totalPaid = totalProducts + totalShipping;
+
+    // Determine payment module based on payment method
+    let paymentModule = "ps_wirepayment";
+    let paymentName = "Przelew bankowy";
+
+    if (paymentMethod === "cod") {
+      paymentModule = "ps_cashondelivery";
+      paymentName = "Płatność przy odbiorze";
+    } else if (paymentMethod === "blik" || paymentMethod === "transfer" || paymentMethod === "installments") {
+      paymentModule = "ps_wirepayment"; // PayU będzie obsługiwany przez webhook
+      paymentName = paymentMethod === "blik" ? "BLIK" : paymentMethod === "installments" ? "Raty PayU" : "Przelew online";
+    } else if (paymentMethod === "card") {
+      paymentModule = "ps_wirepayment"; // Stripe będzie obsługiwany przez webhook
+      paymentName = "Karta płatnicza";
+    }
+
+    // 6. Create order
     let orderId: number;
     try {
-      const orderRowsXml = items
+      const orderRowsXml = productDetails
         .map(
-          (item) => `
+          (p) => `
       <order_row>
-        <product_id>${item.productId}</product_id>
-        <product_attribute_id>${item.productAttributeId || 0}</product_attribute_id>
-        <product_quantity>${item.quantity}</product_quantity>
+        <product_id>${p.id}</product_id>
+        <product_attribute_id>${p.attributeId}</product_attribute_id>
+        <product_quantity>${p.quantity}</product_quantity>
+        <product_name>${escapeXml(p.name)}</product_name>
+        <product_reference>${escapeXml(p.reference)}</product_reference>
+        <product_ean13>${escapeXml(p.ean13)}</product_ean13>
+        <product_price>${p.price.toFixed(6)}</product_price>
+        <unit_price_tax_incl>${p.price.toFixed(6)}</unit_price_tax_incl>
+        <unit_price_tax_excl>${p.price.toFixed(6)}</unit_price_tax_excl>
       </order_row>`
         )
         .join("");
+
+      // Generate secure key (md5 of random string)
+      const secureKey = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
 
       const orderXml = `<?xml version="1.0" encoding="UTF-8"?>
 <prestashop xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -232,19 +308,23 @@ export async function POST(request: NextRequest) {
     <id_currency>1</id_currency>
     <id_lang>1</id_lang>
     <id_customer>${customerId}</id_customer>
-    <id_carrier>1</id_carrier>
-    <current_state>1</current_state>
-    <module>ps_checkpayment</module>
-    <payment>Przelew bankowy</payment>
-    <total_paid>${totalProducts.toFixed(6)}</total_paid>
-    <total_paid_tax_incl>${totalProducts.toFixed(6)}</total_paid_tax_incl>
-    <total_paid_tax_excl>${totalProducts.toFixed(6)}</total_paid_tax_excl>
+    <id_carrier>${carrierId}</id_carrier>
+    <current_state>3</current_state>
+    <module>${paymentModule}</module>
+    <payment>${paymentName}</payment>
+    <secure_key>${secureKey}</secure_key>
+    <valid>1</valid>
+    <id_shop>1</id_shop>
+    <id_shop_group>1</id_shop_group>
+    <total_paid>${totalPaid.toFixed(6)}</total_paid>
+    <total_paid_tax_incl>${totalPaid.toFixed(6)}</total_paid_tax_incl>
+    <total_paid_tax_excl>${totalPaid.toFixed(6)}</total_paid_tax_excl>
     <total_paid_real>0.000000</total_paid_real>
     <total_products>${totalProducts.toFixed(6)}</total_products>
     <total_products_wt>${totalProducts.toFixed(6)}</total_products_wt>
-    <total_shipping>0.000000</total_shipping>
-    <total_shipping_tax_incl>0.000000</total_shipping_tax_incl>
-    <total_shipping_tax_excl>0.000000</total_shipping_tax_excl>
+    <total_shipping>${totalShipping.toFixed(6)}</total_shipping>
+    <total_shipping_tax_incl>${totalShipping.toFixed(6)}</total_shipping_tax_incl>
+    <total_shipping_tax_excl>${totalShipping.toFixed(6)}</total_shipping_tax_excl>
     <conversion_rate>1.000000</conversion_rate>
     <associations>
       <order_rows>${orderRowsXml}
@@ -269,6 +349,8 @@ export async function POST(request: NextRequest) {
       orderId,
       customerId,
       cartId,
+      shippingCost,
+      totalPaid,
     });
 
   } catch (error) {

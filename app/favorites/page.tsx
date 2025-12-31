@@ -20,8 +20,8 @@ export default function FavoritesPage() {
       <div className="container">
         <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold">Ulubione</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Ulubione</h1>
+          <p className="text-muted-foreground mt-2">
             {items.length} {items.length === 1 ? "produkt" : items.length > 1 && items.length < 5 ? "produkty" : "produktów"}
           </p>
         </div>

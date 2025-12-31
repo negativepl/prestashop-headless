@@ -3,20 +3,18 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
+import { InPostPickerModal } from "@/components/checkout/inpost-picker-modal";
 import {
   ShoppingBag, Loader2, Lock, Truck, CreditCard, User, MapPin, Phone, Mail,
-  ChevronDown, Check, Package, Banknote, Wallet, Building2, Tag
+  Check, Package, Banknote, Wallet, Building2, Tag, Shield, Clock,
+  X, ChevronRight, Gift, ArrowLeft, Store, Fuel, Map
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { useCart } from "@/hooks/use-cart";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface CheckoutForm {
   email: string;
@@ -28,21 +26,133 @@ interface CheckoutForm {
   phone: string;
 }
 
-type AccordionSection = "contact" | "shipping" | "delivery" | "payment";
+interface PickupPoint {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  postcode: string;
+  openingHours?: string;
+}
 
-const SHIPPING_METHODS = [
-  { id: "courier", name: "Kurier DPD", price: 14.99, time: "1-2 dni robocze", icon: Truck },
-  { id: "inpost", name: "Paczkomat InPost", price: 12.99, time: "1-2 dni robocze", icon: Package },
-  { id: "courier-express", name: "Kurier Express", price: 24.99, time: "Następny dzień roboczy", icon: Truck },
-  { id: "pickup", name: "Odbiór osobisty", price: 0, time: "Dostępny od ręki", icon: Building2 },
+interface ShippingMethod {
+  id: string;
+  name: string;
+  price: number;
+  time: string;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+  popular?: boolean;
+  requiresPointSelection?: boolean;
+  pointType?: "inpost" | "zabka" | "orlen";
+}
+
+interface ShippingGroup {
+  label: string;
+  methods: ShippingMethod[];
+}
+
+const SHIPPING_GROUPS: ShippingGroup[] = [
+  {
+    label: "Punkty odbioru",
+    methods: [
+      {
+        id: "inpost_locker",
+        name: "Paczkomat® InPost",
+        price: 11.99,
+        time: "1-2 dni",
+        icon: Package,
+        description: "Odbiór 24/7 w wybranym paczkomacie",
+        popular: true,
+        requiresPointSelection: true,
+        pointType: "inpost"
+      },
+      {
+        id: "zabka",
+        name: "Odbiór w Żabce",
+        price: 9.99,
+        time: "1-2 dni",
+        icon: Store,
+        description: "Odbierz w najbliższym sklepie Żabka",
+        requiresPointSelection: true,
+        pointType: "zabka"
+      },
+      {
+        id: "orlen_paczka",
+        name: "Orlen Paczka",
+        price: 8.99,
+        time: "1-3 dni",
+        icon: Fuel,
+        description: "Odbierz na stacji Orlen",
+        requiresPointSelection: true,
+        pointType: "orlen"
+      },
+    ]
+  },
+  {
+    label: "Pod adres",
+    methods: [
+      {
+        id: "inpost_courier",
+        name: "Kurier InPost",
+        price: 13.99,
+        time: "1-2 dni",
+        icon: Truck,
+        description: "Dostawa pod wskazany adres"
+      },
+    ]
+  },
+  {
+    label: "Odbiór osobisty",
+    methods: [
+      {
+        id: "pickup",
+        name: "Odbiór osobisty",
+        price: 0,
+        time: "Od ręki",
+        icon: Building2,
+        description: "Odbierz w naszym punkcie"
+      },
+    ]
+  },
 ];
 
+// Flatten for easy lookup
+const ALL_SHIPPING_METHODS = SHIPPING_GROUPS.flatMap(g => g.methods);
+
 const PAYMENT_METHODS = [
-  { id: "cod", name: "Płatność przy odbiorze", description: "Zapłać gotówką lub kartą kurierowi", icon: Banknote },
-  { id: "blik", name: "BLIK", description: "Szybka płatność kodem BLIK", icon: Wallet },
-  { id: "card", name: "Karta płatnicza", description: "Visa, Mastercard, Maestro", icon: CreditCard },
-  { id: "transfer", name: "Przelew online", description: "Płatność przez Twój bank", icon: Building2 },
-  { id: "installments", name: "Raty PayU", description: "Kup teraz, zapłać później", icon: Wallet },
+  {
+    id: "blik_p24",
+    name: "BLIK / Przelewy24",
+    description: "BLIK lub przelew online",
+    icon: Building2,
+    popular: true
+  },
+  {
+    id: "card",
+    name: "Zapłać kartą",
+    description: "Visa, Mastercard, Maestro",
+    icon: CreditCard
+  },
+  {
+    id: "apple_google_pay",
+    name: "Apple Pay / Google Pay",
+    description: "Szybka płatność mobilna",
+    icon: Wallet
+  },
+  {
+    id: "klarna",
+    name: "Zapłać Klarna",
+    description: "Kup teraz, zapłać później",
+    icon: Gift
+  },
+  {
+    id: "cod",
+    name: "Płatność przy odbiorze",
+    description: "Zapłać kurierowi (+5 zł)",
+    icon: Banknote,
+    surcharge: 5
+  },
 ];
 
 export default function CheckoutPage() {
@@ -50,12 +160,29 @@ export default function CheckoutPage() {
   const { items, total, clearCart } = useCart();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [openSection, setOpenSection] = useState<AccordionSection>("contact");
-  const [completedSections, setCompletedSections] = useState<Set<AccordionSection>>(new Set());
-  const [selectedShipping, setSelectedShipping] = useState("courier");
-  const [selectedPayment, setSelectedPayment] = useState("cod");
+  const [selectedShipping, setSelectedShipping] = useState("inpost_locker");
+  const [selectedPayment, setSelectedPayment] = useState("blik_p24");
   const [discountCode, setDiscountCode] = useState("");
   const [discountApplied, setDiscountApplied] = useState(false);
+  const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
+
+  // Pickup point selection
+  const [pickupPointType, setPickupPointType] = useState<"inpost" | "zabka" | "orlen" | null>(null);
+  const [selectedPickupPoint, setSelectedPickupPoint] = useState<PickupPoint | null>(null);
+  const [pickupPointSearch, setPickupPointSearch] = useState("");
+  const [showInPostWidget, setShowInPostWidget] = useState(false);
+
+  // Handle InPost point selection
+  const handleInPostPointSelect = (point: {
+    id: string;
+    name: string;
+    address: string;
+    city: string;
+    postcode: string;
+  }) => {
+    setSelectedPickupPoint(point);
+    setShowInPostWidget(false);
+  };
 
   const [form, setForm] = useState<CheckoutForm>({
     email: "",
@@ -81,7 +208,7 @@ export default function CheckoutPage() {
           }));
         }
       } catch {
-        // User not logged in, ignore
+        // User not logged in
       }
     }
     fetchUser();
@@ -96,30 +223,37 @@ export default function CheckoutPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setError(null);
   };
 
-  const markSectionComplete = (section: AccordionSection, nextSection?: AccordionSection) => {
-    setCompletedSections((prev) => new Set([...prev, section]));
-    if (nextSection) {
-      setOpenSection(nextSection);
-    }
-  };
-
-  const selectedShippingMethod = SHIPPING_METHODS.find(m => m.id === selectedShipping);
+  const selectedShippingMethod = ALL_SHIPPING_METHODS.find(m => m.id === selectedShipping);
+  const selectedPaymentMethod = PAYMENT_METHODS.find(m => m.id === selectedPayment);
   const FREE_SHIPPING_THRESHOLD = 100;
   const isFreeShipping = total >= FREE_SHIPPING_THRESHOLD;
   const shippingCost = isFreeShipping ? 0 : (selectedShippingMethod?.price || 0);
-  const finalTotal = total + shippingCost;
+  const paymentSurcharge = selectedPaymentMethod?.surcharge || 0;
+  const finalTotal = total + shippingCost + paymentSurcharge;
 
-  const handleApplyDiscount = () => {
-    if (discountCode.trim()) {
-      // TODO: Validate discount code with API
-      setDiscountApplied(true);
-    }
+  const isFormValid = form.email && form.firstName && form.lastName &&
+    form.address && form.city && form.postcode && form.phone;
+
+  const handleApplyDiscount = async () => {
+    if (!discountCode.trim()) return;
+    setIsApplyingDiscount(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 800));
+    setDiscountApplied(true);
+    setIsApplyingDiscount(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isFormValid) {
+      setError("Wypełnij wszystkie wymagane pola");
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
@@ -155,503 +289,727 @@ export default function CheckoutPage() {
     }
   };
 
+  // Empty cart view
   if (items.length === 0) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
-            <ShoppingBag className="size-10 text-muted-foreground" />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center max-w-md mx-auto px-4"
+        >
+          <div className="w-24 h-24 bg-gradient-to-br from-primary/20 to-primary/5 rounded-full flex items-center justify-center mx-auto mb-6">
+            <ShoppingBag className="size-12 text-primary" />
           </div>
-          <h1 className="text-xl md:text-2xl font-bold">Koszyk jest pusty</h1>
-          <p className="text-muted-foreground mt-2 mb-6">
-            Dodaj produkty do koszyka przed złożeniem zamówienia
+          <h1 className="text-2xl font-bold">Twój koszyk jest pusty</h1>
+          <p className="text-muted-foreground mt-2 mb-8">
+            Dodaj produkty do koszyka, aby przejść do finalizacji zamówienia
           </p>
           <Link href="/products">
-            <Button size="lg">Przeglądaj produkty</Button>
+            <Button size="lg" className="gap-2">
+              <ArrowLeft className="size-4" />
+              Wróć do sklepu
+            </Button>
           </Link>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
-  const renderSectionIcon = (section: AccordionSection, Icon: React.ElementType) => {
-    const isCompleted = completedSections.has(section);
-    return (
-      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-        isCompleted ? "bg-green-500 text-white" : "bg-primary/10"
-      }`}>
-        {isCompleted ? <Check className="size-5" /> : <Icon className="size-5 text-primary" />}
-      </div>
-    );
-  };
-
   return (
-    <div className="min-h-[80vh] py-4 md:py-8">
-      <div className="container">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+      <div className="container py-6 md:py-10">
         {/* Header */}
-        <div className="mb-6 md:mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold">Finalizacja zamówienia</h1>
-          <p className="text-muted-foreground mt-1 text-sm md:text-base">
-            Wypełnij dane i złóż zamówienie
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Finalizacja zamówienia</h1>
+          <p className="text-muted-foreground mt-2">
+            Bezpieczne zakupy z gwarancją satysfakcji
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
-          {/* Accordion Form - 2 columns */}
-          <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit}>
-              <Accordion
-                type="single"
-                collapsible
-                value={openSection}
-                onValueChange={(value) => setOpenSection(value as AccordionSection)}
-                className="space-y-3"
+        <form onSubmit={handleSubmit}>
+          <div className="grid lg:grid-cols-5 gap-8">
+            {/* Main form - 3 columns */}
+            <div className="lg:col-span-3 space-y-6">
+
+              {/* Contact & Address Section */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="bg-card rounded-2xl border shadow-sm overflow-hidden"
               >
-                {/* 1. Contact info */}
-                <AccordionItem value="contact" className="bg-card rounded-xl border overflow-hidden">
-                  <AccordionTrigger className="group px-4 md:px-6 py-4 md:py-5 hover:no-underline [&>svg]:hidden">
-                    <div className="flex items-center gap-4 w-full">
-                      {renderSectionIcon("contact", User)}
-                      <div className="flex-1 min-w-0 text-left">
-                        <h2 className="font-semibold">1. Dane kontaktowe</h2>
-                        {completedSections.has("contact") && (
-                          <p className="text-sm text-muted-foreground truncate">{form.firstName} {form.lastName}, {form.email}</p>
-                        )}
-                      </div>
-                      <ChevronDown className="size-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                <div className="p-6 border-b bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <User className="size-5 text-primary" />
                     </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4 md:px-6 pb-4 md:pb-6">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="firstName">Imię</Label>
-                        <Input
-                          id="firstName"
-                          name="firstName"
-                          required
-                          value={form.firstName}
-                          onChange={handleChange}
-                          placeholder="Jan"
-                          className="h-11"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="lastName">Nazwisko</Label>
-                        <Input
-                          id="lastName"
-                          name="lastName"
-                          required
-                          value={form.lastName}
-                          onChange={handleChange}
-                          placeholder="Kowalski"
-                          className="h-11"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                          <Input
-                            id="email"
-                            name="email"
-                            type="email"
-                            required
-                            value={form.email}
-                            onChange={handleChange}
-                            placeholder="jan@example.com"
-                            className="h-11 pl-10"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Telefon</Label>
-                        <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                          <Input
-                            id="phone"
-                            name="phone"
-                            type="tel"
-                            required
-                            value={form.phone}
-                            onChange={handleChange}
-                            placeholder="+48 123 456 789"
-                            className="h-11 pl-10"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      className="mt-6"
-                      onClick={() => markSectionComplete("contact", "shipping")}
-                      disabled={!form.firstName || !form.lastName || !form.email || !form.phone}
-                    >
-                      Dalej
-                    </Button>
-                  </AccordionContent>
-                </AccordionItem>
-
-                {/* 2. Shipping address */}
-                <AccordionItem value="shipping" className="bg-card rounded-xl border overflow-hidden">
-                  <AccordionTrigger className="group px-4 md:px-6 py-4 md:py-5 hover:no-underline [&>svg]:hidden">
-                    <div className="flex items-center gap-4 w-full">
-                      {renderSectionIcon("shipping", MapPin)}
-                      <div className="flex-1 min-w-0 text-left">
-                        <h2 className="font-semibold">2. Adres dostawy</h2>
-                        {completedSections.has("shipping") && (
-                          <p className="text-sm text-muted-foreground truncate">{form.address}, {form.postcode} {form.city}</p>
-                        )}
-                      </div>
-                      <ChevronDown className="size-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4 md:px-6 pb-4 md:pb-6">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="address">Ulica i numer</Label>
-                        <Input
-                          id="address"
-                          name="address"
-                          required
-                          value={form.address}
-                          onChange={handleChange}
-                          placeholder="ul. Przykładowa 123/4"
-                          className="h-11"
-                        />
-                      </div>
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="space-y-2">
-                          <Label htmlFor="postcode">Kod pocztowy</Label>
-                          <Input
-                            id="postcode"
-                            name="postcode"
-                            required
-                            value={form.postcode}
-                            onChange={handleChange}
-                            placeholder="00-000"
-                            className="h-11"
-                          />
-                        </div>
-                        <div className="col-span-2 space-y-2">
-                          <Label htmlFor="city">Miasto</Label>
-                          <Input
-                            id="city"
-                            name="city"
-                            required
-                            value={form.city}
-                            onChange={handleChange}
-                            placeholder="Warszawa"
-                            className="h-11"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      className="mt-6"
-                      onClick={() => markSectionComplete("shipping", "delivery")}
-                      disabled={!form.address || !form.postcode || !form.city}
-                    >
-                      Dalej
-                    </Button>
-                  </AccordionContent>
-                </AccordionItem>
-
-                {/* 3. Delivery method */}
-                <AccordionItem value="delivery" className="bg-card rounded-xl border overflow-hidden">
-                  <AccordionTrigger className="group px-4 md:px-6 py-4 md:py-5 hover:no-underline [&>svg]:hidden">
-                    <div className="flex items-center gap-4 w-full">
-                      {renderSectionIcon("delivery", Truck)}
-                      <div className="flex-1 min-w-0 text-left">
-                        <h2 className="font-semibold">3. Sposób dostawy</h2>
-                        {completedSections.has("delivery") && (
-                          <p className="text-sm text-muted-foreground truncate">{selectedShippingMethod?.name}</p>
-                        )}
-                      </div>
-                      <ChevronDown className="size-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4 md:px-6 pb-4 md:pb-6">
-                    <div className="space-y-3">
-                      {SHIPPING_METHODS.map((method) => {
-                        const Icon = method.icon;
-                        const isSelected = selectedShipping === method.id;
-                        return (
-                          <label
-                            key={method.id}
-                            className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-colors ${
-                              isSelected ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-                            }`}
-                          >
-                            <input
-                              type="radio"
-                              name="shipping"
-                              value={method.id}
-                              checked={isSelected}
-                              onChange={(e) => setSelectedShipping(e.target.value)}
-                              className="sr-only"
-                            />
-                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                              isSelected ? "bg-primary text-white" : "bg-muted"
-                            }`}>
-                              <Icon className="size-5" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium">{method.name}</span>
-                                <span className={`font-semibold ${method.price === 0 || isFreeShipping ? "text-green-600" : ""}`}>
-                                  {method.price === 0 || isFreeShipping ? "Darmowa" : formatPrice(method.price)}
-                                </span>
-                              </div>
-                              <p className="text-sm text-muted-foreground">{method.time}</p>
-                            </div>
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                              isSelected ? "border-primary" : "border-muted-foreground/30"
-                            }`}>
-                              {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
-                            </div>
-                          </label>
-                        );
-                      })}
-                    </div>
-                    <Button
-                      type="button"
-                      className="mt-6"
-                      onClick={() => markSectionComplete("delivery", "payment")}
-                    >
-                      Dalej
-                    </Button>
-                  </AccordionContent>
-                </AccordionItem>
-
-                {/* 4. Payment method */}
-                <AccordionItem value="payment" className="bg-card rounded-xl border overflow-hidden">
-                  <AccordionTrigger className="group px-4 md:px-6 py-4 md:py-5 hover:no-underline [&>svg]:hidden">
-                    <div className="flex items-center gap-4 w-full">
-                      {renderSectionIcon("payment", CreditCard)}
-                      <div className="flex-1 min-w-0 text-left">
-                        <h2 className="font-semibold">4. Metoda płatności</h2>
-                        {completedSections.has("payment") && (
-                          <p className="text-sm text-muted-foreground truncate">{PAYMENT_METHODS.find(m => m.id === selectedPayment)?.name}</p>
-                        )}
-                      </div>
-                      <ChevronDown className="size-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4 md:px-6 pb-4 md:pb-6">
-                    <div className="space-y-3">
-                      {PAYMENT_METHODS.map((method) => {
-                        const Icon = method.icon;
-                        const isSelected = selectedPayment === method.id;
-                        return (
-                          <label
-                            key={method.id}
-                            className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-colors ${
-                              isSelected ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-                            }`}
-                          >
-                            <input
-                              type="radio"
-                              name="payment"
-                              value={method.id}
-                              checked={isSelected}
-                              onChange={(e) => setSelectedPayment(e.target.value)}
-                              className="sr-only"
-                            />
-                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                              isSelected ? "bg-primary text-white" : "bg-muted"
-                            }`}>
-                              <Icon className="size-5" />
-                            </div>
-                            <div className="flex-1">
-                              <span className="font-medium">{method.name}</span>
-                              <p className="text-sm text-muted-foreground">{method.description}</p>
-                            </div>
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                              isSelected ? "border-primary" : "border-muted-foreground/30"
-                            }`}>
-                              {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
-                            </div>
-                          </label>
-                        );
-                      })}
-                    </div>
-                    <Button
-                      type="button"
-                      className="mt-6"
-                      onClick={() => markSectionComplete("payment")}
-                    >
-                      Gotowe
-                    </Button>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-
-              {/* Error message */}
-              {error && (
-                <div className="bg-destructive/10 text-destructive p-4 rounded-xl border border-destructive/20">
-                  {error}
-                </div>
-              )}
-
-              {/* Submit button - mobile */}
-              <div className="lg:hidden pt-4">
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="w-full h-14 text-base"
-                  disabled={isSubmitting || completedSections.size < 4}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="size-5 mr-2 animate-spin" />
-                      Przetwarzanie...
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="size-5 mr-2" />
-                      Zamawiam i płacę {formatPrice(finalTotal)}
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </div>
-
-          {/* Order summary - 1 column */}
-          <div className="lg:col-span-1">
-            <div className="bg-card rounded-xl border p-4 md:p-6 sticky top-24">
-              <h2 className="text-lg font-semibold mb-4">Twoje zamówienie</h2>
-
-              {/* Items */}
-              <div className="space-y-3">
-                {items.map((item) => (
-                  <div
-                    key={`${item.product.id}-${item.productAttributeId}`}
-                    className="flex gap-3"
-                  >
-                    <div className="w-14 h-14 bg-muted rounded-lg overflow-hidden flex-shrink-0">
-                      {item.product.imageUrl ? (
-                        <img
-                          src={item.product.imageUrl}
-                          alt={item.product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                          Brak
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm line-clamp-2">{item.product.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {item.quantity} x {formatPrice(item.product.price)}
-                      </p>
+                    <div>
+                      <h2 className="font-semibold text-lg">Dane do wysyłki</h2>
+                      <p className="text-sm text-muted-foreground">Podaj dane odbiorcy przesyłki</p>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
 
-              {/* Discount code */}
-              <div className="border-t mt-4 pt-4">
-                <Label htmlFor="discount" className="text-sm font-medium flex items-center gap-2 mb-2">
-                  <Tag className="size-4" />
-                  Kod rabatowy
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="discount"
-                    value={discountCode}
-                    onChange={(e) => setDiscountCode(e.target.value)}
-                    placeholder="Wpisz kod"
-                    className="h-10"
-                    disabled={discountApplied}
-                  />
-                  <Button
-                    type="button"
-                    variant={discountApplied ? "secondary" : "outline"}
-                    onClick={handleApplyDiscount}
-                    disabled={discountApplied || !discountCode.trim()}
-                    className="h-10 px-4"
-                  >
-                    {discountApplied ? <Check className="size-4" /> : "Zastosuj"}
-                  </Button>
-                </div>
-                {discountApplied && (
-                  <p className="text-xs text-green-600 mt-1">Kod rabatowy został zastosowany</p>
-                )}
-              </div>
-
-              {/* Summary */}
-              <div className="border-t mt-4 pt-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Produkty ({items.length})</span>
-                  <span>{formatPrice(total)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Dostawa</span>
-                  <span className={shippingCost === 0 ? "text-green-600 font-medium" : ""}>
-                    {shippingCost === 0 ? "Gratis" : formatPrice(shippingCost)}
-                  </span>
-                </div>
-                {!isFreeShipping && (
-                  <div className="mt-2">
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-muted-foreground">Do darmowej dostawy brakuje Ci {formatPrice(FREE_SHIPPING_THRESHOLD - total)}</span>
-                      <span className="text-muted-foreground">{formatPrice(FREE_SHIPPING_THRESHOLD)}</span>
+                <div className="p-6 space-y-5">
+                  {/* Name row */}
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName" className="text-sm font-medium">
+                        Imię <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="firstName"
+                        name="firstName"
+                        required
+                        value={form.firstName}
+                        onChange={handleChange}
+                        placeholder="Jan"
+                        className="h-12 text-base"
+                      />
                     </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary rounded-full transition-all duration-300"
-                        style={{ width: `${Math.min((total / FREE_SHIPPING_THRESHOLD) * 100, 100)}%` }}
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName" className="text-sm font-medium">
+                        Nazwisko <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="lastName"
+                        name="lastName"
+                        required
+                        value={form.lastName}
+                        onChange={handleChange}
+                        placeholder="Kowalski"
+                        className="h-12 text-base"
                       />
                     </div>
                   </div>
-                )}
-                {discountApplied && (
-                  <div className="flex justify-between text-sm text-green-600">
-                    <span>Rabat</span>
-                    <span>-{formatPrice(0)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between font-semibold text-lg pt-2 border-t">
-                  <span>Do zapłaty</span>
-                  <span className="text-primary">{formatPrice(finalTotal)}</span>
-                </div>
-              </div>
 
-              {/* Submit button - desktop */}
-              <div className="hidden lg:block mt-6">
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="w-full h-12 text-base"
-                  disabled={isSubmitting || completedSections.size < 4}
-                  onClick={handleSubmit}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="size-5 mr-2 animate-spin" />
-                      Przetwarzanie...
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="size-5 mr-2" />
-                      Zamawiam i płacę
-                    </>
-                  )}
-                </Button>
-                {completedSections.size < 4 && (
-                  <p className="text-xs text-muted-foreground text-center mt-2">
-                    Wypełnij wszystkie sekcje aby złożyć zamówienie
-                  </p>
-                )}
-              </div>
+                  {/* Contact row */}
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-sm font-medium">
+                        Email <span className="text-destructive">*</span>
+                      </Label>
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          required
+                          value={form.email}
+                          onChange={handleChange}
+                          placeholder="jan@example.com"
+                          className="h-12 text-base pl-11"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="text-sm font-medium">
+                        Telefon <span className="text-destructive">*</span>
+                      </Label>
+                      <div className="relative">
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                        <Input
+                          id="phone"
+                          name="phone"
+                          type="tel"
+                          required
+                          value={form.phone}
+                          onChange={handleChange}
+                          placeholder="+48 123 456 789"
+                          className="h-12 text-base pl-11"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-border" />
+
+                  {/* Address */}
+                  <div className="space-y-2 pt-1">
+                    <Label htmlFor="address" className="text-sm font-medium">
+                      Adres dostawy <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="address"
+                      name="address"
+                      required
+                      value={form.address}
+                      onChange={handleChange}
+                      placeholder="ul. Przykładowa 123/4"
+                      className="h-12 text-base"
+                    />
+                  </div>
+
+                  {/* City row */}
+                  <div className="grid grid-cols-5 gap-4">
+                    <div className="col-span-2 space-y-2">
+                      <Label htmlFor="postcode" className="text-sm font-medium">
+                        Kod pocztowy <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="postcode"
+                        name="postcode"
+                        required
+                        value={form.postcode}
+                        onChange={handleChange}
+                        placeholder="00-000"
+                        className="h-12 text-base"
+                      />
+                    </div>
+                    <div className="col-span-3 space-y-2">
+                      <Label htmlFor="city" className="text-sm font-medium">
+                        Miasto <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="city"
+                        name="city"
+                        required
+                        value={form.city}
+                        onChange={handleChange}
+                        placeholder="Warszawa"
+                        className="h-12 text-base"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Shipping Section */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-card rounded-2xl border shadow-sm overflow-hidden"
+              >
+                <div className="p-6 border-b bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Truck className="size-5 text-primary" />
+                    </div>
+                    <div>
+                      <h2 className="font-semibold text-lg">Sposób dostawy</h2>
+                      <p className="text-sm text-muted-foreground">
+                        {isFreeShipping ? (
+                          <span className="text-green-600 font-medium">Darmowa dostawa!</span>
+                        ) : (
+                          <>Darmowa dostawa od {formatPrice(FREE_SHIPPING_THRESHOLD)}</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 md:p-6 space-y-6">
+                  {SHIPPING_GROUPS.map((group, groupIndex) => {
+                    const isPickupGroup = group.label === "Punkty odbioru";
+
+                    return (
+                      <div key={group.label}>
+                        {groupIndex > 0 && <div className="h-px bg-border -mx-4 md:-mx-6 mb-6" />}
+                        <h3 className="text-sm font-medium text-muted-foreground mb-3">{group.label}</h3>
+                        <div className="space-y-3">
+                          {group.methods.map((method) => {
+                            const Icon = method.icon;
+                            const isSelected = selectedShipping === method.id;
+                            const price = isFreeShipping ? 0 : method.price;
+                            const needsPointSelection = method.requiresPointSelection;
+                            const hasSelectedPoint = isSelected && selectedPickupPoint;
+
+                            return (
+                              <div key={method.id}>
+                                <label
+                                  className={`relative flex flex-col p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                    isSelected
+                                      ? "border-primary bg-primary/5 shadow-sm"
+                                      : "border-border hover:border-primary/40 hover:bg-muted/50"
+                                  }`}
+                                >
+                                  <input
+                                    type="radio"
+                                    name="shipping"
+                                    value={method.id}
+                                    checked={isSelected}
+                                    onChange={(e) => {
+                                      setSelectedShipping(e.target.value);
+                                      if (needsPointSelection) {
+                                        setSelectedPickupPoint(null);
+                                        setPickupPointType(method.pointType || null);
+                                      }
+                                    }}
+                                    className="sr-only"
+                                  />
+
+                                  {method.popular && (
+                                    <span className="absolute -top-2.5 left-3 px-2 py-0.5 bg-primary text-primary-foreground text-xs font-medium rounded-full">
+                                      Popularne
+                                    </span>
+                                  )}
+
+                                  <div className="flex items-start gap-3">
+                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                      isSelected ? "bg-primary text-white" : "bg-muted"
+                                    }`}>
+                                      <Icon className="size-5" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className="font-semibold">{method.name}</span>
+                                        <span className={`text-base font-bold ${
+                                          price === 0 ? "text-green-600" : "text-primary"
+                                        }`}>
+                                          {price === 0 ? "Gratis" : formatPrice(price)}
+                                        </span>
+                                      </div>
+                                      <p className="text-xs text-muted-foreground mt-0.5">{method.description}</p>
+                                      <div className="flex items-center gap-1.5 mt-2">
+                                        <Clock className="size-3 text-muted-foreground" />
+                                        <span className="text-xs text-muted-foreground">{method.time}</span>
+                                      </div>
+
+                                      {/* Selected pickup point display */}
+                                      {hasSelectedPoint && (
+                                        <div className="mt-3 pt-3 border-t">
+                                          <div className="flex items-start gap-2">
+                                            <MapPin className="size-4 text-primary flex-shrink-0 mt-0.5" />
+                                            <div className="flex-1 min-w-0">
+                                              <p className="text-sm font-medium">{selectedPickupPoint.name}</p>
+                                              <p className="text-xs text-muted-foreground">{selectedPickupPoint.address}, {selectedPickupPoint.city}</p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </label>
+
+                                {/* Pickup Point Selection - directly under tile */}
+                                <AnimatePresence>
+                                  {isSelected && needsPointSelection && (
+                                    <motion.div
+                                      initial={{ opacity: 0, height: 0 }}
+                                      animate={{ opacity: 1, height: "auto" }}
+                                      exit={{ opacity: 0, height: 0 }}
+                                      className="overflow-hidden"
+                                    >
+                                      <div className="mt-3 p-4 bg-muted/50 rounded-xl border">
+                                        {/* InPost Picker */}
+                                        {method.pointType === "inpost" && (
+                                          <div className="space-y-3">
+                                            <Button
+                                              type="button"
+                                              variant="outline"
+                                              className="w-full h-12 gap-2 bg-background"
+                                              onClick={() => setShowInPostWidget(true)}
+                                            >
+                                              <Map className="size-5" />
+                                              Wybierz Paczkomat® na mapie
+                                            </Button>
+                                            <p className="text-xs text-center text-muted-foreground">
+                                              Kliknij aby otworzyć mapę paczkomatów
+                                            </p>
+                                          </div>
+                                        )}
+
+                                        {/* Other providers - Search + list */}
+                                        {method.pointType !== "inpost" && (
+                                          <>
+                                            <div className="relative mb-3">
+                                              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                                              <Input
+                                                placeholder="Wpisz miasto lub kod pocztowy..."
+                                                value={pickupPointSearch}
+                                                onChange={(e) => setPickupPointSearch(e.target.value)}
+                                                className="pl-10 h-10 bg-background"
+                                              />
+                                            </div>
+
+                                            {/* Points list */}
+                                            <div className="grid sm:grid-cols-2 gap-2 max-h-[240px] overflow-y-auto">
+
+                                          {method.pointType === "zabka" && [
+                                            { id: "ZAB001", name: "Żabka - Centrum", address: "ul. Nowy Świat 15", city: "Warszawa", postcode: "00-029" },
+                                            { id: "ZAB002", name: "Żabka - Mokotów", address: "ul. Puławska 150", city: "Warszawa", postcode: "02-624" },
+                                            { id: "ZAB003", name: "Żabka - Wola", address: "ul. Wolska 80", city: "Warszawa", postcode: "01-141" },
+                                            { id: "ZAB004", name: "Żabka - Praga", address: "ul. Targowa 20", city: "Warszawa", postcode: "03-731" },
+                                          ].map((point) => (
+                                            <button
+                                              key={point.id}
+                                              type="button"
+                                              onClick={() => setSelectedPickupPoint(point)}
+                                              className={`p-3 rounded-lg border text-left transition-all ${
+                                                selectedPickupPoint?.id === point.id
+                                                  ? "border-green-500 bg-green-50"
+                                                  : "bg-background hover:border-green-300"
+                                              }`}
+                                            >
+                                              <div className="flex items-start gap-2">
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                                  selectedPickupPoint?.id === point.id ? "bg-green-500 text-white" : "bg-green-100"
+                                                }`}>
+                                                  <Store className={`size-4 ${selectedPickupPoint?.id === point.id ? "" : "text-green-600"}`} />
+                                                </div>
+                                                <div className="min-w-0">
+                                                  <p className="font-medium text-sm">{point.name}</p>
+                                                  <p className="text-xs text-muted-foreground truncate">{point.address}</p>
+                                                  <p className="text-xs text-muted-foreground">{point.postcode} {point.city}</p>
+                                                </div>
+                                              </div>
+                                            </button>
+                                          ))}
+
+                                          {method.pointType === "orlen" && [
+                                            { id: "ORL001", name: "Orlen - Centrum", address: "ul. Jana Pawła II 20", city: "Warszawa", postcode: "00-133" },
+                                            { id: "ORL002", name: "Orlen - Ursynów", address: "ul. Rosoła 50", city: "Warszawa", postcode: "02-786" },
+                                            { id: "ORL003", name: "Orlen - Bemowo", address: "ul. Górczewska 200", city: "Warszawa", postcode: "01-460" },
+                                            { id: "ORL004", name: "Orlen - Bielany", address: "ul. Marymoncka 100", city: "Warszawa", postcode: "01-813" },
+                                          ].map((point) => (
+                                            <button
+                                              key={point.id}
+                                              type="button"
+                                              onClick={() => setSelectedPickupPoint(point)}
+                                              className={`p-3 rounded-lg border text-left transition-all ${
+                                                selectedPickupPoint?.id === point.id
+                                                  ? "border-red-500 bg-red-50"
+                                                  : "bg-background hover:border-red-300"
+                                              }`}
+                                            >
+                                              <div className="flex items-start gap-2">
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                                  selectedPickupPoint?.id === point.id ? "bg-red-500 text-white" : "bg-red-100"
+                                                }`}>
+                                                  <Fuel className={`size-4 ${selectedPickupPoint?.id === point.id ? "" : "text-red-600"}`} />
+                                                </div>
+                                                <div className="min-w-0">
+                                                  <p className="font-medium text-sm">{point.name}</p>
+                                                  <p className="text-xs text-muted-foreground truncate">{point.address}</p>
+                                                  <p className="text-xs text-muted-foreground">{point.postcode} {point.city}</p>
+                                                </div>
+                                              </div>
+                                            </button>
+                                          ))}
+                                            </div>
+                                          </>
+                                        )}
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+
+              {/* Payment Section */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="bg-card rounded-2xl border shadow-sm overflow-hidden"
+              >
+                <div className="p-6 border-b bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <CreditCard className="size-5 text-primary" />
+                    </div>
+                    <div>
+                      <h2 className="font-semibold text-lg">Metoda płatności</h2>
+                      <p className="text-sm text-muted-foreground">Wybierz preferowany sposób płatności</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 md:p-6">
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {PAYMENT_METHODS.map((method) => {
+                      const Icon = method.icon;
+                      const isSelected = selectedPayment === method.id;
+
+                      return (
+                        <label
+                          key={method.id}
+                          className={`relative flex flex-col p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                            isSelected
+                              ? "border-primary bg-primary/5 shadow-sm"
+                              : "border-border hover:border-primary/40 hover:bg-muted/50"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="payment"
+                            value={method.id}
+                            checked={isSelected}
+                            onChange={(e) => setSelectedPayment(e.target.value)}
+                            className="sr-only"
+                          />
+
+                          {method.popular && (
+                            <span className="absolute -top-2.5 left-3 px-2 py-0.5 bg-primary text-primary-foreground text-xs font-medium rounded-full">
+                              Popularne
+                            </span>
+                          )}
+
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                              isSelected ? "bg-primary text-white" : "bg-muted"
+                            }`}>
+                              <Icon className="size-5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="font-semibold block">{method.name}</span>
+                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                                {method.description}
+                              </p>
+                            </div>
+                          </div>
+
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </motion.div>
 
             </div>
+
+            {/* Order Summary - 2 columns */}
+            <div className="lg:col-span-2">
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-card rounded-2xl border shadow-sm sticky top-24"
+              >
+                {/* Summary header */}
+                <div className="p-6 border-b bg-muted/30">
+                  <h2 className="font-semibold text-lg flex items-center gap-2">
+                    <ShoppingBag className="size-5" />
+                    Podsumowanie ({items.length})
+                  </h2>
+                </div>
+
+                {/* Items list */}
+                <div className="p-4 max-h-[280px] overflow-y-auto">
+                  <div className="space-y-3">
+                    {items.map((item) => (
+                      <div
+                        key={`${item.product.id}-${item.productAttributeId}`}
+                        className="flex gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="relative flex-shrink-0">
+                          <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden">
+                            {item.product.imageUrl ? (
+                              <Image
+                                src={item.product.imageUrl}
+                                alt={item.product.name}
+                                fill
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Package className="size-6 text-muted-foreground" />
+                              </div>
+                            )}
+                          </div>
+                          <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-primary text-primary-foreground text-xs font-medium rounded-full flex items-center justify-center shadow-sm">
+                            {item.quantity}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm line-clamp-2">{item.product.name}</p>
+                          <p className="text-sm text-primary font-semibold mt-1">
+                            {formatPrice(item.product.price * item.quantity)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Discount code */}
+                <div className="px-4 pb-4">
+                  <div className="p-3 bg-muted/50 rounded-xl">
+                    <Label htmlFor="discount" className="text-sm font-medium flex items-center gap-2 mb-2">
+                      <Tag className="size-4" />
+                      Kod rabatowy
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="discount"
+                        value={discountCode}
+                        onChange={(e) => setDiscountCode(e.target.value)}
+                        placeholder="Wpisz kod"
+                        className="h-10"
+                        disabled={discountApplied}
+                      />
+                      <Button
+                        type="button"
+                        variant={discountApplied ? "default" : "outline"}
+                        onClick={() => {
+                          if (discountApplied) {
+                            setDiscountApplied(false);
+                            setDiscountCode("");
+                          } else {
+                            handleApplyDiscount();
+                          }
+                        }}
+                        disabled={!discountApplied && (!discountCode.trim() || isApplyingDiscount)}
+                        className={`h-10 px-4 min-w-[90px] ${discountApplied ? "bg-green-600 hover:bg-green-700 text-white" : ""}`}
+                      >
+                        {isApplyingDiscount ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : discountApplied ? (
+                          <X className="size-4" />
+                        ) : (
+                          "Zastosuj"
+                        )}
+                      </Button>
+                    </div>
+                    <div className="h-5 mt-2">
+                      <AnimatePresence>
+                        {discountApplied && (
+                          <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="text-xs text-green-600 flex items-center gap-1"
+                          >
+                            <Check className="size-3" />
+                            Kod rabatowy został zastosowany
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Price breakdown */}
+                <div className="px-4 pb-4">
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Produkty</span>
+                      <span className="font-medium">{formatPrice(total)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Dostawa</span>
+                      <span className={`font-medium ${shippingCost === 0 ? "text-green-600" : ""}`}>
+                        {shippingCost === 0 ? "Gratis" : formatPrice(shippingCost)}
+                      </span>
+                    </div>
+                    {paymentSurcharge > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Opłata za pobranie</span>
+                        <span className="font-medium">{formatPrice(paymentSurcharge)}</span>
+                      </div>
+                    )}
+                    {discountApplied && (
+                      <div className="flex justify-between text-green-600">
+                        <span>Rabat</span>
+                        <span className="font-medium">-{formatPrice(0)}</span>
+                      </div>
+                    )}
+
+                    {/* Free shipping progress */}
+                    {!isFreeShipping && (
+                      <div className="pt-2">
+                        <div className="flex justify-between text-xs mb-1.5">
+                          <span className="text-muted-foreground">
+                            Do darmowej dostawy brakuje Ci {formatPrice(FREE_SHIPPING_THRESHOLD - total)}
+                          </span>
+                        </div>
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${Math.min((total / FREE_SHIPPING_THRESHOLD) * 100, 100)}%` }}
+                            className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Total */}
+                <div className="p-4 bg-muted/50 border-t">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-lg">Do zapłaty</span>
+                    <span className="text-2xl font-bold text-primary">{formatPrice(finalTotal)}</span>
+                  </div>
+                </div>
+
+                {/* Submit button */}
+                <div className="p-4 space-y-3">
+                  <AnimatePresence>
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm flex items-start gap-2"
+                      >
+                        <X className="size-4 flex-shrink-0 mt-0.5" />
+                        {error}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className="w-full h-14 text-base font-semibold gap-2 shadow-lg shadow-primary/25"
+                    disabled={isSubmitting || !isFormValid}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="size-5 animate-spin" />
+                        Przetwarzanie zamówienia...
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="size-5" />
+                        Zamawiam i płacę
+                        <ChevronRight className="size-5" />
+                      </>
+                    )}
+                  </Button>
+
+                  {!isFormValid && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      Wypełnij wszystkie wymagane pola, aby złożyć zamówienie
+                    </p>
+                  )}
+                </div>
+
+                {/* Trust badges */}
+                <div className="p-4 border-t">
+                  <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1.5">
+                      <Shield className="size-4" />
+                      <span>Bezpieczne płatności</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Lock className="size-4" />
+                      <span>SSL 256-bit</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
           </div>
-        </div>
+        </form>
+
+        {/* InPost Picker Modal */}
+        <InPostPickerModal
+          isOpen={showInPostWidget}
+          onClose={() => setShowInPostWidget(false)}
+          onSelect={handleInPostPointSelect}
+        />
       </div>
     </div>
   );

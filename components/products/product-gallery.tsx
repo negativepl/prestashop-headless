@@ -5,13 +5,16 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
+import { FavoriteButton } from "@/components/products/favorite-button";
+import type { Product } from "@/lib/prestashop/types";
 
 interface ProductGalleryProps {
   images: string[];
   productName: string;
+  product?: Product;
 }
 
-export function ProductGallery({ images, productName }: ProductGalleryProps) {
+export function ProductGallery({ images, productName, product }: ProductGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -33,18 +36,28 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
   return (
     <div className="space-y-3">
       {/* Main image */}
-      <button
-        onClick={() => openLightbox(selectedIndex)}
-        className="relative aspect-square bg-white rounded-xl overflow-hidden p-6 w-full cursor-zoom-in"
-      >
-        <Image
-          src={displayImages[selectedIndex]}
-          alt={`${productName} - zdjęcie ${selectedIndex + 1}`}
-          fill
-          className="object-contain p-4"
-          priority
-        />
-      </button>
+      <div className="relative">
+        <button
+          onClick={() => openLightbox(selectedIndex)}
+          className="relative aspect-square bg-white rounded-xl overflow-hidden p-6 w-full cursor-zoom-in"
+        >
+          <Image
+            src={displayImages[selectedIndex]}
+            alt={`${productName} - zdjęcie ${selectedIndex + 1}`}
+            fill
+            className="object-contain p-4"
+            priority
+          />
+        </button>
+
+        {/* Favorite button */}
+        {product && (
+          <FavoriteButton
+            product={product}
+            className="absolute top-4 right-4 z-10"
+          />
+        )}
+      </div>
 
       {/* Lightbox */}
       <Lightbox

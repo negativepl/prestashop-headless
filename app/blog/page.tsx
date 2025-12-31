@@ -28,7 +28,7 @@ export default async function BlogPage({
           <span className="text-primary font-semibold text-sm uppercase tracking-wider">
             Blog
           </span>
-          <h1 className="text-3xl md:text-4xl font-bold mt-2">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight mt-2">
             Najnowsze wpisy
           </h1>
           <p className="mt-4 text-lg text-muted-foreground">

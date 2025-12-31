@@ -28,17 +28,18 @@ const securityHeaders = [
   },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(self), interest-cohort=()",
+    value: "camera=(), microphone=(), interest-cohort=()",
   },
   {
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe needed for Next.js
-      "style-src 'self' 'unsafe-inline'", // unsafe-inline needed for styled components
-      "img-src 'self' data: blob: https://presta.trkhspl.com https://images.unsplash.com https://upload.wikimedia.org https://blog.trkhspl.com",
-      "font-src 'self' data:",
-      "connect-src 'self' https://presta.trkhspl.com https://blog.trkhspl.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://geowidget.inpost.pl", // unsafe needed for Next.js + InPost Geowidget
+      "style-src 'self' 'unsafe-inline' https://geowidget.inpost.pl https://unpkg.com", // unsafe-inline needed for styled components + InPost + Leaflet
+      "img-src 'self' data: blob: https://presta.trkhspl.com https://images.unsplash.com https://upload.wikimedia.org https://blog.trkhspl.com https://*.tile.openstreetmap.org https://geowidget.inpost.pl https://cdnjs.cloudflare.com https://unpkg.com https://static.easypack24.net",
+      "font-src 'self' data: https://geowidget.inpost.pl",
+      "connect-src 'self' https://presta.trkhspl.com https://blog.trkhspl.com https://geowidget.inpost.pl https://api-pl-points.inpost.pl https://nominatim.openstreetmap.org",
+      "frame-src 'self' https://geowidget.inpost.pl https://geowidget-app.inpost.pl",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

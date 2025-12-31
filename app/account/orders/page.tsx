@@ -64,7 +64,7 @@ export default async function OrdersPage() {
       <div className="container">
         {/* Header */}
         <div className="text-center mb-10">
-          <h1 className="text-3xl md:text-4xl font-bold">Moje zamówienia</h1>
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Moje zamówienia</h1>
           <p className="text-muted-foreground mt-2">
             Historia wszystkich Twoich zamówień
           </p>

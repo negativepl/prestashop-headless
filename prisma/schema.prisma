@@ -10,6 +10,10 @@ datasource db {
   provider = "sqlite"
 }
 
+// ============================================
+// MEGA MENU & SITE CONFIG
+// ============================================
+
 // Konfiguracja kategorii w mega menu
 model MegaMenuCategory {
   id                 Int      @id @default(autoincrement())
@@ -27,4 +31,223 @@ model SiteConfig {
   id    Int    @id @default(autoincrement())
   key   String @unique
   value String
+}
+
+// ============================================
+// PAYMENT PROVIDERS
+// ============================================
+
+// Konfiguracja dostawców płatności
+model PaymentProvider {
+  id           Int      @id @default(autoincrement())
+  code         String   @unique // stripe, payu, cod, transfer
+  name         String   // Nazwa wyświetlana: "Karta płatnicza", "BLIK"
+  description  String?  // Opis: "Visa, Mastercard, Maestro"
+  icon         String?  // Nazwa ikony: "CreditCard", "Wallet"
+  isActive     Boolean  @default(false)
+  isTestMode   Boolean  @default(true)
+  position     Int      @default(0)
+
+  // Konfiguracja (JSON) - klucze API, etc.
+  // W trybie test: używa testowych kluczy
+  // W produkcji: używa produkcyjnych kluczy
+  config       String   @default("{}") // JSON: { publicKey, secretKey, webhookSecret }
+
+  // Metody płatności obsługiwane przez tego providera
+  // np. PayU obsługuje: blik, card, transfer, installments
+  methods      PaymentMethod[]
+
+  // Transakcje
+  transactions PaymentTransaction[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Metody płatności (sub-typy dostawcy)
+// np. PayU ma metody: BLIK, Karta, Przelew, Raty
+model PaymentMethod {
+  id           Int      @id @default(autoincrement())
+  code         String   // blik, card, transfer, installments, cod
+  name         String   // "BLIK", "Karta płatnicza"
+  description  String?  // "Szybka płatność kodem BLIK"
+  icon         String?  // Nazwa ikony
+  isActive     Boolean  @default(true)
+  position     Int      @default(0)
+
+  // Minimalny i maksymalny koszt zamówienia dla tej metody
+  minAmount    Float?   // np. raty od 300 PLN
+  maxAmount    Float?   // np. BLIK do 10000 PLN
+
+  // Dodatkowa opłata za tę metodę (np. COD +5 PLN)
+  surcharge    Float    @default(0)
+
+  // Powiązanie z dostawcą
+  providerId   Int
+  provider     PaymentProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([providerId, code])
+}
+
+// Transakcje płatności
+model PaymentTransaction {
+  id              Int      @id @default(autoincrement())
+
+  // Powiązanie z zamówieniem PrestaShop
+  orderId         Int      // ID zamówienia w PrestaShop
+  orderReference  String?  // Reference zamówienia
+
+  // Dostawca płatności
+  providerId      Int
+  provider        PaymentProvider @relation(fields: [providerId], references: [id])
+
+  // Metoda płatności użyta
+  methodCode      String   // blik, card, etc.
+
+  // Kwoty
+  amount          Float    // Kwota do zapłaty
+  currency        String   @default("PLN")
+  surcharge       Float    @default(0) // Dodatkowa opłata
+
+  // ID transakcji u dostawcy
+  externalId      String?  // np. Stripe PaymentIntent ID, PayU order ID
+
+  // Status transakcji
+  status          String   @default("pending") // pending, processing, completed, failed, refunded, cancelled
+
+  // Dane z webhooka (JSON) - pełna odpowiedź od dostawcy
+  webhookData     String?  // JSON
+
+  // URL do płatności (dla redirect flow)
+  paymentUrl      String?
+
+  // Błędy
+  errorCode       String?
+  errorMessage    String?
+
+  // Timestamps
+  paidAt          DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([externalId])
+  @@index([status])
+}
+
+// ============================================
+// SHIPPING PROVIDERS
+// ============================================
+
+// Dostawcy wysyłki (mapowanie na PrestaShop carriers)
+model ShippingProvider {
+  id              Int      @id @default(autoincrement())
+  code            String   @unique // inpost_locker, inpost_courier, dpd, dhl, pickup
+  name            String   // "Paczkomat InPost", "Kurier DPD"
+  description     String?  // "1-2 dni robocze"
+  icon            String?  // Nazwa ikony
+  isActive        Boolean  @default(false)
+  position        Int      @default(0)
+
+  // Mapowanie na PrestaShop carrier
+  prestashopCarrierId Int? // ID carrier w PrestaShop (np. 26)
+
+  // Ceny
+  basePrice       Float    @default(0) // Podstawowa cena wysyłki
+  freeFromAmount  Float?   // Darmowa wysyłka od kwoty (np. 100 PLN)
+
+  // Czas dostawy
+  deliveryTimeMin Int?     // Min dni
+  deliveryTimeMax Int?     // Max dni
+
+  // Konfiguracja API (JSON)
+  // np. InPost: { organizationId, accessToken }
+  config          String   @default("{}") // JSON
+
+  // Czy wymaga wyboru punktu (paczkomat)?
+  requiresPoint   Boolean  @default(false)
+
+  // Shipments
+  shipments       Shipment[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Przesyłki (tracking)
+model Shipment {
+  id              Int      @id @default(autoincrement())
+
+  // Powiązanie z zamówieniem PrestaShop
+  orderId         Int      @unique // ID zamówienia w PrestaShop
+
+  // Dostawca wysyłki
+  providerId      Int
+  provider        ShippingProvider @relation(fields: [providerId], references: [id])
+
+  // Numer przesyłki
+  trackingNumber  String?
+  trackingUrl     String?
+
+  // Punkt odbioru (dla paczkomatów)
+  pointId         String?  // np. "KRA123"
+  pointName       String?  // np. "Paczkomat KRA123"
+  pointAddress    String?  // Adres paczkomatu
+
+  // Status przesyłki
+  status          String   @default("pending") // pending, shipped, in_transit, delivered, returned
+
+  // Dane z API kuriera (JSON)
+  trackingData    String?  // JSON - historia statusów
+
+  // Etykieta
+  labelUrl        String?  // URL do etykiety PDF
+
+  // Timestamps
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([trackingNumber])
+  @@index([status])
+}
+
+// ============================================
+// DISCOUNT CODES (rozszerzenie, sync z PrestaShop)
+// ============================================
+
+// Cache kodów rabatowych z PrestaShop
+model DiscountCode {
+  id              Int      @id @default(autoincrement())
+
+  // ID w PrestaShop (cart_rules)
+  prestashopId    Int      @unique
+
+  code            String   @unique
+  name            String?
+  description     String?
+
+  // Typ rabatu
+  type            String   // percentage, fixed_amount, free_shipping
+  value           Float    // Wartość rabatu (% lub PLN)
+
+  // Warunki
+  minAmount       Float?   // Minimalna wartość zamówienia
+  maxUses         Int?     // Maksymalna liczba użyć
+  usesCount       Int      @default(0) // Aktualne użycia
+
+  // Ważność
+  validFrom       DateTime?
+  validTo         DateTime?
+  isActive        Boolean  @default(true)
+
+  // Cache timestamp
+  syncedAt        DateTime @default(now())
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

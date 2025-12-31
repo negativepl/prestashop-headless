@@ -24,8 +24,8 @@ export default function CartPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold">Koszyk</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Koszyk</h1>
+            <p className="text-muted-foreground mt-2">
               {itemCount} {itemCount === 1 ? "produkt" : itemCount > 1 && itemCount < 5 ? "produkty" : "produktów"}
             </p>
           </div>

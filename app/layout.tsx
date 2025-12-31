@@ -4,7 +4,6 @@ import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { MobileDock } from "@/components/layout/mobile-dock";
-import { ChatWidget } from "@/components/chat/chat-widget";
 import { ThemeProvider } from "@/components/theme-provider";
 import { prestashop } from "@/lib/prestashop/client";
 import type { Category } from "@/lib/prestashop/types";

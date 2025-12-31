@@ -36,23 +36,12 @@ export function HeroCarousel() {
   }, []);
 
   return (
-    <div className="container py-4 md:py-6">
-      <div className="relative rounded-2xl md:rounded-3xl overflow-hidden group h-[280px] md:h-[350px] lg:h-[420px]">
-        {!mounted ? (
-          // Static placeholder for SSR - same structure as first slide
-          <div className="relative w-full h-full bg-muted">
-            <Image
-              src={slides[0].image}
-              alt="Slide 1"
-              fill
-              className="object-cover"
-              priority
-              loading="eager"
-              fetchPriority="high"
-              sizes="100vw"
-            />
-          </div>
-        ) : (
+    <div className="container py-4 md:py-6" suppressHydrationWarning>
+      <div
+        className="relative rounded-2xl md:rounded-3xl overflow-hidden group h-[280px] md:h-[350px] lg:h-[420px]"
+        suppressHydrationWarning
+      >
+        {mounted ? (
           <Swiper
             modules={[Autoplay, Navigation, Pagination]}
             onSwiper={setSwiper}
@@ -82,9 +71,20 @@ export function HeroCarousel() {
               </SwiperSlide>
             ))}
           </Swiper>
+        ) : (
+          <div className="relative w-full h-full bg-muted">
+            <Image
+              src={slides[0].image}
+              alt="Slide 1"
+              fill
+              className="object-cover"
+              priority
+              sizes="100vw"
+            />
+          </div>
         )}
 
-        {/* Custom navigation buttons - only show when mounted */}
+        {/* Custom navigation buttons */}
         {mounted && (
           <>
             <button

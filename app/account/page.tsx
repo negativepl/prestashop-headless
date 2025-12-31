@@ -75,7 +75,7 @@ export default async function AccountPage() {
       <div className="container">
         {/* Header */}
         <div className="mb-10">
-          <h1 className="text-3xl md:text-4xl font-bold">Moje konto</h1>
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Moje konto</h1>
           <p className="text-muted-foreground mt-2">
             Zarządzaj swoim kontem i zamówieniami
           </p>

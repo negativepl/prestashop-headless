@@ -76,7 +76,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       {/* Product main section */}
       <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
         {/* Left - Images */}
-        <ProductGallery images={allImages} productName={product.name} />
+        <ProductGallery images={allImages} productName={product.name} product={product} />
 
         {/* Right - Product Info */}
         <div className="space-y-6">

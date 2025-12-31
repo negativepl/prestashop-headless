@@ -25,7 +25,7 @@ export default async function ProductsPage() {
     <div className="container py-8">
       <Breadcrumbs items={[{ label: "Produkty" }]} />
       <div className="mb-8">
-        <h1 className="text-3xl md:text-4xl font-bold">Produkty</h1>
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Produkty</h1>
         <p className="text-muted-foreground mt-2">
           Przeglądaj wszystkie dostępne produkty
         </p>

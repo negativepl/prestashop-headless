@@ -37,7 +37,7 @@ export function FavoriteButton({ product, className = "" }: FavoriteButtonProps)
   return (
     <button
       onClick={handleClick}
-      className={`w-10 h-10 bg-white/70 backdrop-blur-md border border-white/50 rounded-full flex items-center justify-center transition-all duration-300 hover:bg-white/90 hover:scale-110 shadow-sm ${className}`}
+      className={`w-10 h-10 bg-white dark:bg-neutral-800 backdrop-blur-md border border-neutral-200 dark:border-neutral-700 rounded-full flex items-center justify-center transition-all duration-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:scale-110 shadow-sm ${className}`}
       aria-label={favorite ? "Usuń z ulubionych" : "Dodaj do ulubionych"}
     >
       <AnimatePresence mode="wait">
@@ -56,7 +56,7 @@ export function FavoriteButton({ product, className = "" }: FavoriteButtonProps)
         >
           <Heart
             className={`h-5 w-5 transition-colors ${
-              favorite ? "fill-red-500 text-red-500" : "text-foreground/60"
+              favorite ? "fill-red-500 text-red-500" : "text-neutral-600 dark:text-neutral-300"
             }`}
           />
         </motion.div>
