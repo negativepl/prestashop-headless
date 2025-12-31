@@ -3,7 +3,7 @@
  * Headless Auth Module for PrestaShop
  * Provides /api/auth/login endpoint for headless frontend authentication
  *
- * @author PrestaShop Headless Project
+ * @author Home Screen Distribution sp. z o.o.
  * @version 1.0.0
  */
 
@@ -18,7 +18,7 @@ class HeadlessAuth extends Module
         $this->name = 'headlessauth';
         $this->tab = 'front_office_features';
         $this->version = '1.0.0';
-        $this->author = 'PrestaShop Headless';
+        $this->author = 'Home Screen Distribution sp. z o.o.';
         $this->need_instance = 0;
         $this->ps_versions_compliancy = [
             'min' => '1.7.0.0',
