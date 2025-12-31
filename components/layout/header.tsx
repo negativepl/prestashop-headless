@@ -38,6 +38,7 @@ export function Header({ categories = [] }: HeaderProps) {
   const [cartAnimating, setCartAnimating] = useState(false);
   const prevCartCount = useRef(itemCount);
   const [cartOpen, setCartOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     await logoutUser();
@@ -333,7 +334,7 @@ export function Header({ categories = [] }: HeaderProps) {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <DropdownMenu>
+              <DropdownMenu open={userMenuOpen} onOpenChange={setUserMenuOpen}>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="default" className="h-10 px-3 gap-2 cursor-pointer hover:bg-transparent! hover:text-primary focus-visible:ring-0 focus-visible:ring-offset-0 group">
                     <User className="size-5" />
@@ -347,26 +348,26 @@ export function Header({ categories = [] }: HeaderProps) {
                       <DropdownMenuLabel>{user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : "Moje konto"}</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link href="/account" className="flex items-center gap-2 cursor-pointer">
+                        <Link href="/account" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2 cursor-pointer">
                           <User className="size-4" />
                           Moje konto
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href="/favorites" className="flex items-center gap-2 cursor-pointer">
+                        <Link href="/favorites" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2 cursor-pointer">
                           <Heart className="size-4" />
                           Ulubione
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 cursor-pointer text-destructive">
+                      <DropdownMenuItem onClick={() => { setUserMenuOpen(false); handleLogout(); }} className="flex items-center gap-2 cursor-pointer text-destructive">
                         <LogOut className="size-4" />
                         Wyloguj się
                       </DropdownMenuItem>
                     </>
                   ) : (
                     <div className="p-3">
-                      <Link href="/login">
+                      <Link href="/login" onClick={() => setUserMenuOpen(false)}>
                         <Button className="w-full mb-3">
                           Zaloguj się
                         </Button>
@@ -399,7 +400,7 @@ export function Header({ categories = [] }: HeaderProps) {
                         <div className="flex-1 h-px bg-border" />
                       </div>
 
-                      <Link href="/register">
+                      <Link href="/register" onClick={() => setUserMenuOpen(false)}>
                         <Button variant="outline" className="w-full">
                           Załóż konto
                         </Button>
