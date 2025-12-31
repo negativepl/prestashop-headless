@@ -122,6 +122,39 @@ npm run build
 npm start
 ```
 
+## Features
+
+### Catalog & Products
+- Product catalog with categories and subcategories
+- Product filters (price range, availability)
+- Grid and list view modes
+- Lazy loading with "Load more" pagination
+- Out-of-stock products sorted to bottom
+- Product images from PrestaShop
+- Manufacturer/brand display
+
+### Shopping
+- Shopping cart with quantity management
+- Favorites/wishlist (local storage)
+- Product variants support
+
+### User Account
+- User registration and login
+- Secure authentication via PrestaShop headlessauth module
+- Account dashboard with order history
+- Address management
+
+### Checkout
+- Multi-step checkout process
+- Shipping method selection
+- **InPost Paczkomat** integration with map picker
+- Order summary and confirmation
+
+### Performance
+- ISR (Incremental Static Regeneration) caching
+- SWR for client-side data fetching
+- Optimized product loading (lightweight ID fetch + batch details)
+
 ## Tech Stack
 
 - Next.js 16 (App Router)
@@ -130,7 +163,10 @@ npm start
 - Tailwind CSS
 - Shadcn/ui
 - Zustand (state management)
+- SWR (data fetching)
+- Prisma + SQLite (local data)
 - Zod (validation)
+- Leaflet (maps)
 
 ## Project Structure
 
@@ -154,19 +190,33 @@ frontend/
 
 ## Roadmap / TODO
 
+### Shipping Integrations
+- [x] InPost Paczkomat (map picker)
+- [ ] DHL Parcel (Żabka points)
+- [ ] Orlen Paczka
+- [ ] DPD Pickup
+- [ ] Poczta Polska
+
+### Payment Integrations
+- [ ] Przelewy24
+- [ ] PayU
+- [ ] BLIK
+- [ ] Stripe
+
 ### High Priority
 - [x] Product filters (price, availability)
 - [x] ISR caching for product/category pages
-- [ ] Secure password verification (PrestaShop module or custom endpoint)
-- [ ] Payment integrations (Przelewy24, PayU, BLIK)
-- [ ] Shipping integrations (InPost, DPD, Poczta Polska)
+- [x] Secure authentication (headlessauth module)
+- [x] InPost Paczkomat integration
+- [ ] Product search with filters
+- [ ] Order tracking page
 
 ### Medium Priority
-- [ ] Product search with filters
 - [x] Breadcrumbs navigation
+- [x] Grid/list view toggle
+- [x] Category descriptions with HTML
 - [ ] Product reviews/ratings
 - [ ] Wishlist sync with PrestaShop
-- [ ] Order tracking page
 - [ ] Password reset flow
 - [ ] Email notifications
 
@@ -181,12 +231,11 @@ frontend/
 - [ ] Analytics integration (GA4, GTM)
 
 ### Performance & Security
+- [x] SWR data fetching with caching
+- [x] Optimized pagination (ID-first loading)
 - [ ] Redis/Upstash caching layer
 - [ ] Rate limiting on API routes
-- [ ] CSRF protection
-- [ ] Input sanitization audit
 - [ ] Image optimization pipeline
-- [ ] CDN for static assets
 
 ---
 
