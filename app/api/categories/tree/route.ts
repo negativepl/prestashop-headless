@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prestashop } from "@/lib/prestashop/client";
 import type { Category } from "@/lib/prestashop/types";
 
+// Skip static generation during build - fetch on-demand
+export const dynamic = "force-dynamic";
 // ISR - cache for 10 minutes
 export const revalidate = 600;
 

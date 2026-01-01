@@ -2,38 +2,86 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Navigation, Pagination } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 
-const slides = [
+export interface HeroSlide {
+  id: string;
+  title: string;
+  subtitle?: string;
+  image: {
+    url: string;
+    alt: string;
+  };
+  cta?: {
+    text?: string;
+    link?: string;
+  };
+  textPosition?: "left" | "center" | "right";
+}
+
+interface HeroCarouselProps {
+  slides: HeroSlide[];
+}
+
+// Fallback slides when CMS is not available
+const fallbackSlides: HeroSlide[] = [
   {
-    image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1920&q=80",
+    id: "1",
+    title: "",
+    image: {
+      url: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1920&q=80",
+      alt: "Hero slide 1",
+    },
   },
   {
-    image: "https://images.unsplash.com/photo-1556656793-08538906a9f8?w=1920&q=80",
+    id: "2",
+    title: "",
+    image: {
+      url: "https://images.unsplash.com/photo-1556656793-08538906a9f8?w=1920&q=80",
+      alt: "Hero slide 2",
+    },
   },
   {
-    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1920&q=80",
-  },
-  {
-    image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1920&q=80",
+    id: "3",
+    title: "",
+    image: {
+      url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1920&q=80",
+      alt: "Hero slide 3",
+    },
   },
 ];
 
-export function HeroCarousel() {
+export function HeroCarousel({ slides: propSlides }: HeroCarouselProps) {
   const [mounted, setMounted] = useState(false);
   const [swiper, setSwiper] = useState<SwiperType | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
+  // Use prop slides or fallback
+  const slides = propSlides.length > 0 ? propSlides : fallbackSlides;
+
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const getTextPositionClasses = (position?: string) => {
+    switch (position) {
+      case "center":
+        return "items-center text-center";
+      case "right":
+        return "items-end text-right";
+      default:
+        return "items-start text-left";
+    }
+  };
 
   return (
     <div className="container py-4 md:py-6" suppressHydrationWarning>
@@ -51,15 +99,15 @@ export function HeroCarousel() {
               disableOnInteraction: false,
               pauseOnMouseEnter: true,
             }}
-            loop
+            loop={slides.length > 1}
             className="h-full"
           >
             {slides.map((slide, index) => (
-              <SwiperSlide key={index}>
+              <SwiperSlide key={slide.id}>
                 <div className="relative w-full h-full bg-muted">
                   <Image
-                    src={slide.image}
-                    alt={`Slide ${index + 1}`}
+                    src={slide.image.url}
+                    alt={slide.image.alt || slide.title || `Slide ${index + 1}`}
                     fill
                     className="object-cover"
                     priority={index === 0}
@@ -67,6 +115,35 @@ export function HeroCarousel() {
                     fetchPriority={index === 0 ? "high" : "auto"}
                     sizes="100vw"
                   />
+                  {/* Overlay for text */}
+                  {(slide.title || slide.subtitle || slide.cta?.text) && (
+                    <>
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
+                      <div
+                        className={`absolute inset-0 flex flex-col justify-center p-8 md:p-12 lg:p-16 ${getTextPositionClasses(slide.textPosition)}`}
+                      >
+                        <div className="max-w-xl">
+                          {slide.title && (
+                            <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white mb-2 md:mb-4">
+                              {slide.title}
+                            </h2>
+                          )}
+                          {slide.subtitle && (
+                            <p className="text-sm md:text-lg text-white/90 mb-4 md:mb-6">
+                              {slide.subtitle}
+                            </p>
+                          )}
+                          {slide.cta?.text && slide.cta?.link && (
+                            <Link href={slide.cta.link}>
+                              <Button size="lg" className="font-semibold">
+                                {slide.cta.text}
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </SwiperSlide>
             ))}
@@ -74,8 +151,8 @@ export function HeroCarousel() {
         ) : (
           <div className="relative w-full h-full bg-muted">
             <Image
-              src={slides[0].image}
-              alt="Slide 1"
+              src={slides[0]?.image.url || fallbackSlides[0].image.url}
+              alt={slides[0]?.image.alt || "Hero"}
               fill
               className="object-cover"
               priority
@@ -85,7 +162,7 @@ export function HeroCarousel() {
         )}
 
         {/* Custom navigation buttons */}
-        {mounted && (
+        {mounted && slides.length > 1 && (
           <>
             <button
               onClick={() => swiper?.slidePrev()}

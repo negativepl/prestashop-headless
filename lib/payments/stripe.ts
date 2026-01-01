@@ -58,7 +58,7 @@ class StripeProvider implements PaymentProvider {
 
       const StripeClass = await getStripe();
       this.client = new StripeClass(this.config.secretKey, {
-        apiVersion: "2024-12-18.acacia",
+        apiVersion: "2025-12-15.clover",
         typescript: true,
       });
     }
@@ -137,7 +137,7 @@ class StripeProvider implements PaymentProvider {
         this.config.webhookSecret
       );
 
-      return this.processWebhookEvent(event);
+      return this.processWebhookEvent(event as unknown as { type: string; data: { object: Record<string, unknown> } });
     } catch (error) {
       console.error("[Stripe] handleWebhook error:", error);
       return {

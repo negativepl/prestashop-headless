@@ -147,12 +147,12 @@ function getDefaultShippingMethods(orderAmount?: number): ShippingMethodInfo[] {
       deliveryTimeMin: 1,
       deliveryTimeMax: 2,
       requiresPoint: true,
-      prestashopCarrierId: 26, // Twój ID carrier w PrestaShop
+      prestashopCarrierId: 437,
     },
     {
       id: 2,
-      code: "dpd_courier",
-      name: "Kurier DPD",
+      code: "inpost_courier",
+      name: "Kurier InPost",
       description: "Dostawa pod wskazany adres",
       icon: "Truck",
       price: isFree ? 0 : 14.99,
@@ -161,24 +161,38 @@ function getDefaultShippingMethods(orderAmount?: number): ShippingMethodInfo[] {
       deliveryTimeMin: 1,
       deliveryTimeMax: 2,
       requiresPoint: false,
-      prestashopCarrierId: 26,
+      prestashopCarrierId: 506,
     },
     {
       id: 3,
-      code: "dpd_express",
-      name: "Kurier Express",
-      description: "Dostawa następnego dnia roboczego",
-      icon: "Truck",
-      price: 24.99,
-      freeFromAmount: null, // Express nigdy nie jest darmowy
-      deliveryTime: "Następny dzień roboczy",
+      code: "zabka",
+      name: "Odbiór w Żabce",
+      description: "Odbierz w najbliższym sklepie Żabka",
+      icon: "Store",
+      price: isFree ? 0 : 9.99,
+      freeFromAmount: FREE_SHIPPING_THRESHOLD,
+      deliveryTime: "1-2 dni robocze",
       deliveryTimeMin: 1,
-      deliveryTimeMax: 1,
-      requiresPoint: false,
-      prestashopCarrierId: 26,
+      deliveryTimeMax: 2,
+      requiresPoint: true,
+      prestashopCarrierId: 515,
     },
     {
       id: 4,
+      code: "orlen_paczka",
+      name: "Orlen Paczka",
+      description: "Odbierz na stacji Orlen",
+      icon: "Fuel",
+      price: isFree ? 0 : 8.99,
+      freeFromAmount: FREE_SHIPPING_THRESHOLD,
+      deliveryTime: "1-3 dni robocze",
+      deliveryTimeMin: 1,
+      deliveryTimeMax: 3,
+      requiresPoint: true,
+      prestashopCarrierId: 516,
+    },
+    {
+      id: 5,
       code: "pickup",
       name: "Odbiór osobisty",
       description: "Odbierz w naszym punkcie",
@@ -189,7 +203,7 @@ function getDefaultShippingMethods(orderAmount?: number): ShippingMethodInfo[] {
       deliveryTimeMin: 0,
       deliveryTimeMax: 0,
       requiresPoint: false,
-      prestashopCarrierId: 26,
+      prestashopCarrierId: 279,
     },
   ];
 }
@@ -306,8 +320,8 @@ export async function getPrestaShopCarrierId(
     return method.prestashopCarrierId;
   }
 
-  // Domyślny carrier (fallback)
-  return 26; // Twój domyślny carrier ID
+  // Domyślny carrier (fallback) - Paczkomat InPost
+  return 437;
 }
 
 /**

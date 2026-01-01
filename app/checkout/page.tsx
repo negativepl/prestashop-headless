@@ -8,11 +8,12 @@ import { InPostPickerModal } from "@/components/checkout/inpost-picker-modal";
 import {
   ShoppingBag, Loader2, Lock, Truck, CreditCard, User, MapPin, Phone, Mail,
   Check, Package, Banknote, Wallet, Building2, Tag, Shield, Clock,
-  X, ChevronRight, Gift, ArrowLeft, Store, Fuel, Map
+  X, ChevronRight, Gift, ArrowLeft, Store, Fuel, Map, MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useCart } from "@/hooks/use-cart";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -165,6 +166,7 @@ export default function CheckoutPage() {
   const [discountCode, setDiscountCode] = useState("");
   const [discountApplied, setDiscountApplied] = useState(false);
   const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
+  const [notes, setNotes] = useState("");
 
   // Pickup point selection
   const [pickupPointType, setPickupPointType] = useState<"inpost" | "zabka" | "orlen" | null>(null);
@@ -279,6 +281,7 @@ export default function CheckoutPage() {
           shippingMethod: selectedShipping,
           paymentMethod: selectedPayment,
           discountCode: discountApplied ? discountCode : null,
+          notes: notes.trim() || undefined,
         }),
       });
 
@@ -480,6 +483,27 @@ export default function CheckoutPage() {
                         className="h-12 text-base"
                       />
                     </div>
+                  </div>
+
+                  <div className="h-px bg-border" />
+
+                  {/* Customer notes */}
+                  <div className="space-y-2 pt-1">
+                    <Label htmlFor="notes" className="text-sm font-medium flex items-center gap-2">
+                      <MessageSquare className="size-4" />
+                      Uwagi do zamówienia
+                    </Label>
+                    <Textarea
+                      id="notes"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Dodatkowe informacje, prośby dotyczące dostawy, itp."
+                      className="min-h-[80px] text-base resize-none"
+                      maxLength={500}
+                    />
+                    <p className="text-xs text-muted-foreground text-right">
+                      {notes.length}/500 znaków
+                    </p>
                   </div>
 
                 </div>

@@ -1,5 +1,5 @@
 {
-  "name": "frontend",
+  "name": "kestrel",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -42,9 +42,10 @@
     "prisma": "^7.2.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "react-headroom": "^3.2.1",
     "react-hook-form": "^7.68.0",
     "react-leaflet": "^5.0.0",
+    "sass": "^1.97.1",
+    "sharp": "^0.34.5",
     "stripe": "^20.1.0",
     "swiper": "^12.0.3",
     "swr": "^2.3.8",

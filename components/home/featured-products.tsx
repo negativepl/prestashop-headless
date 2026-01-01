@@ -1,11 +1,11 @@
 import { ProductCard } from "@/components/products/product-card";
 import type { Product } from "@/lib/prestashop/types";
 
-interface WeeklyHitsProps {
+interface FeaturedProductsProps {
   products: Product[];
 }
 
-export function WeeklyHits({ products }: WeeklyHitsProps) {
+export function FeaturedProducts({ products }: FeaturedProductsProps) {
   if (products.length === 0) return null;
 
   return (
@@ -26,7 +26,7 @@ export function WeeklyHits({ products }: WeeklyHitsProps) {
       {/* Products grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-5">
         {products.map((product, index) => (
-          <ProductCard key={product.id} product={product} priority={index < 5} />
+          <ProductCard key={product.id} product={product} priority={index === 0} />
         ))}
       </div>
     </div>

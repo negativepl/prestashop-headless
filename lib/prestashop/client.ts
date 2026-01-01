@@ -7,6 +7,7 @@ import type {
   PSOrderState,
   PSAddress,
   PSCountry,
+  PSMultiLang,
   Product,
   Category,
   Order,
@@ -145,15 +146,17 @@ class PrestaShopClient {
 
     // When sorting by stock, fetch more to have a better pool to sort from
     // This ensures first pages have mostly in-stock products
+    // Keep multipliers low to stay under 2MB cache limit
     let fetchMultiplier = 1;
     if (params?.sortByStock) {
-      fetchMultiplier = 4; // fetch 4x more products to sort properly
+      fetchMultiplier = 2; // fetch 2x more products to sort properly (reduced from 4x)
     }
     if (params?.withImages) {
-      fetchMultiplier = fetchMultiplier * 3;
+      fetchMultiplier = fetchMultiplier * 1.5; // reduced from 3x
     }
 
-    const fetchLimit = requestedLimit * fetchMultiplier;
+    // Cap at 24 products per request to stay under 2MB cache limit (~75KB per product)
+    const fetchLimit = Math.min(Math.ceil(requestedLimit * fetchMultiplier), 24);
     const fetchOffset = requestedOffset;
 
     const separator = endpoint.includes("?") ? "&" : "?";
@@ -177,7 +180,7 @@ class PrestaShopClient {
       try {
         const productIds = products.map(p => p.id);
         const stockResponse = await this.fetch<PSResponse<PSStockAvailable[]>>(
-          `stock_availables?filter[id_product]=[${productIds.join("|")}]&filter[id_product_attribute]=0&display=full`
+          `stock_availables?filter[id_product]=[${productIds.join("|")}]&filter[id_product_attribute]=0&display=[id_product,quantity]`
         );
         const stocks = (stockResponse.stock_availables as PSStockAvailable[]) || [];
         for (const stock of stocks) {
@@ -251,7 +254,7 @@ class PrestaShopClient {
     if (products.length > 0) {
       try {
         const stockResponse = await this.fetch<PSResponse<PSStockAvailable[]>>(
-          `stock_availables?filter[id_product]=[${ids.join("|")}]&filter[id_product_attribute]=0&display=full`
+          `stock_availables?filter[id_product]=[${ids.join("|")}]&filter[id_product_attribute]=0&display=[id_product,quantity]`
         );
         const stocks = (stockResponse.stock_availables as PSStockAvailable[]) || [];
         for (const stock of stocks) {
@@ -284,7 +287,8 @@ class PrestaShopClient {
 
     try {
       const response = await this.fetch<PSResponse<PSProduct[]>>(endpoint);
-      const products = response.products || [];
+      const rawProducts = response.products as PSProduct | PSProduct[] | undefined;
+      const products: PSProduct[] = Array.isArray(rawProducts) ? rawProducts : rawProducts ? [rawProducts] : [];
 
       // Fetch stock for all products
       let stockMap: Map<number, number> = new Map();
@@ -292,7 +296,7 @@ class PrestaShopClient {
         try {
           const productIds = products.map(p => p.id);
           const stockResponse = await this.fetch<PSResponse<PSStockAvailable[]>>(
-            `stock_availables?filter[id_product]=[${productIds.join("|")}]&filter[id_product_attribute]=0&display=full`
+            `stock_availables?filter[id_product]=[${productIds.join("|")}]&filter[id_product_attribute]=0&display=[id_product,quantity]`
           );
           const stocks = (stockResponse.stock_availables as PSStockAvailable[]) || [];
           for (const stock of stocks) {
@@ -342,7 +346,7 @@ class PrestaShopClient {
     if (fetchExtras) {
       try {
         const stockResponse = await this.fetch<PSResponse<PSStockAvailable[]>>(
-          `stock_availables?filter[id_product]=${p.id}&filter[id_product_attribute]=0&display=full`
+          `stock_availables?filter[id_product]=${p.id}&filter[id_product_attribute]=0&display=[id_product,quantity]`
         );
         const stocks = (stockResponse.stock_availables as PSStockAvailable[]) || [];
         if (stocks.length > 0) {
@@ -357,7 +361,8 @@ class PrestaShopClient {
           const mfResponse = await this.fetch<PSResponse<{ id: number; name: string }[]>>(
             `manufacturers/${p.id_manufacturer}?display=full`
           );
-          const manufacturer = mfResponse.manufacturers?.[0] || mfResponse.manufacturer;
+          const manufacturerRaw = mfResponse.manufacturers?.[0] || mfResponse.manufacturer;
+          const manufacturer = Array.isArray(manufacturerRaw) ? manufacturerRaw[0] : manufacturerRaw;
           if (manufacturer) {
             manufacturerName = manufacturer.name;
           }
@@ -441,7 +446,8 @@ class PrestaShopClient {
     endpoint += `${endpoint.includes("?") ? "&" : "?"}display=full`;
 
     const response = await this.fetch<PSResponse<PSCategory[]>>(endpoint);
-    const categories = response.categories || [];
+    const rawCategories = response.categories as PSCategory | PSCategory[] | undefined;
+    const categories: PSCategory[] = Array.isArray(rawCategories) ? rawCategories : rawCategories ? [rawCategories] : [];
 
     return categories.map((c) => this.mapCategory(c));
   }
@@ -860,7 +866,8 @@ class PrestaShopClient {
       const statesResponse = await this.fetch<PSResponse<PSOrderState[]>>(
         "order_states?display=full"
       );
-      const states = statesResponse.order_states || [];
+      const rawStates = statesResponse.order_states as PSOrderState | PSOrderState[] | undefined;
+      const states: PSOrderState[] = Array.isArray(rawStates) ? rawStates : rawStates ? [rawStates] : [];
       const statesMap = new Map<number, string>();
       states.forEach((state) => {
         statesMap.set(state.id, this.getMultiLangValue(state.name));
@@ -893,7 +900,8 @@ class PrestaShopClient {
       const statesResponse = await this.fetch<PSResponse<PSOrderState[]>>(
         "order_states?display=full"
       );
-      const states = statesResponse.order_states || [];
+      const rawStates2 = statesResponse.order_states as PSOrderState | PSOrderState[] | undefined;
+      const states: PSOrderState[] = Array.isArray(rawStates2) ? rawStates2 : rawStates2 ? [rawStates2] : [];
       const statesMap = new Map<number, string>();
       states.forEach((state) => {
         statesMap.set(state.id, this.getMultiLangValue(state.name));
@@ -936,13 +944,15 @@ class PrestaShopClient {
       const response = await this.fetch<PSResponse<PSAddress[]>>(
         `addresses?filter[id_customer]=${customerId}&filter[deleted]=0&display=full`
       );
-      const addresses = response.addresses || [];
+      const rawAddresses = response.addresses as PSAddress | PSAddress[] | undefined;
+      const addresses: PSAddress[] = Array.isArray(rawAddresses) ? rawAddresses : rawAddresses ? [rawAddresses] : [];
 
       // Get countries for names
       const countriesResponse = await this.fetch<PSResponse<PSCountry[]>>(
         "countries?display=full"
       );
-      const countries = countriesResponse.countries || [];
+      const rawCountries = countriesResponse.countries as PSCountry | PSCountry[] | undefined;
+      const countries: PSCountry[] = Array.isArray(rawCountries) ? rawCountries : rawCountries ? [rawCountries] : [];
       const countriesMap = new Map<number, string>();
       countries.forEach((country) => {
         countriesMap.set(country.id, this.getMultiLangValue(country.name));

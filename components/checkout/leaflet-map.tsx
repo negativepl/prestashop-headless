@@ -91,8 +91,14 @@ function MapEventHandler({ onMapMove }: { onMapMove: (lat: number, lng: number) 
         clearTimeout(timeoutRef.current);
       }
       timeoutRef.current = setTimeout(() => {
-        const center = map.getCenter();
-        onMapMove(center.lat, center.lng);
+        try {
+          if (map && map.getCenter) {
+            const center = map.getCenter();
+            onMapMove(center.lat, center.lng);
+          }
+        } catch {
+          // Map not ready yet
+        }
       }, 500);
     },
   });

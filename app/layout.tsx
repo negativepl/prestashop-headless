@@ -44,6 +44,13 @@ export default async function RootLayout({
 
   return (
     <html lang="pl" suppressHydrationWarning>
+      <head>
+        {/* Preconnect to external origins */}
+        <link rel="preconnect" href="https://images.unsplash.com" />
+        <link rel="preconnect" href="https://presta.trkhspl.com" />
+        <link rel="dns-prefetch" href="https://images.unsplash.com" />
+        <link rel="dns-prefetch" href="https://presta.trkhspl.com" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${lora.variable} antialiased min-h-screen flex flex-col`}
       >

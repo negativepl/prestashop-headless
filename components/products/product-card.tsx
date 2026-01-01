@@ -99,6 +99,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
                 fill
                 sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
                 priority={priority}
+                fetchPriority={priority ? "high" : "auto"}
                 loading={priority ? "eager" : "lazy"}
                 className={`object-contain transition-transform duration-500 group-hover:scale-105 ${isOutOfStock ? "grayscale opacity-60" : ""}`}
               />

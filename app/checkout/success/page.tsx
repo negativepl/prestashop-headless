@@ -1,11 +1,12 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function CheckoutSuccessPage() {
+function CheckoutSuccessContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("order");
 
@@ -26,14 +27,28 @@ export default function CheckoutSuccessPage() {
           Potwierdzenie zostanie wysłane na podany adres email.
         </p>
         <div className="mt-8 flex gap-4 justify-center">
-          <Link href="/products">
-            <Button>Kontynuuj zakupy</Button>
-          </Link>
           <Link href="/">
-            <Button variant="outline">Strona główna</Button>
+            <Button>Strona główna</Button>
+          </Link>
+          <Link href="/products">
+            <Button variant="outline">Kontynuuj zakupy</Button>
           </Link>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CheckoutSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="container py-16">
+        <div className="max-w-md mx-auto text-center">
+          <Loader2 className="h-12 w-12 mx-auto text-primary animate-spin" />
+        </div>
+      </div>
+    }>
+      <CheckoutSuccessContent />
+    </Suspense>
   );
 }

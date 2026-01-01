@@ -55,6 +55,36 @@ async function psPost(endpoint: string, xml: string) {
   }
 }
 
+async function psPut(endpoint: string, xml: string) {
+  const url = `${PRESTASHOP_URL}/api/${endpoint}?output_format=JSON`;
+
+  console.log(`PUT ${endpoint} - XML:`, xml.substring(0, 500));
+
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: {
+      Authorization: getAuthHeader(),
+      "Content-Type": "application/xml",
+    },
+    body: xml,
+  });
+
+  const text = await response.text();
+
+  console.log(`PUT ${endpoint} - Status: ${response.status}, Response:`, text.substring(0, 500));
+
+  if (!response.ok) {
+    console.error(`PUT ${endpoint} error:`, text);
+    throw new Error(`PUT ${endpoint}: ${response.status} - ${text}`);
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
 interface CheckoutRequest {
   customer: {
     email: string;
@@ -79,12 +109,15 @@ interface CheckoutRequest {
   };
   // Payment options
   paymentMethod?: string; // kod metody płatności np. "blik", "card", "cod"
+  // Customer notes
+  notes?: string; // uwagi klienta do zamówienia
+  discountCode?: string | null;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: CheckoutRequest = await request.json();
-    const { customer, items, shippingMethod, shippingPoint, paymentMethod } = body;
+    const { customer, items, shippingMethod, shippingPoint, paymentMethod, notes } = body;
 
     // Check if user is logged in via JWT session
     const session = await getSession();
@@ -251,13 +284,33 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Calculate shipping and get carrier ID
-    const selectedShipping = shippingMethod || "dpd_courier"; // domyślny kurier
+    const selectedShipping = shippingMethod || "inpost_locker"; // domyślny paczkomat
     const carrierId = await getPrestaShopCarrierId(selectedShipping);
     const shippingCost = await calculateShippingCost(selectedShipping, totalProducts);
 
     // Calculate totals
     const totalShipping = shippingCost;
     const totalPaid = totalProducts + totalShipping;
+
+    // 5b. Update cart with carrier (required for PrestaShop to link carrier to order)
+    console.log(`[Checkout] Updating cart ${cartId} with carrier ${carrierId}`);
+    try {
+      const deliveryOption = JSON.stringify({ [addressId.toString()]: `${carrierId},` });
+      const cartUpdateXml = `<?xml version="1.0" encoding="UTF-8"?>
+<prestashop xmlns:xlink="http://www.w3.org/1999/xlink">
+  <cart>
+    <id>${cartId}</id>
+    <id_carrier>${carrierId}</id_carrier>
+    <delivery_option><![CDATA[${deliveryOption}]]></delivery_option>
+  </cart>
+</prestashop>`;
+
+      const putResult = await psPut(`carts/${cartId}`, cartUpdateXml);
+      console.log(`[Checkout] Cart carrier update result:`, JSON.stringify(putResult).substring(0, 300));
+    } catch (err) {
+      console.error("[Checkout] Cart carrier update error:", err);
+      // Continue anyway - order might still work
+    }
 
     // Determine payment module based on payment method
     let paymentModule = "ps_wirepayment";
@@ -342,6 +395,29 @@ export async function POST(request: NextRequest) {
     } catch (err) {
       console.error("Order error:", err);
       throw new Error("Nie udało się utworzyć zamówienia");
+    }
+
+    // 7. Add customer notes as order message (if provided)
+    console.log(`[Checkout] Notes provided: "${notes || '(none)'}"`);
+    if (notes && notes.trim()) {
+      console.log(`[Checkout] Creating order message for order ${orderId}`);
+      try {
+        const messageXml = `<?xml version="1.0" encoding="UTF-8"?>
+<prestashop xmlns:xlink="http://www.w3.org/1999/xlink">
+  <message>
+    <id_order>${orderId}</id_order>
+    <id_customer>${customerId}</id_customer>
+    <id_employee>0</id_employee>
+    <message><![CDATA[${notes.trim()}]]></message>
+    <private>0</private>
+  </message>
+</prestashop>`;
+        const msgResult = await psPost("messages", messageXml);
+        console.log(`[Checkout] Message created:`, JSON.stringify(msgResult).substring(0, 200));
+      } catch (err) {
+        console.error("[Checkout] Message error:", err);
+        // Don't fail the order if message fails
+      }
     }
 
     return NextResponse.json({

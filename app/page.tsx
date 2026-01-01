@@ -3,12 +3,13 @@ import Image from "next/image";
 import { ArrowRight, Truck, RotateCcw, Percent, Headphones, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/products/product-card";
-import { HeroCarousel } from "@/components/home/hero-carousel";
-import { WeeklyHits } from "@/components/home/weekly-hits";
+import { HeroCarouselWrapper } from "@/components/home/hero-carousel-wrapper";
+import { FeaturedProducts } from "@/components/home/featured-products";
 import { NewArrivals } from "@/components/home/new-arrivals";
 import { prestashop } from "@/lib/prestashop/client";
 import type { Product } from "@/lib/prestashop/types";
 import { wordpress, type BlogPost } from "@/lib/wordpress/client";
+import { getHeroSlides, type HeroSlide } from "@/lib/cms/client";
 
 export const revalidate = 60; // Revalidate every 60 seconds
 
@@ -16,12 +17,14 @@ export default async function HomePage() {
   let products: Product[] = [];
   let newArrivalsProducts: Product[] = [];
   let blogPosts: BlogPost[] = [];
+  let heroSlides: HeroSlide[] = [];
 
   try {
-    [products, newArrivalsProducts, blogPosts] = await Promise.all([
+    [products, newArrivalsProducts, blogPosts, heroSlides] = await Promise.all([
       prestashop.getProducts({ limit: 20, withImages: true, withStock: true }),
       prestashop.getProducts({ limit: 30, withImages: true, withStock: true }),
       wordpress.getPosts({ limit: 3 }),
+      getHeroSlides(),
     ]);
   } catch (e) {
     console.error("Error fetching data:", e);
@@ -41,13 +44,13 @@ export default async function HomePage() {
   return (
     <div className="flex flex-col">
       {/* Hero Carousel */}
-      <HeroCarousel />
+      <HeroCarouselWrapper slides={heroSlides} />
 
-      {/* Weekly Hits */}
+      {/* Polecane */}
       {products.length > 0 && (
         <section className="py-8">
           <div className="container">
-            <WeeklyHits products={weeklyHitsProducts} />
+            <FeaturedProducts products={weeklyHitsProducts} />
           </div>
         </section>
       )}
