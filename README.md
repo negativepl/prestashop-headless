@@ -2,7 +2,7 @@
 
 **Modern headless e-commerce frontend for PrestaShop**
 
-Kestrel is a high-performance Next.js 15 storefront that transforms PrestaShop into a modern, fast, and customizable e-commerce platform. Combined with [Kestrel CMS](https://github.com/negativepl/kestrel-cms), it provides a complete headless commerce solution.
+Kestrel is a high-performance Next.js 16 storefront that transforms PrestaShop into a modern, fast, and customizable e-commerce platform. Combined with [Kestrel CMS](https://github.com/negativepl/kestrel-cms), it provides a complete headless commerce solution.
 
 ## The Kestrel Ecosystem
 
@@ -14,7 +14,7 @@ Kestrel is a high-performance Next.js 15 storefront that transforms PrestaShop i
 │   │   PrestaShop    │      │     Kestrel     │      │   Kestrel CMS   │     │
 │   │                 │      │   (This Repo)   │      │                 │     │
 │   │  Product Data   │─────►│                 │◄─────│  Marketing      │     │
-│   │  Orders, Cart   │ API  │   Next.js 15    │ API  │  Content        │     │
+│   │  Orders, Cart   │ API  │   Next.js 16    │ API  │  Content        │     │
 │   │  Customers      │      │   Port: 3000    │      │  Port: 3001     │     │
 │   └─────────────────┘      └─────────────────┘      └─────────────────┘     │
 │                                    │                                         │
@@ -223,7 +223,7 @@ See [Kestrel CMS documentation](https://github.com/negativepl/kestrel-cms) for d
 
 | Technology | Purpose |
 |------------|---------|
-| **Next.js 15** | React framework with App Router |
+| **Next.js 16** | React framework with App Router |
 | **React 19** | UI library |
 | **TypeScript** | Type-safe development |
 | **Tailwind CSS** | Utility-first styling |
