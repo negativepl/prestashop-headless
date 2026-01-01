@@ -396,4 +396,4 @@ See [Kestrel CMS Deployment Guide](https://github.com/negativepl/kestrel-cms/blo
 
 ## License
 
-MIT
+MIT License — see [LICENSE](LICENSE) for details.
