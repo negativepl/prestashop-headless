@@ -119,9 +119,15 @@ async function fetchPrestaShop<T>(endpoint: string, retries = MAX_RETRIES): Prom
   throw new Error("Unreachable");
 }
 
-function buildImageUrl(productId: number, imageId: string): string | null {
-  if (!imageId || imageId === "0") return null;
-  return `${PRESTASHOP_API_URL}/images/products/${productId}/${imageId}`;
+function buildImageUrl(imageId: string | number | undefined): string | null {
+  if (!imageId || imageId === "0" || imageId === 0) return null;
+  // PrestaShop stores images in nested folders by digit
+  // e.g., image ID 10769 -> /img/p/1/0/7/6/9/10769.jpg
+  const id = String(imageId);
+  const path = id.split("").join("/");
+  // Use base URL without /api
+  const baseUrl = PRESTASHOP_API_URL.replace("/api", "");
+  return `${baseUrl}/img/p/${path}/${id}.jpg`;
 }
 
 // Main
@@ -209,10 +215,10 @@ async function syncProducts() {
   while (consecutiveEmptyBatches < 3) {
     try {
       // Fetch batch with retry - use id-based pagination
-      // PrestaShop filter syntax requires URL encoding: filter[id]>[lastId]
-      const filterParam = lastId > 0 ? `&filter%5Bid%5D=%3E%5B${lastId}%5D` : "";
+      // PrestaShop filter syntax requires URL encoding: filter[id]<[lastId] for DESC order
+      const filterParam = lastId > 0 ? `&filter%5Bid%5D=%3C%5B${lastId}%5D` : "";
       const resp = await fetchPrestaShop<{ products?: PSProduct[] }>(
-        `products?filter[active]=1${filterParam}&display=full&limit=${BATCH_SIZE}&sort=[id_ASC]`
+        `products?filter[active]=1${filterParam}&display=full&limit=${BATCH_SIZE}&sort=[id_DESC]`
       );
 
       const products = resp.products;
@@ -238,7 +244,7 @@ async function syncProducts() {
           categoryId,
           categoryName: categories.get(categoryId) || "",
           manufacturerName: manufacturers.get(manufacturerId) || "",
-          imageUrl: buildImageUrl(p.id, p.id_default_image),
+          imageUrl: buildImageUrl(p.id_default_image),
           quantity: stock.get(p.id) ?? 0,
           active: p.active === "1",
         };
@@ -252,8 +258,8 @@ async function syncProducts() {
         throw new Error(`Indexing task failed: ${result.error?.message}`);
       }
 
-      // Track last ID for next batch
-      lastId = Math.max(...productList.map((p) => p.id));
+      // Track last ID for next batch (min ID since we're going DESC)
+      lastId = Math.min(...productList.map((p) => p.id));
       totalIndexed += meiliProducts.length;
       console.log(`  Indexed ${totalIndexed} products (lastId: ${lastId})`);
 

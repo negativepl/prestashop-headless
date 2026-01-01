@@ -24,8 +24,13 @@ export interface MeiliProduct {
 export interface SearchResult {
   id: number;
   name: string;
+  nameHighlighted: string;
   price: number;
   imageUrl: string | null;
+  categoryName: string;
+  manufacturerName: string;
+  quantity: number;
+  reference: string;
 }
 
 class MeilisearchClient {
@@ -55,9 +60,9 @@ class MeilisearchClient {
           "name",
           "reference",
           "ean13",
-          "description",
           "manufacturerName",
           "categoryName",
+          "description",
         ],
         // Fields to return in search results
         displayedAttributes: [
@@ -85,13 +90,24 @@ class MeilisearchClient {
           "name",
           "quantity",
         ],
-        // Typo tolerance settings
+        // Ranking rules - prioritize exactness
+        rankingRules: [
+          "words",        // All query words present
+          "typo",         // Fewer typos
+          "proximity",    // Words close together
+          "attribute",    // Match in important fields first
+          "exactness",    // Exact matches over partial
+          "sort",
+        ],
+        // Typo tolerance settings - stricter for numbers
         typoTolerance: {
           enabled: true,
           minWordSizeForTypos: {
-            oneTypo: 4,
-            twoTypos: 8,
+            oneTypo: 5,   // Stricter - need 5+ chars for typo
+            twoTypos: 9,  // Stricter - need 9+ chars for 2 typos
           },
+          // Disable typos for numbers
+          disableOnNumbers: true,
         },
         // Pagination
         pagination: {
@@ -126,15 +142,23 @@ class MeilisearchClient {
         offset,
         filter: filter ? `${filter} AND active = true` : "active = true",
         sort,
-        attributesToRetrieve: ["id", "name", "price", "imageUrl"],
+        attributesToRetrieve: ["id", "name", "price", "imageUrl", "categoryName", "manufacturerName", "quantity", "reference"],
+        attributesToHighlight: ["name"],
+        highlightPreTag: '<mark class="bg-primary/20 text-foreground">',
+        highlightPostTag: "</mark>",
       });
 
       return {
         products: results.hits.map((hit) => ({
           id: hit.id,
           name: hit.name,
+          nameHighlighted: hit._formatted?.name || hit.name,
           price: hit.price,
           imageUrl: hit.imageUrl,
+          categoryName: hit.categoryName || "",
+          manufacturerName: hit.manufacturerName || "",
+          quantity: hit.quantity || 0,
+          reference: hit.reference || "",
         })),
         totalHits: results.estimatedTotalHits || results.hits.length,
       };

@@ -8,6 +8,8 @@ export async function GET(request: NextRequest) {
   const limit = parseInt(searchParams.get("limit") || "8");
   const offset = parseInt(searchParams.get("offset") || "0");
   const category = searchParams.get("category");
+  const filterParam = searchParams.get("filter");
+  const sortParam = searchParams.get("sort");
 
   if (!query || query.trim().length < 2) {
     return NextResponse.json({ products: [], totalHits: 0 });
@@ -18,16 +20,31 @@ export async function GET(request: NextRequest) {
     const isMeiliHealthy = await meilisearch.isHealthy();
 
     if (isMeiliHealthy) {
-      // Build filter
-      let filter: string | undefined;
+      // Build filter - combine category and custom filter
+      const filters: string[] = [];
       if (category) {
-        filter = `categoryId = ${category}`;
+        filters.push(`categoryId = ${category}`);
+      }
+      if (filterParam) {
+        filters.push(filterParam);
+      }
+      const filter = filters.length > 0 ? filters.join(" AND ") : undefined;
+
+      // Parse sort parameter
+      let sort: string[] | undefined;
+      if (sortParam) {
+        try {
+          sort = JSON.parse(sortParam);
+        } catch {
+          // Invalid sort param, ignore
+        }
       }
 
       const { products, totalHits } = await meilisearch.searchProducts(query, {
         limit,
         offset,
         filter,
+        sort,
       });
 
       return NextResponse.json({

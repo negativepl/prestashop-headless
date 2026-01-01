@@ -1,17 +1,36 @@
 import { ProductGrid } from "@/components/products/product-grid";
+import { SearchResults } from "@/components/search/search-results";
 import { prestashop } from "@/lib/prestashop/client";
 import type { Product } from "@/lib/prestashop/types";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 
-// ISR - revalidate every 5 minutes
-export const revalidate = 300;
+// Dynamic page for search
+export const dynamic = "force-dynamic";
 
-export const metadata = {
-  title: "Produkty | PrestaShop Headless",
-  description: "Lista wszystkich produktów",
-};
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ search?: string }> }) {
+  const { search } = await searchParams;
+  if (search) {
+    return {
+      title: `"${search}" - Wyniki wyszukiwania | Kestrel`,
+      description: `Wyniki wyszukiwania dla "${search}"`,
+    };
+  }
+  return {
+    title: "Produkty | Kestrel",
+    description: "Lista wszystkich produktów",
+  };
+}
 
-export default async function ProductsPage() {
+export default async function ProductsPage({ searchParams }: { searchParams: Promise<{ search?: string }> }) {
+  const { search } = await searchParams;
+  const isSearchMode = !!search?.trim();
+
+  // For search mode, render client component with filters
+  if (isSearchMode) {
+    return <SearchResults query={search.trim()} />;
+  }
+
+  // Regular product listing (server-rendered)
   let products: Product[] = [];
   let error: string | null = null;
 
@@ -24,6 +43,7 @@ export default async function ProductsPage() {
   return (
     <div className="container py-8">
       <Breadcrumbs items={[{ label: "Produkty" }]} />
+
       <div className="mb-8">
         <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Produkty</h1>
         <p className="text-muted-foreground mt-2">

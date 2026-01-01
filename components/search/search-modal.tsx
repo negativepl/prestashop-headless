@@ -11,8 +11,13 @@ import { cn } from "@/lib/utils";
 interface SearchProduct {
   id: number;
   name: string;
+  nameHighlighted: string;
   price: number;
   imageUrl: string | null;
+  categoryName: string;
+  manufacturerName: string;
+  quantity: number;
+  reference: string;
 }
 
 interface SearchModalProps {
@@ -138,10 +143,12 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
   };
 
   const formatPrice = (price: number) => {
+    // Price from API is net, add 23% VAT
+    const priceWithVat = price * 1.23;
     return new Intl.NumberFormat("pl-PL", {
       style: "currency",
       currency: "PLN",
-    }).format(price);
+    }).format(priceWithVat);
   };
 
   if (!mounted) return null;
@@ -209,9 +216,21 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
               {/* Results */}
               <div className="flex-1 md:flex-none md:max-h-[60vh] overflow-y-auto">
                 {isSearching ? (
-                  <div className="flex items-center justify-center gap-3 py-12 text-muted-foreground">
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent" />
-                    <span>Szukam...</span>
+                  <div className="p-4 space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex items-start gap-4 animate-pulse">
+                        <div className="w-20 h-20 rounded-xl bg-muted shrink-0" />
+                        <div className="flex-1 space-y-2 py-1">
+                          <div className="h-3 w-24 bg-muted rounded" />
+                          <div className="h-4 w-full bg-muted rounded" />
+                          <div className="h-4 w-3/4 bg-muted rounded" />
+                          <div className="flex gap-2 mt-1">
+                            <div className="h-5 w-20 bg-muted rounded" />
+                            <div className="h-5 w-16 bg-muted rounded" />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ) : searchQuery.trim().length >= 2 ? (
                   <>
@@ -252,28 +271,56 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                             href={`/products/${product.id}`}
                             onClick={onClose}
                             className={cn(
-                              "flex items-center gap-3 px-4 py-3 transition-colors",
+                              "flex items-start gap-4 px-4 py-3 transition-colors",
                               selectedIndex === index + 1 ? "bg-primary/10" : "hover:bg-muted"
                             )}
                           >
-                            <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden shrink-0">
+                            <div className="w-20 h-20 rounded-xl bg-white border overflow-hidden shrink-0 shadow-sm">
                               {product.imageUrl ? (
                                 <img
                                   src={product.imageUrl}
                                   alt={product.name}
-                                  className="w-full h-full object-cover"
+                                  className="w-full h-full object-contain p-1.5"
                                 />
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                                  Brak
+                                <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground bg-muted">
+                                  Brak zdjęcia
                                 </div>
                               )}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">{product.name}</p>
-                              <p className="text-sm text-primary font-semibold">
-                                {formatPrice(product.price)}
-                              </p>
+                            <div className="flex-1 min-w-0 py-0.5">
+                              {/* Category & Manufacturer */}
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                                {product.manufacturerName && (
+                                  <span className="font-medium text-foreground/70">{product.manufacturerName}</span>
+                                )}
+                                {product.manufacturerName && product.categoryName && (
+                                  <span>•</span>
+                                )}
+                                {product.categoryName && (
+                                  <span className="truncate">{product.categoryName}</span>
+                                )}
+                              </div>
+                              {/* Name with highlighting */}
+                              <p
+                                className="font-medium text-sm leading-snug line-clamp-2"
+                                dangerouslySetInnerHTML={{ __html: product.nameHighlighted }}
+                              />
+                              {/* Price & Stock */}
+                              <div className="flex items-center gap-3 mt-1.5">
+                                <span className="text-base text-primary font-bold">
+                                  {formatPrice(product.price)}
+                                </span>
+                                {product.quantity > 0 ? (
+                                  <span className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded font-medium">
+                                    W magazynie
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded font-medium">
+                                    Na zamówienie
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </Link>
                         ))}
