@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { FreeMode, Navigation } from "swiper/modules";
+import { FreeMode } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ProductCard } from "@/components/products/product-card";
@@ -11,21 +11,21 @@ import type { Product } from "@/lib/prestashop/types";
 import "swiper/css";
 import "swiper/css/free-mode";
 
-interface NewArrivalsProps {
-  initialProducts: Product[];
+interface BestsellersCarouselProps {
+  products: Product[];
 }
 
-export function NewArrivals({ initialProducts }: NewArrivalsProps) {
+export function BestsellersCarousel({ products }: BestsellersCarouselProps) {
   const [swiper, setSwiper] = useState<SwiperType | null>(null);
   const [isBeginning, setIsBeginning] = useState(true);
   const [isEnd, setIsEnd] = useState(false);
 
-  if (initialProducts.length === 0) return null;
+  if (products.length === 0) return null;
 
   return (
-    <div className="relative group/carousel">
+    <div className="md:hidden relative group/carousel -mx-6 md:-mx-10">
       <Swiper
-        modules={[FreeMode, Navigation]}
+        modules={[FreeMode]}
         onSwiper={setSwiper}
         onSlideChange={(s) => {
           setIsBeginning(s.isBeginning);
@@ -57,31 +57,10 @@ export function NewArrivals({ initialProducts }: NewArrivalsProps) {
             slidesPerView: 2,
             spaceBetween: 16,
           },
-          768: {
-            slidesPerView: 3,
-            spaceBetween: 16,
-            slidesOffsetBefore: 40,
-            slidesOffsetAfter: 40,
-            centeredSlides: false,
-          },
-          1024: {
-            slidesPerView: 4,
-            spaceBetween: 20,
-            slidesOffsetBefore: 40,
-            slidesOffsetAfter: 40,
-            centeredSlides: false,
-          },
-          1536: {
-            slidesPerView: 5,
-            spaceBetween: 20,
-            slidesOffsetBefore: 40,
-            slidesOffsetAfter: 40,
-            centeredSlides: false,
-          },
         }}
-        className="!overflow-visible select-none"
+        className="select-none"
       >
-        {initialProducts.map((product) => (
+        {products.map((product) => (
           <SwiperSlide key={product.id} className="!h-auto">
             <ProductCard product={product} />
           </SwiperSlide>
@@ -91,23 +70,22 @@ export function NewArrivals({ initialProducts }: NewArrivalsProps) {
       {/* Navigation buttons */}
       <button
         onClick={() => swiper?.slidePrev()}
-        className={`absolute left-2 lg:left-12 top-1/2 -translate-y-1/2 z-10 h-9 w-9 lg:h-11 lg:w-11 rounded-full bg-black/50 backdrop-blur-sm border border-white/20 text-white hover:bg-black/70 flex items-center justify-center transition-all duration-300 ${
+        className={`absolute left-2 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full bg-black/50 backdrop-blur-sm border border-white/20 text-white hover:bg-black/70 flex items-center justify-center transition-all duration-300 ${
           isBeginning ? "opacity-0 pointer-events-none" : "opacity-0 group-hover/carousel:opacity-100"
         }`}
         aria-label="Poprzednie produkty"
       >
-        <ChevronLeft className="h-4 w-4 lg:h-5 lg:w-5" />
+        <ChevronLeft className="h-4 w-4" />
       </button>
       <button
         onClick={() => swiper?.slideNext()}
-        className={`absolute right-2 lg:right-12 top-1/2 -translate-y-1/2 z-10 h-9 w-9 lg:h-11 lg:w-11 rounded-full bg-black/50 backdrop-blur-sm border border-white/20 text-white hover:bg-black/70 flex items-center justify-center transition-all duration-300 ${
+        className={`absolute right-2 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full bg-black/50 backdrop-blur-sm border border-white/20 text-white hover:bg-black/70 flex items-center justify-center transition-all duration-300 ${
           isEnd ? "opacity-0 pointer-events-none" : "opacity-0 group-hover/carousel:opacity-100"
         }`}
         aria-label="Następne produkty"
       >
-        <ChevronRight className="h-4 w-4 lg:h-5 lg:w-5" />
+        <ChevronRight className="h-4 w-4" />
       </button>
-
     </div>
   );
 }

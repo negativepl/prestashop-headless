@@ -75,11 +75,11 @@ export function HeroCarousel({ slides: propSlides }: HeroCarouselProps) {
   const getTextPositionClasses = (position?: string) => {
     switch (position) {
       case "center":
-        return "items-center text-center";
+        return "items-center text-center px-16 md:px-24";
       case "right":
-        return "items-end text-right";
+        return "items-end text-right pl-8 pr-16 md:pl-12 md:pr-24 lg:pl-16 lg:pr-28";
       default:
-        return "items-start text-left";
+        return "items-start text-left pr-8 pl-16 md:pr-12 md:pl-24 lg:pr-16 lg:pl-28";
     }
   };
 
@@ -180,20 +180,20 @@ export function HeroCarousel({ slides: propSlides }: HeroCarouselProps) {
             </button>
 
             {/* Dots indicator */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
-              <div className="flex gap-1 px-2 py-2 rounded-full bg-black/20 backdrop-blur-md">
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-black/20 backdrop-blur-md">
                 {slides.map((_, dotIndex) => (
                   <button
                     key={dotIndex}
                     onClick={() => swiper?.slideToLoop(dotIndex)}
-                    className="min-w-[44px] min-h-[44px] flex items-center justify-center"
+                    className="p-0.5"
                     aria-label={`Przejdź do slajdu ${dotIndex + 1}`}
                   >
                     <span
-                      className={`h-2.5 rounded-full transition-all duration-300 ${
+                      className={`block h-2 rounded-full transition-all duration-300 ${
                         activeIndex === dotIndex
-                          ? "bg-white w-6"
-                          : "bg-white/50 hover:bg-white/70 w-2.5"
+                          ? "bg-white w-5"
+                          : "bg-white/50 hover:bg-white/70 w-2"
                       }`}
                     />
                   </button>

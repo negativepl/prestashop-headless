@@ -166,13 +166,21 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed left-1/2 top-[15%] -translate-x-1/2 w-full max-w-2xl z-[100] px-4"
+            className="fixed inset-0 md:inset-auto md:left-1/2 md:top-[15%] md:-translate-x-1/2 w-full md:max-w-2xl z-[100] md:px-4"
           >
-            <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border overflow-hidden">
+            <div className="bg-white dark:bg-neutral-900 md:rounded-2xl shadow-2xl md:border overflow-hidden h-full md:h-auto flex flex-col">
               {/* Search input */}
               <form onSubmit={handleSubmit}>
                 <div className="flex items-center gap-3 px-4 border-b">
-                  <Search className="size-5 text-muted-foreground shrink-0" />
+                  {/* Close button - mobile only */}
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="md:hidden p-1.5 -ml-1.5 rounded-lg hover:bg-muted transition-colors"
+                  >
+                    <X className="size-5 text-muted-foreground" />
+                  </button>
+                  <Search className="size-5 text-muted-foreground shrink-0 hidden md:block" />
                   <input
                     ref={inputRef}
                     type="text"
@@ -199,7 +207,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
               </form>
 
               {/* Results */}
-              <div className="max-h-[60vh] overflow-y-auto">
+              <div className="flex-1 md:flex-none md:max-h-[60vh] overflow-y-auto">
                 {isSearching ? (
                   <div className="flex items-center justify-center gap-3 py-12 text-muted-foreground">
                     <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent" />
@@ -286,8 +294,8 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                 )}
               </div>
 
-              {/* Footer with keyboard hints */}
-              <div className="flex items-center justify-between gap-4 px-4 py-3 border-t bg-muted/30 text-xs text-muted-foreground">
+              {/* Footer with keyboard hints - hidden on mobile */}
+              <div className="hidden md:flex items-center justify-between gap-4 px-4 py-3 border-t bg-muted/30 text-xs text-muted-foreground">
                 <div className="flex items-center gap-4">
                   <span className="flex items-center gap-1">
                     <kbd className="px-1.5 py-0.5 rounded border bg-white dark:bg-neutral-800 font-mono">↑</kbd>

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "sync:meilisearch": "npx tsx scripts/sync-meilisearch.ts"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
@@ -37,6 +38,7 @@
     "jose": "^6.1.3",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.562.0",
+    "meilisearch": "^0.54.0",
     "next": "^16.1.1",
     "next-themes": "^0.4.6",
     "prisma": "^7.2.0",
@@ -65,6 +67,7 @@
     "eslint": "^9",
     "eslint-config-next": "^16.1.1",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "tw-animate-css": "^1.4.0",
     "typescript": "^5"
   }

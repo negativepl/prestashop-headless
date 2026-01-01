@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { ShoppingCart, Search, User, ChevronDown, Phone, Star, Minus, Plus, Trash2, ShoppingBag, ArrowRight, Heart, LogIn, LogOut, Truck, X, Globe, Coins } from "lucide-react";
+import { ShoppingCart, Search, User, ChevronDown, Phone, Star, Minus, Plus, Trash2, ShoppingBag, ArrowRight, Heart, LogIn, LogOut, Truck, X, Globe, Coins, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,6 +19,13 @@ import { useUser } from "@/hooks/use-user";
 import { logoutUser } from "@/app/actions/auth";
 import { MegaMenu } from "@/components/layout/mega-menu";
 import { SearchModal, useSearchModal } from "@/components/search/search-modal";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import type { Category } from "@/lib/prestashop/types";
 
 
@@ -39,6 +46,8 @@ export function Header({ categories = [] }: HeaderProps) {
   const prevCartCount = useRef(itemCount);
   const [cartOpen, setCartOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [expandedCategory, setExpandedCategory] = useState<number | null>(null);
 
   const handleLogout = async () => {
     await logoutUser();
@@ -91,22 +100,22 @@ export function Header({ categories = [] }: HeaderProps) {
     <>
       {/* Top bar - scrolls away */}
       <div className="bg-muted text-foreground">
-        <div className="container py-2.5 md:py-3 flex justify-center md:justify-between items-center text-sm relative">
-          <div className="hidden md:flex items-center gap-6">
-            <span className="flex items-center gap-2"><Phone className="h-4 w-4" /> +48 793 237 970</span>
+        <div className="container py-2 md:py-2.5 flex justify-center md:justify-between items-center text-xs lg:text-sm relative">
+          <div className="hidden md:flex items-center gap-3 lg:gap-6">
+            <span className="flex items-center gap-1.5 lg:gap-2"><Phone className="h-3 w-3 lg:h-4 lg:w-4" /> +48 793 237 970</span>
           </div>
-          <div className="hidden md:flex items-center gap-6 absolute left-1/2 -translate-x-1/2">
-            <span className="flex items-center gap-2"><Truck className="h-4 w-4" /> Darmowa dostawa od 100 PLN</span>
-            <span className="flex items-center gap-2"><Star className="h-4 w-4" /> Na rynku od ponad 10 lat</span>
+          <div className="hidden md:flex items-center gap-3 lg:gap-6 absolute left-1/2 -translate-x-1/2">
+            <span className="flex items-center gap-1.5 lg:gap-2"><Truck className="h-3 w-3 lg:h-4 lg:w-4" /> Darmowa dostawa od 100 PLN</span>
+            <span className="hidden lg:flex items-center gap-2"><Star className="h-4 w-4" /> Na rynku od ponad 10 lat</span>
           </div>
-          <p className="md:hidden text-sm">Darmowa dostawa od 100 PLN</p>
-          <div className="hidden md:flex items-center gap-4">
+          <p className="md:hidden text-xs">Darmowa dostawa od 100 PLN</p>
+          <div className="hidden md:flex items-center gap-2 lg:gap-4">
             {/* Currency selector */}
             <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1.5 hover:text-primary transition-colors cursor-pointer outline-none">
-                <Coins className="size-3.5" />
+              <DropdownMenuTrigger className="flex items-center gap-1 lg:gap-1.5 hover:text-primary transition-colors cursor-pointer outline-none">
+                <Coins className="size-3 lg:size-3.5" />
                 <span>PLN</span>
-                <ChevronDown className="size-3" />
+                <ChevronDown className="size-2.5 lg:size-3" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-[100px] bg-white dark:bg-black">
                 <DropdownMenuItem className="cursor-pointer">
@@ -122,10 +131,10 @@ export function Header({ categories = [] }: HeaderProps) {
 
             {/* Language selector */}
             <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1.5 hover:text-primary transition-colors cursor-pointer outline-none">
-                <Globe className="size-3.5" />
+              <DropdownMenuTrigger className="flex items-center gap-1 lg:gap-1.5 hover:text-primary transition-colors cursor-pointer outline-none">
+                <Globe className="size-3 lg:size-3.5" />
                 <span>PL</span>
-                <ChevronDown className="size-3" />
+                <ChevronDown className="size-2.5 lg:size-3" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-[120px] bg-white dark:bg-black">
                 <DropdownMenuItem className="cursor-pointer">Polski</DropdownMenuItem>
@@ -146,8 +155,93 @@ export function Header({ categories = [] }: HeaderProps) {
       <header className={`sticky top-0 z-50 bg-card transition-shadow duration-300 ease-in-out ${isScrolled ? "shadow-sm" : "shadow-none"}`}>
         <div className="container py-2 md:py-2.5">
           <div className="flex items-center justify-between gap-4 md:gap-8">
-            {/* Left - Logo */}
+            {/* Left - Hamburger (md only) + Logo */}
             <div className="flex items-center gap-2">
+              {/* Hamburger menu - visible only on md, hidden on mobile and lg+ */}
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="hidden md:flex lg:hidden h-10 w-10 cursor-pointer hover:bg-transparent hover:text-primary"
+                  >
+                    <Menu className="size-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-80 p-0">
+                  <SheetHeader className="p-4 border-b">
+                    <SheetTitle>Menu</SheetTitle>
+                  </SheetHeader>
+                  <nav className="p-4 overflow-y-auto max-h-[calc(100vh-80px)]">
+                    <ul className="space-y-1">
+                      {(() => {
+                        const categoryOrder = ["apple", "samsung", "xiaomi", "oneplus", "realme", "moto", "motorola", "google", "honor", "inne", "akcesoria", "smart home"];
+                        const filteredCategories = categories
+                          .filter((c) => {
+                            if (!c.children || c.children.length === 0) return false;
+                            const name = c.name.toLowerCase();
+                            return categoryOrder.some(orderName => name.includes(orderName));
+                          })
+                          .sort((a, b) => {
+                            const aName = a.name.toLowerCase();
+                            const bName = b.name.toLowerCase();
+                            const aIndex = categoryOrder.findIndex(name => aName.includes(name));
+                            const bIndex = categoryOrder.findIndex(name => bName.includes(name));
+                            return aIndex - bIndex;
+                          });
+                        return filteredCategories.map((category) => (
+                          <li key={category.id}>
+                            <div className="flex items-center">
+                              <Link
+                                href={`/categories/${category.id}`}
+                                onClick={() => setMobileMenuOpen(false)}
+                                className="flex-1 flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors font-semibold"
+                              >
+                                {category.name}
+                              </Link>
+                              {category.children && category.children.length > 0 && (
+                                <button
+                                  onClick={() => setExpandedCategory(expandedCategory === category.id ? null : category.id)}
+                                  className="p-2 hover:bg-muted rounded-lg transition-colors"
+                                >
+                                  <ChevronDown className={`size-4 transition-transform ${expandedCategory === category.id ? "rotate-180" : ""}`} />
+                                </button>
+                              )}
+                            </div>
+                            {category.children && category.children.length > 0 && expandedCategory === category.id && (
+                              <ul className="ml-4 mt-1 space-y-0.5 border-l pl-3">
+                                {category.children.slice(0, 8).map((sub) => (
+                                  <li key={sub.id}>
+                                    <Link
+                                      href={`/categories/${sub.id}`}
+                                      onClick={() => setMobileMenuOpen(false)}
+                                      className="flex items-center px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors"
+                                    >
+                                      {sub.name}
+                                    </Link>
+                                  </li>
+                                ))}
+                                {category.children.length > 8 && (
+                                  <li>
+                                    <Link
+                                      href={`/categories/${category.id}`}
+                                      onClick={() => setMobileMenuOpen(false)}
+                                      className="flex items-center px-3 py-1.5 text-sm text-primary hover:underline"
+                                    >
+                                      Zobacz wszystkie ({category.children.length})
+                                    </Link>
+                                  </li>
+                                )}
+                              </ul>
+                            )}
+                          </li>
+                        ));
+                      })()}
+                    </ul>
+                  </nav>
+                </SheetContent>
+              </Sheet>
+
               <Link href="/" className="shrink-0 flex items-center gap-2">
                 <div className="w-8 h-8 md:w-10 md:h-10 bg-primary rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-sm md:text-lg">HS</span>
@@ -158,16 +252,6 @@ export function Header({ categories = [] }: HeaderProps) {
 
             {/* Center - spacer */}
             <div className="flex-1" />
-
-            {/* Search - visible on mobile */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden h-10 w-10 cursor-pointer hover:bg-transparent! hover:text-primary"
-              onClick={searchModal.open}
-            >
-              <Search className="size-5" />
-            </Button>
 
             {/* Favorites - visible on mobile */}
             <Link href="/favorites" className="md:hidden">
@@ -203,7 +287,7 @@ export function Header({ categories = [] }: HeaderProps) {
                 onClick={searchModal.open}
               >
                 <Search className="size-5" />
-                <span className="text-sm">Szukaj</span>
+                <span className="hidden lg:inline text-sm">Szukaj</span>
               </Button>
 
               <Link href="/favorites">
@@ -228,7 +312,7 @@ export function Header({ categories = [] }: HeaderProps) {
                       </motion.span>
                     )}
                   </motion.span>
-                  <span className="text-sm">Ulubione</span>
+                  <span className="hidden lg:inline text-sm">Ulubione</span>
                 </Button>
               </Link>
 
@@ -417,7 +501,7 @@ export function Header({ categories = [] }: HeaderProps) {
       </header>
 
       {/* Mega Menu navigation bar - scrolls away (hidden on mobile) */}
-      <div className="hidden md:block bg-card relative z-40">
+      <div className="hidden lg:block bg-card relative z-40">
         {/* Fading divider line */}
         <div className="container">
           <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />

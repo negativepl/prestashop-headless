@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Home, Menu, Search, ShoppingCart, User, X, ChevronRight } from "lucide-react";
+import { Home, Menu, Search, ShoppingCart, User, ChevronRight } from "lucide-react";
 import { Drawer } from "vaul";
 import { useCart } from "@/hooks/use-cart";
+import { SearchModal, useSearchModal } from "@/components/search/search-modal";
 
 interface Category {
   id: number;
@@ -17,28 +18,11 @@ interface MobileDockProps {
 
 export function MobileDock({ categories = [] }: MobileDockProps) {
   const { itemCount } = useCart();
-  const [searchOpen, setSearchOpen] = useState(false);
+  const searchModal = useSearchModal();
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <>
-      {/* Search overlay */}
-      {searchOpen && (
-        <div className="fixed inset-0 z-50 bg-background md:hidden">
-          <div className="flex items-center gap-3 p-4 border-b">
-            <button onClick={() => setSearchOpen(false)}>
-              <X className="size-6" />
-            </button>
-            <input
-              type="search"
-              placeholder="Czego szukasz?"
-              autoFocus
-              className="flex-1 h-10 px-4 rounded-lg bg-muted border-0 focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-        </div>
-      )}
-
       {/* Vaul Drawer for Menu */}
       <Drawer.Root open={menuOpen} onOpenChange={setMenuOpen}>
         <Drawer.Portal>
@@ -92,7 +76,7 @@ export function MobileDock({ categories = [] }: MobileDockProps) {
 
           {/* Search */}
           <button
-            onClick={() => setSearchOpen(true)}
+            onClick={searchModal.open}
             className="flex flex-col items-center gap-0.5 px-3 py-1.5 text-muted-foreground hover:text-primary transition-colors"
           >
             <Search className="size-5" />
@@ -125,6 +109,9 @@ export function MobileDock({ categories = [] }: MobileDockProps) {
           </Link>
         </nav>
       </div>
+
+      {/* Search Modal (Command Palette) */}
+      <SearchModal isOpen={searchModal.isOpen} onClose={searchModal.close} />
 
       {/* Spacer to prevent content being hidden behind dock */}
       <div className="h-16 md:hidden" />

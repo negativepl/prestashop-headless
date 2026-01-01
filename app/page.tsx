@@ -6,6 +6,8 @@ import { ProductCard } from "@/components/products/product-card";
 import { HeroCarouselWrapper } from "@/components/home/hero-carousel-wrapper";
 import { FeaturedProducts } from "@/components/home/featured-products";
 import { NewArrivals } from "@/components/home/new-arrivals";
+import { BestsellersCarousel } from "@/components/home/bestsellers-carousel";
+import { BlogCarousel } from "@/components/home/blog-carousel";
 import { prestashop } from "@/lib/prestashop/client";
 import type { Product } from "@/lib/prestashop/types";
 import { wordpress, type BlogPost } from "@/lib/wordpress/client";
@@ -80,10 +82,27 @@ export default async function HomePage() {
               </Link>
             </div>
 
+            {/* Mobile carousel */}
+            {availableProducts.length > 0 && (
+              <BestsellersCarousel products={availableProducts.slice(0, 6)} />
+            )}
+
+            {/* Desktop grid: md: 6 products (3x2), lg: 4 products (4x1), 2xl: 5 products (5x1) */}
             {availableProducts.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-5">
-                {availableProducts.slice(0, 5).map((product, index) => (
-                  <ProductCard key={product.id} product={product} priority={index < 5} />
+              <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-5">
+                {availableProducts.slice(0, 6).map((product, index) => (
+                  <div
+                    key={product.id}
+                    className={
+                      index === 4
+                        ? "hidden md:block lg:hidden 2xl:block"
+                        : index === 5
+                          ? "hidden md:block lg:hidden"
+                          : undefined
+                    }
+                  >
+                    <ProductCard product={product} priority={index < 5} />
+                  </div>
                 ))}
               </div>
             ) : (
@@ -159,7 +178,11 @@ export default async function HomePage() {
                 </Link>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Mobile carousel */}
+              <BlogCarousel posts={blogPosts} />
+
+              {/* Desktop grid */}
+              <div className="hidden md:grid md:grid-cols-3 gap-6">
                 {blogPosts.map((post) => (
                   <article key={post.id} className="group bg-accent rounded-xl border overflow-hidden hover:border-foreground/20 transition-colors">
                     <Link href={`/blog/${post.slug}`}>
@@ -169,7 +192,7 @@ export default async function HomePage() {
                             src={post.image}
                             alt={post.imageAlt || post.title}
                             fill
-                            sizes="(max-width: 768px) 100vw, 33vw"
+                            sizes="33vw"
                             loading="lazy"
                             className="object-cover group-hover:scale-105 transition-transform duration-300"
                           />
@@ -230,45 +253,42 @@ export default async function HomePage() {
 
       {/* Trust Section */}
       <section className="bg-card">
-        <div className="container py-10 md:py-14">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 md:gap-0">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
-                <Truck className="h-6 w-6 text-primary" />
+        <div className="container py-8 md:py-10 lg:py-14">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 xl:gap-8">
+            <div className="flex items-center gap-2 sm:gap-3 xl:gap-4">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 xl:w-12 xl:h-12 bg-primary/10 rounded-lg xl:rounded-xl flex items-center justify-center shrink-0">
+                <Truck className="h-4 w-4 sm:h-5 sm:w-5 xl:h-6 xl:w-6 text-primary" />
               </div>
               <div>
-                <p className="font-semibold">Darmowa wysyłka</p>
-                <p className="text-sm text-muted-foreground">Paczkomat® od 100 zł</p>
+                <p className="font-semibold text-xs sm:text-sm xl:text-base">Darmowa wysyłka</p>
+                <p className="text-[10px] sm:text-xs xl:text-sm text-muted-foreground">Paczkomat® od 100 zł</p>
               </div>
             </div>
-            <div className="hidden md:block w-px h-12 bg-border" />
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
-                <RotateCcw className="h-6 w-6 text-primary" />
+            <div className="flex items-center gap-2 sm:gap-3 xl:gap-4">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 xl:w-12 xl:h-12 bg-primary/10 rounded-lg xl:rounded-xl flex items-center justify-center shrink-0">
+                <RotateCcw className="h-4 w-4 sm:h-5 sm:w-5 xl:h-6 xl:w-6 text-primary" />
               </div>
               <div>
-                <p className="font-semibold">Zwrot do 30 dni</p>
-                <p className="text-sm text-muted-foreground">Bez podawania przyczyny</p>
+                <p className="font-semibold text-xs sm:text-sm xl:text-base">Zwrot do 30 dni</p>
+                <p className="text-[10px] sm:text-xs xl:text-sm text-muted-foreground">Bez podawania przyczyny</p>
               </div>
             </div>
-            <div className="hidden md:block w-px h-12 bg-border" />
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
-                <Percent className="h-6 w-6 text-primary" />
+            <div className="flex items-center gap-2 sm:gap-3 xl:gap-4">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 xl:w-12 xl:h-12 bg-primary/10 rounded-lg xl:rounded-xl flex items-center justify-center shrink-0">
+                <Percent className="h-4 w-4 sm:h-5 sm:w-5 xl:h-6 xl:w-6 text-primary" />
               </div>
               <div>
-                <p className="font-semibold">15% rabatu</p>
-                <p className="text-sm text-muted-foreground">Za zapisanie się do newslettera</p>
+                <p className="font-semibold text-xs sm:text-sm xl:text-base">15% rabatu</p>
+                <p className="text-[10px] sm:text-xs xl:text-sm text-muted-foreground">Za zapis do newslettera</p>
               </div>
             </div>
-            <div className="hidden md:block w-px h-12 bg-border" />
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
-                <Headphones className="h-6 w-6 text-primary" />
+            <div className="flex items-center gap-2 sm:gap-3 xl:gap-4">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 xl:w-12 xl:h-12 bg-primary/10 rounded-lg xl:rounded-xl flex items-center justify-center shrink-0">
+                <Headphones className="h-4 w-4 sm:h-5 sm:w-5 xl:h-6 xl:w-6 text-primary" />
               </div>
               <div>
-                <p className="font-semibold">Wsparcie 24/7</p>
-                <p className="text-sm text-muted-foreground">Zawsze chętnie pomożemy</p>
+                <p className="font-semibold text-xs sm:text-sm xl:text-base">Wsparcie 24/7</p>
+                <p className="text-[10px] sm:text-xs xl:text-sm text-muted-foreground">Zawsze chętnie pomożemy</p>
               </div>
             </div>
           </div>
