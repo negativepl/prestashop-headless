@@ -1,6 +1,6 @@
 "use server";
 
-import { prestashop } from "@/lib/prestashop/client";
+import { binshops } from "@/lib/binshops/client";
 import { getSession } from "@/lib/auth/session";
 import { revalidatePath } from "next/cache";
 
@@ -27,7 +27,7 @@ export async function createAddress(formData: FormData) {
   }
 
   try {
-    const address = await prestashop.createAddress(session.customerId, {
+    const address = await binshops.createAddress({
       alias,
       firstName,
       lastName,
@@ -60,7 +60,7 @@ export async function deleteAddress(addressId: number) {
   }
 
   try {
-    const success = await prestashop.deleteAddress(addressId);
+    const success = await binshops.deleteAddress(addressId);
 
     if (!success) {
       return { success: false, error: "Nie udało się usunąć adresu" };

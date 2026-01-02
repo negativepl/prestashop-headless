@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prestashop } from "@/lib/prestashop/client";
+import { binshops } from "@/lib/binshops/client";
 
 // ISR - revalidate every 5 minutes
 export const revalidate = 300;
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const products = await prestashop.getProductsByIds(ids);
+    const products = await binshops.getProductsByIds(ids);
     return NextResponse.json(products);
   } catch (error) {
     console.error("Error fetching products by IDs:", error);

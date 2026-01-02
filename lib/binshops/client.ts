@@ -1,0 +1,857 @@
+import type {
+  BinshopsProductDetail,
+  BinshopsProductListItem,
+  BinshopsCategoryProductsResponse,
+  BinshopsBootstrapResponse,
+  BinshopsLoginResponse,
+  BinshopsRegisterResponse,
+  BinshopsAccountInfoResponse,
+  BinshopsOrderHistoryResponse,
+  BinshopsOrder,
+  BinshopsAddressResponse,
+  BinshopsAddress,
+  BinshopsCarriersResponse,
+  BinshopsPaymentOptionsResponse,
+  BinshopsCartUpdateResponse,
+  BinshopsNewProductsResponse,
+  BinshopsBestSalesResponse,
+  BinshopsFeaturedProductsResponse,
+  BinshopsRelatedProductsResponse,
+  BinshopsResponse,
+  BinshopsCategoryTree,
+} from "./types";
+
+// Re-export frontend types from prestashop (they stay the same)
+import type {
+  Product,
+  Category,
+  Order,
+  OrderItem,
+  Address,
+} from "@/lib/prestashop/types";
+
+export type { Product, Category, Order, OrderItem, Address };
+
+class BinshopsClient {
+  private baseUrl: string;
+  private apiKey: string;
+  private sessionCookie: string | null = null;
+
+  constructor() {
+    this.baseUrl = process.env.PRESTASHOP_URL || "http://localhost:8080";
+    this.apiKey = process.env.BINSHOPS_API_KEY || "";
+  }
+
+  private getHeaders(withAuth: boolean = false): HeadersInit {
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+
+    if (withAuth && this.apiKey) {
+      headers["Authorization"] = `Basic ${this.apiKey}`;
+    }
+
+    if (this.sessionCookie) {
+      headers["Cookie"] = this.sessionCookie;
+    }
+
+    return headers;
+  }
+
+  private async fetch<T>(
+    endpoint: string,
+    options?: RequestInit & { withAuth?: boolean },
+    cacheTime: number = 60
+  ): Promise<T> {
+    // Use non-friendly URL format (works without route registration)
+    // endpoint format: "controller?param=value" -> "index.php?fc=module&module=binshopsrest&controller=XXX&param=value"
+    const [controller, queryString] = endpoint.split("?");
+
+    // Build URL with fc, module, controller FIRST, then other params
+    const baseParams = `fc=module&module=binshopsrest&controller=${controller}`;
+    const url = queryString
+      ? `${this.baseUrl}/index.php?${baseParams}&${queryString}`
+      : `${this.baseUrl}/index.php?${baseParams}`;
+
+    const { withAuth, ...fetchOptions } = options || {};
+
+    const shouldCache = !endpoint.includes("cart") &&
+                       !endpoint.includes("account") &&
+                       !endpoint.includes("order") &&
+                       cacheTime > 0;
+
+    const response = await fetch(url, {
+      ...fetchOptions,
+      headers: this.getHeaders(withAuth),
+      ...(shouldCache ? { next: { revalidate: cacheTime } } : { cache: "no-store" }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Binshops API error (${response.status}) for ${url}:`, errorText.slice(0, 200));
+      throw new Error(`Binshops API error: ${response.status} ${response.statusText}`);
+    }
+
+    // Save session cookie for subsequent requests
+    const setCookie = response.headers.get("set-cookie");
+    if (setCookie) {
+      this.sessionCookie = setCookie;
+    }
+
+    return response.json();
+  }
+
+  // =====================
+  // PRODUCTS
+  // =====================
+
+  async getProduct(id: number): Promise<Product | null> {
+    try {
+      const response = await this.fetch<any>(
+        `productdetail?product_id=${id}&image_type=large&with_all_images=1`
+      );
+
+      if (!response.success || !response.psdata) {
+        return null;
+      }
+
+      // psdata is the product directly, not { product: ... }
+      return this.mapProduct(response.psdata);
+    } catch (error) {
+      console.error("Error fetching product:", error);
+      return null;
+    }
+  }
+
+  async getProducts(params?: {
+    limit?: number;
+    offset?: number;
+    categoryId?: number;
+    page?: number;
+    sortBy?: "date" | "price_asc" | "price_desc" | "name" | "sales";
+  }): Promise<{ products: Product[]; total: number; pagination?: any }> {
+    const categoryId = params?.categoryId || 2; // Root category
+    const page = params?.page || Math.floor((params?.offset || 0) / (params?.limit || 24)) + 1;
+    const resultsPerPage = params?.limit || 24;
+
+    // Map sort options to Binshops format
+    const sortMap: Record<string, string> = {
+      date: "product.date_add.desc",
+      price_asc: "product.price.asc",
+      price_desc: "product.price.desc",
+      name: "product.name.asc",
+      sales: "product.sales.desc",
+    };
+    const order = sortMap[params?.sortBy || "date"] || "product.date_add.desc";
+
+    try {
+      const response = await this.fetch<BinshopsCategoryProductsResponse>(
+        `categoryproducts?id_category=${categoryId}&page=${page}&resultsPerPage=${resultsPerPage}&with_all_images=0&image_size=home_default&order=${order}`
+      );
+
+      if (!response.success || !response.psdata?.products) {
+        return { products: [], total: 0 };
+      }
+
+      const products = response.psdata.products.map((p) => this.mapProductListItem(p));
+
+      return {
+        products,
+        total: response.psdata.pagination?.total_items || products.length,
+        pagination: response.psdata.pagination,
+      };
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      return { products: [], total: 0 };
+    }
+  }
+
+  async getNewProducts(limit: number = 10): Promise<Product[]> {
+    try {
+      const response = await this.fetch<BinshopsNewProductsResponse>("new-products");
+
+      if (!response.success || !response.psdata?.products) {
+        return [];
+      }
+
+      return response.psdata.products.slice(0, limit).map((p) => this.mapProductListItem(p));
+    } catch (error) {
+      console.error("Error fetching new products:", error);
+      return [];
+    }
+  }
+
+  async getBestSellers(limit: number = 10): Promise<Product[]> {
+    try {
+      const response = await this.fetch<BinshopsBestSalesResponse>("best-sales");
+
+      if (!response.success || !response.psdata?.products) {
+        return [];
+      }
+
+      return response.psdata.products.slice(0, limit).map((p) => this.mapProductListItem(p));
+    } catch (error) {
+      console.error("Error fetching best sellers:", error);
+      return [];
+    }
+  }
+
+  async getFeaturedProducts(limit: number = 10): Promise<Product[]> {
+    try {
+      const response = await this.fetch<any>("featuredproducts");
+
+      if (!response.success) {
+        return [];
+      }
+
+      // psdata can be array directly or { products: [] }
+      const products = Array.isArray(response.psdata)
+        ? response.psdata
+        : response.psdata?.products || [];
+
+      return products.slice(0, limit).map((p: any) => this.mapProductListItem(p));
+    } catch (error) {
+      console.error("Error fetching featured products:", error);
+      return [];
+    }
+  }
+
+  async getRelatedProducts(productId: number, limit: number = 10): Promise<Product[]> {
+    try {
+      const response = await this.fetch<BinshopsRelatedProductsResponse>(
+        `related-products?id_product=${productId}`
+      );
+
+      if (!response.success || !response.psdata?.products) {
+        return [];
+      }
+
+      return response.psdata.products.slice(0, limit).map((p) => this.mapProductListItem(p));
+    } catch (error) {
+      console.error("Error fetching related products:", error);
+      return [];
+    }
+  }
+
+  async searchProducts(query: string, limit: number = 10): Promise<Product[]> {
+    try {
+      const response = await this.fetch<BinshopsCategoryProductsResponse>(
+        `productsearch?s=${encodeURIComponent(query)}&resultsPerPage=${limit}`
+      );
+
+      if (!response.success || !response.psdata?.products) {
+        return [];
+      }
+
+      return response.psdata.products.map((p) => this.mapProductListItem(p));
+    } catch (error) {
+      console.error("Error searching products:", error);
+      return [];
+    }
+  }
+
+  async getProductsByIds(ids: number[]): Promise<Product[]> {
+    // Fetch products in parallel
+    const products = await Promise.all(
+      ids.map((id) => this.getProduct(id))
+    );
+
+    // Filter out nulls and maintain order
+    return products.filter((p): p is Product => p !== null);
+  }
+
+  async getProductIdsWithStock(categoryId: number): Promise<{ id: number; quantity: number }[]> {
+    try {
+      // Get all products from category with a large limit
+      const { products } = await this.getProducts({
+        categoryId,
+        limit: 500, // Large limit to get all products
+      });
+
+      return products.map((p) => ({
+        id: p.id,
+        quantity: p.quantity || 0,
+      }));
+    } catch (error) {
+      console.error("Error fetching product IDs with stock:", error);
+      return [];
+    }
+  }
+
+  // =====================
+  // CATEGORIES
+  // =====================
+
+  async getBootstrap(): Promise<BinshopsBootstrapResponse | null> {
+    try {
+      const response = await this.fetch<BinshopsBootstrapResponse>(
+        "bootstrap?menu_with_images=single"
+      );
+      return response;
+    } catch (error) {
+      console.error("Error fetching bootstrap:", error);
+      return null;
+    }
+  }
+
+  async getCategoryTree(): Promise<Category[]> {
+    const bootstrap = await this.getBootstrap();
+    if (!bootstrap?.psdata?.categories) {
+      return [];
+    }
+
+    return this.mapCategoryTree(bootstrap.psdata.categories);
+  }
+
+  async getCategory(id: number): Promise<Category | null> {
+    const bootstrap = await this.getBootstrap();
+    if (!bootstrap?.psdata?.categories) {
+      return null;
+    }
+
+    const findCategory = (categories: BinshopsCategoryTree[]): Category | null => {
+      for (const cat of categories) {
+        if (cat.id === id) {
+          return {
+            id: cat.id,
+            name: cat.name,
+            description: "",
+            parentId: 0,
+            level: 0,
+            active: true,
+            children: cat.children ? this.mapCategoryTree(cat.children) : undefined,
+          };
+        }
+        if (cat.children) {
+          const found = findCategory(cat.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    return findCategory(bootstrap.psdata.categories);
+  }
+
+  async getCategories(params?: { parentId?: number }): Promise<Category[]> {
+    const tree = await this.getCategoryTree();
+
+    if (!params?.parentId) {
+      return tree;
+    }
+
+    // Find parent and return its children
+    const findChildren = (categories: Category[]): Category[] => {
+      for (const cat of categories) {
+        if (cat.id === params.parentId) {
+          return cat.children || [];
+        }
+        if (cat.children) {
+          const found = findChildren(cat.children);
+          if (found.length > 0) return found;
+        }
+      }
+      return [];
+    };
+
+    return findChildren(tree);
+  }
+
+  // =====================
+  // AUTHENTICATION
+  // =====================
+
+  async login(
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; customer?: any; error?: string }> {
+    try {
+      const response = await this.fetch<BinshopsLoginResponse>("login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (response.success && response.psdata?.customer) {
+        return {
+          success: true,
+          customer: {
+            id: response.psdata.customer.id,
+            email: response.psdata.customer.email,
+            firstName: response.psdata.customer.firstname,
+            lastName: response.psdata.customer.lastname,
+          },
+        };
+      }
+
+      return {
+        success: false,
+        error: response.message || "Nieprawidłowy email lub hasło",
+      };
+    } catch (error) {
+      console.error("Login error:", error);
+      return { success: false, error: "Wystąpił błąd podczas logowania" };
+    }
+  }
+
+  async register(data: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+  }): Promise<{ success: boolean; customerId?: number; error?: string }> {
+    try {
+      const response = await this.fetch<BinshopsRegisterResponse>("register", {
+        method: "POST",
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          firstName: data.firstName,
+          lastName: data.lastName,
+        }),
+      });
+
+      if (response.success && response.psdata?.customer) {
+        return {
+          success: true,
+          customerId: response.psdata.customer.id,
+        };
+      }
+
+      return {
+        success: false,
+        error: response.errors?.[0] || response.message || "Wystąpił błąd podczas rejestracji",
+      };
+    } catch (error) {
+      console.error("Registration error:", error);
+      return { success: false, error: "Wystąpił błąd podczas rejestracji" };
+    }
+  }
+
+  async logout(): Promise<boolean> {
+    try {
+      await this.fetch("logout");
+      this.sessionCookie = null;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async getAccountInfo(): Promise<{
+    id: number;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null> {
+    try {
+      const response = await this.fetch<BinshopsAccountInfoResponse>("accountinfo");
+
+      if (response.success && response.psdata?.customer) {
+        const c = response.psdata.customer;
+        return {
+          id: c.id,
+          email: c.email,
+          firstName: c.firstname,
+          lastName: c.lastname,
+        };
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  async updateAccount(data: {
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    password?: string;
+    newPassword?: string;
+  }): Promise<boolean> {
+    try {
+      const response = await this.fetch<BinshopsResponse<any>>("accountedit", {
+        method: "POST",
+        body: JSON.stringify({
+          email: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          password: data.password,
+          new_password: data.newPassword,
+        }),
+      });
+
+      return response.success;
+    } catch {
+      return false;
+    }
+  }
+
+  // =====================
+  // ORDERS
+  // =====================
+
+  async getCustomerOrders(): Promise<Order[]> {
+    try {
+      const response = await this.fetch<BinshopsOrderHistoryResponse>("orderhistory");
+
+      if (!response.success || !response.psdata?.orders) {
+        return [];
+      }
+
+      return response.psdata.orders.map((o) => this.mapOrder(o));
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      return [];
+    }
+  }
+
+  async getOrder(orderId: number): Promise<Order | null> {
+    try {
+      const response = await this.fetch<BinshopsResponse<{ order: BinshopsOrder }>>(
+        `orderhistory?id_order=${orderId}`
+      );
+
+      if (!response.success || !response.psdata?.order) {
+        return null;
+      }
+
+      return this.mapOrder(response.psdata.order);
+    } catch (error) {
+      console.error("Error fetching order:", error);
+      return null;
+    }
+  }
+
+  // =====================
+  // ADDRESSES
+  // =====================
+
+  async getCustomerAddresses(): Promise<Address[]> {
+    try {
+      const response = await this.fetch<BinshopsAddressResponse>("alladdresses");
+
+      if (!response.success || !response.psdata?.addresses) {
+        return [];
+      }
+
+      return response.psdata.addresses.map((a) => this.mapAddress(a));
+    } catch (error) {
+      console.error("Error fetching addresses:", error);
+      return [];
+    }
+  }
+
+  async createAddress(data: {
+    alias: string;
+    firstName: string;
+    lastName: string;
+    address1: string;
+    address2?: string;
+    postcode: string;
+    city: string;
+    countryId: number;
+    phone?: string;
+    company?: string;
+  }): Promise<Address | null> {
+    try {
+      const response = await this.fetch<BinshopsResponse<{ address: BinshopsAddress }>>(
+        "address",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            alias: data.alias,
+            firstname: data.firstName,
+            lastname: data.lastName,
+            address1: data.address1,
+            address2: data.address2 || "",
+            postcode: data.postcode,
+            city: data.city,
+            id_country: data.countryId,
+            phone: data.phone || "",
+            company: data.company || "",
+          }),
+        }
+      );
+
+      if (response.success && response.psdata?.address) {
+        return this.mapAddress(response.psdata.address);
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error creating address:", error);
+      return null;
+    }
+  }
+
+  async deleteAddress(addressId: number): Promise<boolean> {
+    try {
+      const response = await this.fetch<BinshopsResponse<any>>("address", {
+        method: "DELETE",
+        body: JSON.stringify({ id_address: addressId }),
+      });
+
+      return response.success;
+    } catch {
+      return false;
+    }
+  }
+
+  // =====================
+  // CART
+  // =====================
+
+  async getCart(): Promise<BinshopsCartUpdateResponse | null> {
+    try {
+      const response = await this.fetch<BinshopsCartUpdateResponse>(
+        "cart?image_size=medium_default"
+      );
+      return response;
+    } catch {
+      return null;
+    }
+  }
+
+  async addToCart(
+    productId: number,
+    quantity: number = 1,
+    productAttributeId: number = 0
+  ): Promise<BinshopsCartUpdateResponse | null> {
+    try {
+      const response = await this.fetch<BinshopsCartUpdateResponse>(
+        `cart?update=1&id_product=${productId}&id_product_attribute=${productAttributeId}&op=up&action=update&qty=${quantity}&image_size=medium_default`
+      );
+      return response;
+    } catch {
+      return null;
+    }
+  }
+
+  async updateCartItem(
+    productId: number,
+    quantity: number,
+    productAttributeId: number = 0
+  ): Promise<BinshopsCartUpdateResponse | null> {
+    try {
+      const response = await this.fetch<BinshopsCartUpdateResponse>(
+        `cart?update=1&id_product=${productId}&id_product_attribute=${productAttributeId}&action=update&qty=${quantity}&image_size=medium_default`
+      );
+      return response;
+    } catch {
+      return null;
+    }
+  }
+
+  async removeFromCart(
+    productId: number,
+    productAttributeId: number = 0
+  ): Promise<BinshopsCartUpdateResponse | null> {
+    try {
+      const response = await this.fetch<BinshopsCartUpdateResponse>(
+        `cart?delete=1&id_product=${productId}&id_product_attribute=${productAttributeId}&action=update&image_size=medium_default`
+      );
+      return response;
+    } catch {
+      return null;
+    }
+  }
+
+  async applyVoucher(code: string): Promise<BinshopsCartUpdateResponse | null> {
+    try {
+      const response = await this.fetch<BinshopsCartUpdateResponse>(
+        `cart?action=update&addDiscount=1&discount_name=${encodeURIComponent(code)}`
+      );
+      return response;
+    } catch {
+      return null;
+    }
+  }
+
+  // =====================
+  // CHECKOUT
+  // =====================
+
+  async setCheckoutAddress(
+    deliveryAddressId: number,
+    invoiceAddressId?: number
+  ): Promise<boolean> {
+    try {
+      const response = await this.fetch<BinshopsResponse<any>>("setaddresscheckout", {
+        method: "POST",
+        body: JSON.stringify({
+          id_address_delivery: deliveryAddressId,
+          id_address_invoice: invoiceAddressId || deliveryAddressId,
+        }),
+      });
+      return response.success;
+    } catch {
+      return false;
+    }
+  }
+
+  async getCarriers(): Promise<BinshopsCarriersResponse | null> {
+    try {
+      const response = await this.fetch<BinshopsCarriersResponse>("carriers");
+      return response;
+    } catch {
+      return null;
+    }
+  }
+
+  async setCarrier(addressId: number, carrierId: number): Promise<boolean> {
+    try {
+      const response = await this.fetch<BinshopsResponse<any>>("setcarriercheckout", {
+        method: "POST",
+        body: JSON.stringify({
+          id_address: addressId,
+          id_carrier: carrierId,
+        }),
+      });
+      return response.success;
+    } catch {
+      return false;
+    }
+  }
+
+  async getPaymentOptions(): Promise<BinshopsPaymentOptionsResponse | null> {
+    try {
+      const response = await this.fetch<BinshopsPaymentOptionsResponse>("paymentoptions");
+      return response;
+    } catch {
+      return null;
+    }
+  }
+
+  // =====================
+  // MAPPERS
+  // =====================
+
+  private mapProduct(p: any): Product {
+    // Handle product detail response
+    const price = p.float_price ?? p.price_amount ?? p.price_without_reduction ?? 0;
+    const imageUrl = p.cover_image || null;
+    // Handle different image formats: string, {url: "..."}, {src: "..."}, or full object
+    const images = p.images?.map((img: any) => {
+      if (typeof img === "string") return img;
+      return img.url || img.src || img.large || img.medium || img.small || null;
+    }).filter(Boolean) || (imageUrl ? [imageUrl] : []);
+
+    return {
+      id: p.id_product,
+      name: p.name,
+      description: p.description || "",
+      descriptionShort: p.description_short || "",
+      price: typeof price === "number" ? price : parseFloat(String(price).replace(",", ".").replace(/[^\d.]/g, "")) || 0,
+      reference: p.reference || "",
+      ean13: p.ean13 || null,
+      imageUrl,
+      images,
+      categoryId: p.id_category_default || 0,
+      active: p.active === 1 || p.active === "1" || p.active === true,
+      quantity: p.quantity ?? 0,
+      weight: parseFloat(p.weight) || 0,
+      manufacturerId: p.id_manufacturer || 0,
+      manufacturerName: p.manufacturer_name || null,
+      features: p.features?.map((f: any) => ({
+        id: 0,
+        name: f.name,
+        value: f.value,
+      })) || [],
+    };
+  }
+
+  private mapProductListItem(p: any): Product {
+    // Handle both list item format and full product format
+    const price = p.price_amount ?? p.float_price ?? p.price_without_reduction ?? 0;
+    const imageUrl = p.cover_image || p.cover?.url || null;
+
+    return {
+      id: p.id_product,
+      name: p.name,
+      description: p.description || "",
+      descriptionShort: p.description_short || "",
+      price: typeof price === "number" ? price : parseFloat(String(price).replace(",", ".").replace(/[^\d.]/g, "")) || 0,
+      reference: p.reference || "",
+      ean13: p.ean13 || null,
+      imageUrl,
+      images: imageUrl ? [imageUrl] : [],
+      categoryId: p.id_category_default || 0,
+      active: p.active === 1 || p.active === "1" || p.active === true,
+      quantity: p.quantity ?? 0,
+      weight: parseFloat(p.weight) || 0,
+      manufacturerId: p.id_manufacturer || 0,
+      manufacturerName: p.manufacturer_name || null,
+      features: [],
+    };
+  }
+
+  private mapCategoryTree(categories: BinshopsCategoryTree[]): Category[] {
+    return categories.map((c) => ({
+      id: c.id,
+      name: c.name,
+      description: "",
+      parentId: 0,
+      level: 0,
+      active: true,
+      children: c.children ? this.mapCategoryTree(c.children) : undefined,
+    }));
+  }
+
+  private mapOrder(o: BinshopsOrder): Order {
+    const items: OrderItem[] = o.details?.products?.map((p) => ({
+      id: p.id_order_detail,
+      productId: p.id_product,
+      productName: p.product_name,
+      productReference: p.product_reference || "",
+      quantity: p.product_quantity,
+      unitPrice: p.unit_price_tax_incl,
+    })) || [];
+
+    return {
+      id: o.id_order,
+      reference: o.reference,
+      status: o.order_state,
+      statusId: o.id_order_state,
+      dateAdd: o.date_add,
+      totalPaid: o.total_paid,
+      totalProducts: o.total_products,
+      totalShipping: o.total_shipping,
+      payment: o.payment,
+      items,
+    };
+  }
+
+  private mapAddress(a: BinshopsAddress): Address {
+    return {
+      id: a.id_address,
+      alias: a.alias,
+      firstName: a.firstname,
+      lastName: a.lastname,
+      company: a.company || undefined,
+      address1: a.address1,
+      address2: a.address2 || undefined,
+      postcode: a.postcode,
+      city: a.city,
+      country: a.country,
+      countryId: a.id_country,
+      phone: a.phone || undefined,
+      phoneMobile: a.phone_mobile || undefined,
+    };
+  }
+
+  // Test connection
+  async testConnection(): Promise<boolean> {
+    try {
+      const response = await this.fetch<BinshopsBootstrapResponse>("lightbootstrap");
+      return response.success;
+    } catch {
+      return false;
+    }
+  }
+}
+
+// Singleton instance
+export const binshops = new BinshopsClient();
+export default binshops;

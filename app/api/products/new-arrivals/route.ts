@@ -1,18 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prestashop } from "@/lib/prestashop/client";
+import { binshops } from "@/lib/binshops/client";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const page = parseInt(searchParams.get("page") || "1");
   const limit = parseInt(searchParams.get("limit") || "5");
-  const offset = (page - 1) * limit;
 
   try {
-    const products = await prestashop.getProducts({
-      offset,
+    // Use Binshops API - get products from root category sorted by date (newest first)
+    const { products } = await binshops.getProducts({
+      categoryId: 2, // Root category
+      page,
       limit,
-      withImages: true,
-      withStock: true,
     });
 
     // Filter out of stock products

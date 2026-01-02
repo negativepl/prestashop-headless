@@ -6,7 +6,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { MobileDock } from "@/components/layout/mobile-dock";
 import { ThemeProvider } from "@/components/theme-provider";
-import { prestashop } from "@/lib/prestashop/client";
+import { binshops } from "@/lib/binshops/client";
 import { getSEO } from "@/lib/cms/client";
 import type { Category } from "@/lib/prestashop/types";
 
@@ -71,7 +71,7 @@ export default async function RootLayout({
   const seo = await getSEO();
 
   try {
-    categories = await prestashop.getCategoriesWithChildren(2);
+    categories = await binshops.getCategoryTree();
   } catch (e) {
     console.error("Error fetching categories:", e);
   }

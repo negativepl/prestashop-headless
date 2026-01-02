@@ -1,6 +1,6 @@
 import { ProductGrid } from "@/components/products/product-grid";
 import { SearchResults } from "@/components/search/search-results";
-import { prestashop } from "@/lib/prestashop/client";
+import { binshops } from "@/lib/binshops/client";
 import type { Product } from "@/lib/prestashop/types";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 
@@ -35,7 +35,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   let error: string | null = null;
 
   try {
-    products = await prestashop.getProducts({ limit: 100, withStock: true });
+    const result = await binshops.getProducts({ limit: 100 });
+    products = result.products;
   } catch (e) {
     error = e instanceof Error ? e.message : "Błąd połączenia z API";
   }

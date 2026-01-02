@@ -8,7 +8,7 @@ import { FeaturedProducts } from "@/components/home/featured-products";
 import { NewArrivals } from "@/components/home/new-arrivals";
 import { BestsellersCarousel } from "@/components/home/bestsellers-carousel";
 import { BlogCarousel } from "@/components/home/blog-carousel";
-import { prestashop } from "@/lib/prestashop/client";
+import { binshops } from "@/lib/binshops/client";
 import type { Product } from "@/lib/prestashop/types";
 import { wordpress, type BlogPost } from "@/lib/wordpress/client";
 import { getHeroSlides, type HeroSlide } from "@/lib/cms/client";
@@ -16,27 +16,38 @@ import { getHeroSlides, type HeroSlide } from "@/lib/cms/client";
 export const revalidate = 60; // Revalidate every 60 seconds
 
 export default async function HomePage() {
-  let products: Product[] = [];
+  let featuredProducts: Product[] = [];
+  let bestsellers: Product[] = [];
   let newArrivalsProducts: Product[] = [];
   let blogPosts: BlogPost[] = [];
   let heroSlides: HeroSlide[] = [];
 
   try {
-    [products, newArrivalsProducts, blogPosts, heroSlides] = await Promise.all([
-      prestashop.getProducts({ limit: 20, withImages: true, withStock: true }),
-      prestashop.getProducts({ limit: 30, withImages: true, withStock: true }),
+    // Fetch all data in parallel using Binshops API
+    const [featuredRes, bestsellersRes, newArrivalsRes, blogRes, slidesRes] = await Promise.all([
+      binshops.getFeaturedProducts(10),
+      binshops.getProducts({ limit: 20, sortBy: "sales" }),
+      binshops.getProducts({ limit: 30, sortBy: "date" }),
       wordpress.getPosts({ limit: 3 }),
       getHeroSlides(),
     ]);
+
+    featuredProducts = featuredRes;
+    bestsellers = bestsellersRes.products;
+    newArrivalsProducts = newArrivalsRes.products;
+    blogPosts = blogRes;
+    heroSlides = slidesRes;
   } catch (e) {
     console.error("Error fetching data:", e);
   }
 
-  // Filter out of stock products first, then take 10
-  const availableProducts = products.filter(
+  // Filter out of stock products
+  const availableProducts = bestsellers.filter(
     (product) => product.quantity === null || product.quantity > 0
   );
-  const weeklyHitsProducts = availableProducts.slice(0, 10);
+  const weeklyHitsProducts = featuredProducts.filter(
+    (product) => product.quantity === null || product.quantity > 0
+  ).slice(0, 10);
 
   // Filter and take 20 products for new arrivals
   const availableNewArrivals = newArrivalsProducts.filter(
@@ -49,7 +60,7 @@ export default async function HomePage() {
       <HeroCarouselWrapper slides={heroSlides} />
 
       {/* Polecane */}
-      {products.length > 0 && (
+      {weeklyHitsProducts.length > 0 && (
         <section className="py-8">
           <div className="container">
             <FeaturedProducts products={weeklyHitsProducts} />

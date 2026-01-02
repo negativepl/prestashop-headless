@@ -1,8 +1,9 @@
 import { redirect, notFound } from "next/navigation";
 import { Package, CreditCard, Truck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { prestashop } from "@/lib/prestashop/client";
+import { binshops } from "@/lib/binshops/client";
 import { getSession } from "@/lib/auth/session";
+import type { Order } from "@/lib/prestashop/types";
 
 export const dynamic = "force-dynamic";
 
@@ -55,18 +56,15 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     redirect("/login");
   }
 
-  console.log("Fetching order with ID:", id, "parsed:", parseInt(id));
-  const order = await prestashop.getOrder(parseInt(id));
-  console.log("Order result:", order);
+  const order = await binshops.getOrder(parseInt(id));
 
   if (!order) {
-    console.log("Order not found, returning 404");
     notFound();
   }
 
   // SECURITY: Verify order belongs to logged-in user
-  const customerOrders = await prestashop.getCustomerOrders(session.customerId);
-  const orderBelongsToUser = customerOrders.some((o) => o.id === order.id);
+  const customerOrders = await binshops.getCustomerOrders();
+  const orderBelongsToUser = customerOrders.some((o: Order) => o.id === order.id);
   if (!orderBelongsToUser) {
     notFound();
   }

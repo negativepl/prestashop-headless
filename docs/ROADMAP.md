@@ -1,18 +1,32 @@
-# Roadmapa Projektu: PrestaShop Headless E-commerce
+# Project Roadmap: PrestaShop Headless E-commerce
 
-> **Ostatnia aktualizacja:** 2025-12-31
-> **Status analizy:** Zweryfikowane przez 4 agentów AI
+> **Last updated:** 2026-01-02
+> **Analysis status:** Verified by 4 AI agents
 
-## Podsumowanie Analizy
+## Analysis Summary
 
-Projekt to headless sklep internetowy oparty na Next.js 16.1.1 (React 19) z backendem PrestaShop API. Frontend jest w stanie **semi-finished** - większość podstawowych funkcji e-commerce jest zaimplementowana, ale istnieje wiele krytycznych luk, placeholderów i problemów bezpieczeństwa.
+This project is a headless e-commerce store built on Next.js 16.1.1 (React 19) with PrestaShop API backend. The frontend is in a **semi-finished** state - most basic e-commerce features are implemented, but there are many critical gaps, placeholders, and security issues.
+
+### API Architecture (NEW)
+
+Since 2026-01-02, the project uses a **dual-API architecture**:
+- **Binshops REST API Pro** - all read operations (products, categories, account, order history)
+- **PrestaShop XML API** - write operations only (checkout, order creation)
+
+This significantly improves security (fewer API permissions) and performance (JSON instead of XML).
+
+### Search Architecture
+
+The project supports **Meilisearch** for AI-powered product search:
+- Primary: Meilisearch (sub-50ms, typo-tolerant, faceted filtering)
+- Fallback: Binshops REST API (if Meilisearch unavailable)
 
 ---
 
-## KRYTYCZNE PROBLEMY BEZPIECZEŃSTWA
+## CRITICAL SECURITY ISSUES
 
-### 1. ~~Hardkodowany klucz API~~ (NAPRAWIONE)
-**Plik:** `scripts/sync-categories.ts:23-29`
+### 1. ~~Hardcoded API key~~ (FIXED)
+**File:** `scripts/sync-categories.ts:23-29`
 ```typescript
 const PRESTASHOP_URL = process.env.PRESTASHOP_URL;
 const PRESTASHOP_API_KEY = process.env.PRESTASHOP_API_KEY;
@@ -21,20 +35,20 @@ if (!PRESTASHOP_URL || !PRESTASHOP_API_KEY) {
   throw new Error("Missing required environment variables...");
 }
 ```
-**Status:** ✅ NAPRAWIONE - usunięto fallback, wymuszono zmienne środowiskowe
+**Status:** ✅ FIXED - removed fallback, enforced environment variables
 
-### 2. ~~Brak weryfikacji hasła przy logowaniu~~ (NAPRAWIONE)
-**Plik:** `app/actions/auth.ts` + `prestashop-modules/headlessauth/`
-- Usunięto niebezpieczny fallback `UNSAFE_DEV_AUTH`
-- Stworzono moduł PHP `headlessauth` dla PrestaShop
+### 2. ~~No password verification on login~~ (FIXED)
+**File:** `app/actions/auth.ts` + `prestashop-modules/headlessauth/`
+- Removed dangerous `UNSAFE_DEV_AUTH` fallback
+- Created PHP module `headlessauth` for PrestaShop
 - Endpoint: `POST /modules/headlessauth/api.php`
-- Bezpieczna weryfikacja hasła przez PrestaShop (bcrypt + legacy MD5)
-- Moduł zainstalowany na serwerze: `presta.trkhspl.com`
-- Autor modułu: Home Screen Distribution sp. z o.o.
-**Status:** ✅ NAPRAWIONE - moduł zainstalowany i działający
+- Secure password verification via PrestaShop (bcrypt + legacy MD5)
+- Module installed on server: `presta.trkhspl.com`
+- Module author: Home Screen Distribution sp. z o.o.
+**Status:** ✅ FIXED - module installed and working
 
-### 3. ~~Słaby domyślny SECRET_KEY~~ (NAPRAWIONE)
-**Plik:** `lib/auth/session.ts:4-14`
+### 3. ~~Weak default SECRET_KEY~~ (FIXED)
+**File:** `lib/auth/session.ts:4-14`
 ```typescript
 const SECRET_KEY = process.env.AUTH_SECRET;
 
@@ -46,22 +60,22 @@ if (SECRET_KEY.length < 32) {
   throw new Error("AUTH_SECRET must be at least 32 characters long");
 }
 ```
-**Status:** ✅ NAPRAWIONE - wymuszono AUTH_SECRET min. 32 znaki
+**Status:** ✅ FIXED - enforced AUTH_SECRET min. 32 characters
 
-### 4. ~~Brak sprawdzenia przynależności zamówienia~~ (NAPRAWIONE)
-**Plik:** `app/account/orders/[id]/page.tsx:67-72`
+### 4. ~~No order ownership check~~ (FIXED)
+**File:** `app/account/orders/[id]/page.tsx:67-72`
 ```typescript
 // SECURITY: Verify order belongs to logged-in user
-const customerOrders = await prestashop.getCustomerOrders(session.customerId);
+const customerOrders = await binshops.getCustomerOrders();
 const orderBelongsToUser = customerOrders.some((o) => o.id === order.id);
 if (!orderBelongsToUser) {
   notFound();
 }
 ```
-**Status:** ✅ NAPRAWIONE - włączono weryfikację właściciela zamówienia
+**Status:** ✅ FIXED - enabled order ownership verification
 
-### 5. ~~Brak rate limitingu na API routes~~ (NAPRAWIONE)
-**Plik:** `proxy.ts` (NOWY)
+### 5. ~~No rate limiting on API routes~~ (FIXED)
+**File:** `proxy.ts` (NEW)
 
 | Route | Rate Limit | Status |
 |-------|-----------|--------|
@@ -72,18 +86,18 @@ if (!orderBelongsToUser) {
 | `/api/auth` | 10/min | ✅ |
 | `/api/*` (default) | 100/min | ✅ |
 
-**Status:** ✅ NAPRAWIONE - utworzono `proxy.ts` z rate limiting
+**Status:** ✅ FIXED - created `proxy.ts` with rate limiting
 
-### 6. ~~Brak proxy.ts / middleware~~ (NAPRAWIONE)
-**Plik:** `proxy.ts` - UTWORZONY
-- Rate limiting dla wszystkich API routes
-- Headery X-RateLimit-* w odpowiedziach
-- Odpowiedź 429 Too Many Requests przy przekroczeniu limitu
-**Status:** ✅ NAPRAWIONE
+### 6. ~~Missing proxy.ts / middleware~~ (FIXED)
+**File:** `proxy.ts` - CREATED
+- Rate limiting for all API routes
+- X-RateLimit-* headers in responses
+- 429 Too Many Requests response when limit exceeded
+**Status:** ✅ FIXED
 
-### 7. ~~Brak CSP headerów~~ (NAPRAWIONE)
-**Plik:** `next.config.ts`
-Dodano security headers:
+### 7. ~~No CSP headers~~ (FIXED)
+**File:** `next.config.ts`
+Added security headers:
 - ✅ Content-Security-Policy
 - ✅ X-Frame-Options: DENY
 - ✅ X-Content-Type-Options: nosniff
@@ -91,22 +105,22 @@ Dodano security headers:
 - ✅ X-XSS-Protection
 - ✅ Referrer-Policy
 - ✅ Permissions-Policy
-**Status:** ✅ NAPRAWIONE
+**Status:** ✅ FIXED
 
 ---
 
-## KRYTYCZNY PROBLEM: DESYNCHRONIZACJA CHECKOUT
+## CRITICAL ISSUE: CHECKOUT DESYNC
 
-### Frontend wysyła dane, Backend je ignoruje!
+### Frontend sends data, Backend ignores it!
 
 **Frontend (`app/checkout/page.tsx:127-140`):**
 ```javascript
 body: JSON.stringify({
   customer: form,
   items: items.map(...),
-  shippingMethod: selectedShipping,    // WYSYŁANE
-  paymentMethod: selectedPayment,      // WYSYŁANE
-  discountCode: discountApplied ? discountCode : null, // WYSYŁANE
+  shippingMethod: selectedShipping,    // SENT
+  paymentMethod: selectedPayment,      // SENT
+  discountCode: discountApplied ? discountCode : null, // SENT
 })
 ```
 
@@ -115,169 +129,169 @@ body: JSON.stringify({
 interface CheckoutRequest {
   customer: { ... };
   items: { productId, quantity, productAttributeId }[];
-  // BRAK: shippingMethod, paymentMethod, discountCode!
+  // MISSING: shippingMethod, paymentMethod, discountCode!
 }
 ```
 
-**Efekt - hardcoded wartości w zamówieniu:**
-- `id_carrier: 1` - zawsze pierwsza metoda dostawy
-- `payment: "Przelew bankowy"` - zawsze ta sama metoda
-- `total_shipping: 0.000000` - zawsze zero!
-- `current_state: 1` - zawsze "oczekiwanie na płatność"
+**Result - hardcoded values in order:**
+- `id_carrier: 1` - always first shipping method
+- `payment: "Bank transfer"` - always same payment
+- `total_shipping: 0.000000` - always zero!
+- `current_state: 1` - always "awaiting payment"
 
 ---
 
-## BRAKUJĄCE STRONY (Placeholdery)
+## MISSING PAGES (Placeholders)
 
-| Strona | Status | Linkowana z |
-|--------|--------|-------------|
-| `/contact` | NIE ISTNIEJE | Footer (href="#") |
-| `/terms` | NIE ISTNIEJE | Footer (href="#") |
-| `/privacy` | NIE ISTNIEJE | Footer (href="#") |
-| `/forgot-password` | NIE ISTNIEJE | Login |
-| `/about` | NIE ISTNIEJE | Footer (href="#") |
-| `/faq` | NIE ISTNIEJE | Footer (href="#") |
-| `/delivery-info` | NIE ISTNIEJE | Footer (href="#") |
-| `/returns` | NIE ISTNIEJE | Footer (href="#") |
-| `/payments-info` | NIE ISTNIEJE | Footer (href="#") |
+| Page | Status | Linked from |
+|------|--------|-------------|
+| `/contact` | MISSING | Footer (href="#") |
+| `/terms` | MISSING | Footer (href="#") |
+| `/privacy` | MISSING | Footer (href="#") |
+| `/forgot-password` | MISSING | Login |
+| `/about` | MISSING | Footer (href="#") |
+| `/faq` | MISSING | Footer (href="#") |
+| `/delivery-info` | MISSING | Footer (href="#") |
+| `/returns` | MISSING | Footer (href="#") |
+| `/payments-info` | MISSING | Footer (href="#") |
 
-### Footer.tsx - 12 linków `href="#"`
-**Plik:** `components/layout/footer.tsx`
+### Footer.tsx - 12 links with `href="#"`
+**File:** `components/layout/footer.tsx`
 
-**Sekcja "Pomoc" (linie 106-121):**
-- Dostawa → powinno `/delivery-info`
-- Zwroty i reklamacje → powinno `/returns`
-- Płatności → powinno `/payments-info`
-- FAQ → powinno `/faq`
+**"Help" section (lines 106-121):**
+- Delivery → should be `/delivery-info`
+- Returns & complaints → should be `/returns`
+- Payments → should be `/payments-info`
+- FAQ → should be `/faq`
 
-**Sekcja "Firma" (linie 133-148):**
-- O nas → powinno `/about`
-- Regulamin → powinno `/terms`
-- Polityka prywatności → powinno `/privacy`
-- Kontakt → powinno `/contact`
+**"Company" section (lines 133-148):**
+- About us → should be `/about`
+- Terms → should be `/terms`
+- Privacy policy → should be `/privacy`
+- Contact → should be `/contact`
 
-**Sekcja "Sklep" (linie 89-94):**
-- Nowości → placeholder
-- Wyprzedaż → placeholder
+**"Shop" section (lines 89-94):**
+- New arrivals → placeholder
+- Sale → placeholder
 
-**Social media (linie 52-68):**
-- Facebook, Instagram, X, TikTok, YouTube → wszystkie `href="#"`
+**Social media (lines 52-68):**
+- Facebook, Instagram, X, TikTok, YouTube → all `href="#"`
 
 ---
 
-## BRAKUJĄCE INTEGRACJE PŁATNOŚCI
+## MISSING PAYMENT INTEGRATIONS
 
-### Obecny stan:
+### Current state:
 **UI (`app/checkout/page.tsx:40-46`):**
 ```javascript
 const PAYMENT_METHODS = [
-  { id: "cod", name: "Płatność przy odbiorze" },
+  { id: "cod", name: "Cash on delivery" },
   { id: "blik", name: "BLIK" },
-  { id: "card", name: "Karta płatnicza" },
-  { id: "transfer", name: "Przelew online" },
-  { id: "installments", name: "Raty PayU" },
+  { id: "card", name: "Credit card" },
+  { id: "transfer", name: "Bank transfer" },
+  { id: "installments", name: "PayU installments" },
 ];
 ```
 
-**Backend:** Wszystko hardcoded jako "Przelew bankowy" (`ps_checkpayment`)
+**Backend:** Everything hardcoded as "Bank transfer" (`ps_checkpayment`)
 
 | Element | UI | Backend | Status |
 |---------|-----|---------|--------|
-| Wybór metody | ✅ | ❌ Ignorowane | STUB |
-| Stripe SDK | ❌ | ❌ | BRAK |
-| PayU SDK | ❌ | ❌ | BRAK |
-| Webhooks | ❌ | ❌ | BRAK |
-| Status płatności | ❌ | Zawsze "niezapłacone" | STUB |
+| Method selection | ✅ | ❌ Ignored | STUB |
+| Stripe SDK | ❌ | ❌ | MISSING |
+| PayU SDK | ❌ | ❌ | MISSING |
+| Webhooks | ❌ | ❌ | MISSING |
+| Payment status | ❌ | Always "unpaid" | STUB |
 
-### Wymagane integracje:
-1. **Stripe** - karty płatnicze
-2. **PayU** - BLIK, przelewy, raty
-3. **Przelewy24** - alternatywa dla PayU
-4. Webhooks do potwierdzenia płatności (`/api/webhooks/stripe`, `/api/webhooks/payu`)
-5. Zmiana statusu zamówienia po opłaceniu
+### Required integrations:
+1. **Stripe** - credit cards
+2. **PayU** - BLIK, transfers, installments
+3. **Przelewy24** - alternative to PayU
+4. Webhooks for payment confirmation (`/api/webhooks/stripe`, `/api/webhooks/payu`)
+5. Order status change after payment
 
 ---
 
-## BRAKUJĄCE INTEGRACJE DOSTAW
+## MISSING SHIPPING INTEGRATIONS
 
-### Obecny stan:
+### Current state:
 **UI (`app/checkout/page.tsx:33-38`):**
 ```javascript
 const SHIPPING_METHODS = [
-  { id: "courier", name: "Kurier DPD", price: 14.99, time: "1-2 dni robocze" },
-  { id: "inpost", name: "Paczkomat InPost", price: 12.99, time: "1-2 dni robocze" },
-  { id: "courier-express", name: "Kurier Express", price: 24.99, time: "Następny dzień roboczy" },
-  { id: "pickup", name: "Odbiór osobisty", price: 0, time: "Dostępny od ręki" },
+  { id: "courier", name: "DPD Courier", price: 14.99, time: "1-2 business days" },
+  { id: "inpost", name: "InPost Parcel Locker", price: 12.99, time: "1-2 business days" },
+  { id: "courier-express", name: "Express Courier", price: 24.99, time: "Next business day" },
+  { id: "pickup", name: "Store pickup", price: 0, time: "Available immediately" },
 ];
 ```
 
-**Backend:** Zawsze `id_carrier=1`, `total_shipping=0`
+**Backend:** Always `id_carrier=1`, `total_shipping=0`
 
 | Element | UI | Backend | Status |
 |---------|-----|---------|--------|
-| Wybór metody | ✅ | ❌ Hardcoded carrier=1 | STUB |
-| Ceny wysyłki | ✅ Hardcoded | ❌ Zawsze 0 | STUB |
-| Darmowa od 100 PLN | ✅ UI only | ❌ Nie zapisywane | STUB |
-| InPost API | ❌ | ❌ | BRAK |
-| Mapa paczkomatów | ❌ | ❌ | BRAK |
-| Tracking | ❌ | ❌ | BRAK |
+| Method selection | ✅ | ❌ Hardcoded carrier=1 | STUB |
+| Shipping prices | ✅ Hardcoded | ❌ Always 0 | STUB |
+| Free shipping >100 PLN | ✅ UI only | ❌ Not saved | STUB |
+| InPost API | ✅ | ✅ | DONE |
+| Parcel locker map | ✅ | ✅ | DONE |
+| Tracking | ❌ | ❌ | MISSING |
 
-### Wymagane integracje:
-1. **InPost API** - wybór paczkomatu, mapa, walidacja
-2. **DPD/DHL API** - śledzenie przesyłek
-3. Dynamiczna kalkulacja kosztów (waga, wymiary, lokalizacja)
-4. Mapowanie UI methods → PrestaShop `id_carrier`
-5. Tracking number w szczegółach zamówienia
+### Required integrations:
+1. ~~**InPost API** - parcel locker selection, map, validation~~ ✅ DONE
+2. **DPD/DHL API** - shipment tracking
+3. Dynamic cost calculation (weight, dimensions, location)
+4. Mapping UI methods → PrestaShop `id_carrier`
+5. Tracking number in order details
 
 ---
 
-## BRAKUJĄCE FUNKCJONALNOŚCI E-COMMERCE
+## MISSING E-COMMERCE FEATURES
 
-| Funkcja | Status | Uwagi |
+| Feature | Status | Notes |
 |---------|--------|-------|
-| Porównywarka produktów | NIE ISTNIEJE | Brak komponentów |
-| Newsletter | STUB | Form bez backendu |
-| Opinie/recenzje | STUB | UI + demo data, bez zapisu |
-| Kody rabatowe | STUB | TODO w kodzie, zawsze 0 PLN |
-| Paginacja produktów | NIE ISTNIEJE | Load all |
-| Filtry zaawansowane | CZĘŚCIOWE | Brak: marka, atrybuty, rating |
-| Reset hasła | NIE ISTNIEJE | Link jest, strona nie |
-| Faktury PDF | NIE ISTNIEJE | Tylko CSV/HTML export |
-| Śledzenie przesyłki | NIE ISTNIEJE | Brak tracking |
-| Walidacja stanów magazynowych | BRAK | Można zamówić niedostępne |
-| Panel admina | NIE ISTNIEJE | Tylko PrestaShop backend |
-| Toast notifications | NIE ISTNIEJE | Brak feedback UI |
+| Product comparison | MISSING | No components |
+| Newsletter | STUB | Form without backend |
+| Reviews/ratings | STUB | UI + demo data, no saving |
+| Discount codes | STUB | TODO in code, always 0 PLN |
+| Product pagination | PARTIAL | SWR infinite scroll |
+| Advanced filters | PARTIAL | Missing: brand, attributes, rating |
+| Password reset | MISSING | Link exists, page doesn't |
+| PDF invoices | MISSING | Only CSV/HTML export |
+| Shipment tracking | MISSING | No tracking |
+| Stock validation | MISSING | Can order unavailable items |
+| Admin panel | MISSING | Only PrestaShop backend |
+| Toast notifications | MISSING | No feedback UI |
 
 ---
 
-## ROADMAPA IMPLEMENTACJI
+## IMPLEMENTATION ROADMAP
 
-### ~~FAZA 1: KRYTYCZNE BEZPIECZEŃSTWO~~ ✅ UKOŃCZONA
+### ~~PHASE 1: CRITICAL SECURITY~~ ✅ COMPLETED
 
-#### ~~1.1 Napraw hardkodowany API key~~ ✅
-- [x] Usuń fallback z `scripts/sync-categories.ts:24`
-- [x] Wymuś zmienne środowiskowe (throw error jeśli brak)
+#### ~~1.1 Fix hardcoded API key~~ ✅
+- [x] Remove fallback from `scripts/sync-categories.ts:24`
+- [x] Enforce environment variables (throw error if missing)
 
-#### ~~1.2 Implementuj weryfikację hasła~~ ✅
-- [x] Usuń kod `UNSAFE_DEV_AUTH` z `app/actions/auth.ts`
-- [x] Stwórz moduł PHP `headlessauth` w PrestaShop (`prestashop-modules/headlessauth/`)
-- [x] Endpoint `POST /modules/headlessauth/api.php` z weryfikacją hasła
+#### ~~1.2 Implement password verification~~ ✅
+- [x] Remove `UNSAFE_DEV_AUTH` code from `app/actions/auth.ts`
+- [x] Create PHP module `headlessauth` in PrestaShop (`prestashop-modules/headlessauth/`)
+- [x] Endpoint `POST /modules/headlessauth/api.php` with password verification
 
-#### ~~1.3 Wymuś AUTH_SECRET~~ ✅
-- [x] Usuń domyślny secret z `lib/auth/session.ts:4`
-- [x] Dodaj walidację na starcie aplikacji (throw error)
-- [x] Dodaj walidację minimalnej długości (32 znaki)
+#### ~~1.3 Enforce AUTH_SECRET~~ ✅
+- [x] Remove default secret from `lib/auth/session.ts:4`
+- [x] Add validation on app start (throw error)
+- [x] Add minimum length validation (32 characters)
 
-#### ~~1.4 Napraw sprawdzanie zamówień~~ ✅
-- [x] Odkomentuj weryfikację `customerId` w `app/account/orders/[id]/page.tsx:67-73`
+#### ~~1.4 Fix order ownership check~~ ✅
+- [x] Uncomment `customerId` verification in `app/account/orders/[id]/page.tsx:67-73`
 
-#### ~~1.5 Utwórz proxy.ts z rate limiting~~ ✅
-- [x] Utwórz `proxy.ts` w głównym katalogu (Next.js 16)
-- [x] Dodaj rate limiting dla wszystkich `/api/*` routes
-- [x] Limity: 60 req/min dla products, 10 req/min dla checkout
+#### ~~1.5 Create proxy.ts with rate limiting~~ ✅
+- [x] Create `proxy.ts` in root directory (Next.js 16)
+- [x] Add rate limiting for all `/api/*` routes
+- [x] Limits: 60 req/min for products, 10 req/min for checkout
 
-#### ~~1.6 Dodaj security headers~~ ✅
-- [x] CSP headers w `next.config.ts`
+#### ~~1.6 Add security headers~~ ✅
+- [x] CSP headers in `next.config.ts`
 - [x] X-Frame-Options: DENY
 - [x] X-Content-Type-Options: nosniff
 - [x] Strict-Transport-Security
@@ -287,218 +301,270 @@ const SHIPPING_METHODS = [
 
 ---
 
-### FAZA 2: NAPRAWA CHECKOUT (Priorytet: KRYTYCZNY)
+### ~~PHASE 1.5: BINSHOPS REST API MIGRATION~~ ✅ COMPLETED
 
-#### 2.1 Napraw desynchronizację Frontend/Backend
-- [ ] Dodaj `shippingMethod`, `paymentMethod`, `discountCode` do `CheckoutRequest` interface
-- [ ] Mapuj `shippingMethod` → PrestaShop `id_carrier`
-- [ ] Zapisuj rzeczywiste `total_shipping` w zamówieniu
-- [ ] Waliduj `paymentMethod` przed tworzeniem zamówienia
+#### Changes made (2026-01-02):
 
-#### 2.2 Integracja Stripe
-- [ ] Instalacja `@stripe/react-stripe-js`, `stripe`
-- [ ] Stripe Elements dla kart
+**New files:**
+- `lib/binshops/client.ts` - Binshops REST API client
+- `lib/binshops/types.ts` - TypeScript types for Binshops API
+
+**Migrated files (prestashop → binshops):**
+| File | Operation |
+|------|----------|
+| `app/layout.tsx` | getCategoryTree() |
+| `app/page.tsx` | getFeaturedProducts(), getProducts() |
+| `app/products/page.tsx` | getProducts() |
+| `app/products/[id]/page.tsx` | getProduct(), getRelatedProducts() |
+| `app/account/page.tsx` | getCustomerOrders(), getCustomerAddresses(), getAccountInfo() |
+| `app/account/orders/page.tsx` | getCustomerOrders() |
+| `app/account/orders/[id]/page.tsx` | getOrder(), getCustomerOrders() |
+| `app/actions/auth.ts` | login(), register() |
+| `app/actions/account.ts` | updateAccount() |
+| `app/actions/address.ts` | createAddress(), deleteAddress() |
+| `app/api/search/route.ts` | searchProducts() (fallback) |
+| `app/api/products/route.ts` | getProducts() |
+| `app/api/products/by-ids/route.ts` | getProductsByIds() |
+| `app/api/products/ids/route.ts` | getProductIdsWithStock() |
+| `app/api/products/related/route.ts` | getProducts() |
+| `app/api/products/new-arrivals/route.ts` | getProducts() |
+| `app/api/mega-menu/products/route.ts` | getProducts() |
+| `app/api/categories/route.ts` | getCategories() |
+| `app/api/categories/[id]/route.ts` | getCategory() |
+| `app/api/categories/tree/route.ts` | getCategoryTree() |
+| `app/api/account/export/route.ts` | getAccountInfo(), getCustomerOrders(), getCustomerAddresses() |
+
+**Remaining on PrestaShop XML API (write operations):**
+- `app/api/checkout/route.ts` - order creation
+- `lib/prestashop/orders.ts` - order status updates (webhooks)
+
+**Reduced API permissions:**
+- Before: 16 resources with permissions
+- After: 7 resources (write-only)
+
+---
+
+### PHASE 2: FIX CHECKOUT (Priority: CRITICAL)
+
+#### 2.1 Fix Frontend/Backend desync
+- [ ] Add `shippingMethod`, `paymentMethod`, `discountCode` to `CheckoutRequest` interface
+- [ ] Map `shippingMethod` → PrestaShop `id_carrier`
+- [ ] Save actual `total_shipping` in order
+- [ ] Validate `paymentMethod` before creating order
+
+#### 2.2 Stripe Integration
+- [ ] Install `@stripe/react-stripe-js`, `stripe`
+- [ ] Stripe Elements for cards
 - [ ] Webhook `/api/webhooks/stripe`
-- [ ] Aktualizacja statusu zamówienia
+- [ ] Order status update
 
-#### 2.3 Integracja PayU
+#### 2.3 PayU Integration
 - [ ] BLIK
-- [ ] Przelewy online
-- [ ] Raty
+- [ ] Online transfers
+- [ ] Installments
 - [ ] Webhook `/api/webhooks/payu`
 
-#### 2.4 Obsługa statusów płatności
+#### 2.4 Payment status handling
 - [ ] Pending → Paid → Shipped flow
 - [ ] Email notifications (Resend/SendGrid)
 
 ---
 
-### FAZA 3: DOSTAWY (Priorytet: WYSOKI)
+### PHASE 3: SHIPPING (Priority: HIGH)
 
-#### 3.1 Integracja InPost
-- [ ] API do pobierania paczkomatów
-- [ ] Mapa wyboru paczkomatu (Leaflet/Google Maps)
-- [ ] Walidacja adresu paczkomatu
+#### 3.1 InPost Integration ✅ DONE
+- [x] API for fetching parcel lockers
+- [x] Parcel locker selection map (Leaflet)
+- [x] Custom Paczkomat picker component
 
-#### 3.2 Dynamiczna kalkulacja kosztów
-- [ ] Pobieranie carriers z PrestaShop API
-- [ ] Kalkulacja na podstawie wagi/wymiarów
-- [ ] Mapowanie UI → PrestaShop carriers
+#### 3.2 Dynamic cost calculation
+- [ ] Fetch carriers from PrestaShop API
+- [ ] Calculate based on weight/dimensions
+- [ ] Map UI → PrestaShop carriers
 
 #### 3.3 Tracking
-- [ ] Pole tracking number w zamówieniu
-- [ ] Integracja z API kurierów
-- [ ] Wyświetlanie statusu w panelu konta
+- [ ] Tracking number field in order
+- [ ] Integration with courier APIs
+- [ ] Status display in account panel
 
 ---
 
-### FAZA 4: BRAKUJĄCE STRONY (Priorytet: ŚREDNI)
+### PHASE 4: MISSING PAGES (Priority: MEDIUM)
 
-#### 4.1 Strony prawne (WYMAGANE przed produkcją)
-- [ ] `/terms` - regulamin
-- [ ] `/privacy` - polityka prywatności
+#### 4.1 Legal pages (REQUIRED before production)
+- [ ] `/terms` - terms of service
+- [ ] `/privacy` - privacy policy
 
-#### 4.2 Strony informacyjne
-- [ ] `/contact` - formularz kontaktowy + mapa
-- [ ] `/about` - o firmie
-- [ ] `/faq` - pytania i odpowiedzi (accordion)
-- [ ] `/delivery-info` - informacje o dostawie
-- [ ] `/returns` - zwroty i reklamacje
-- [ ] `/payments-info` - metody płatności
+#### 4.2 Informational pages
+- [ ] `/contact` - contact form + map
+- [ ] `/about` - about company
+- [ ] `/faq` - questions and answers (accordion)
+- [ ] `/delivery-info` - delivery information
+- [ ] `/returns` - returns and complaints
+- [ ] `/payments-info` - payment methods
 
-#### 4.3 Strony funkcjonalne
-- [ ] `/forgot-password` - reset hasła z tokenem email
-- [ ] Napraw linki w `components/layout/footer.tsx`
+#### 4.3 Functional pages
+- [ ] `/forgot-password` - password reset with email token
+- [ ] Fix links in `components/layout/footer.tsx`
 
 ---
 
-### FAZA 5: FUNKCJONALNOŚCI E-COMMERCE (Priorytet: ŚREDNI)
+### PHASE 5: E-COMMERCE FEATURES (Priority: MEDIUM)
 
-#### 5.1 Kody rabatowe
-- [ ] Walidacja kodu w PrestaShop API (`cart_rules`)
-- [ ] Wyliczenie rabatu
-- [ ] Obsługa reguł (min. wartość, kategorie, daty)
-- [ ] Zapisywanie w zamówieniu
+#### 5.1 Discount codes
+- [ ] Code validation via PrestaShop API (`cart_rules`)
+- [ ] Discount calculation
+- [ ] Rule handling (min. value, categories, dates)
+- [ ] Save in order
 
-#### 5.2 System opinii
-- [ ] API route do zapisywania opinii
-- [ ] Moderacja opinii
-- [ ] Weryfikacja zakupu
-- [ ] Agregacja ratingu
+#### 5.2 Reviews system
+- [ ] API route for saving reviews
+- [ ] Review moderation
+- [ ] Purchase verification
+- [ ] Rating aggregation
 
 #### 5.3 Newsletter
 - [ ] API route `/api/newsletter`
-- [ ] Integracja z Mailchimp/SendGrid
+- [ ] Mailchimp/SendGrid integration
 - [ ] Double opt-in
 
-#### 5.4 Porównywarka produktów
+#### 5.4 Product comparison
 - [ ] Hook `use-compare.ts`
-- [ ] Strona `/compare`
-- [ ] Tabela porównawcza atrybutów
+- [ ] Page `/compare`
+- [ ] Attribute comparison table
 
-#### 5.5 Paginacja
-- [ ] Produkty - infinite scroll lub paginacja
-- [ ] Kategorie - paginacja
+#### 5.5 Pagination
+- [x] Products - SWR infinite scroll
+- [ ] Categories - pagination
 - [ ] Search results
 
 ---
 
-### FAZA 6: UX/UI IMPROVEMENTS (Priorytet: NISKI)
+### PHASE 6: UX/UI IMPROVEMENTS (Priority: LOW)
 
 #### 6.1 Toast notifications
-- [ ] Komponent Toast/Notification (sonner/react-hot-toast)
-- [ ] Feedback dla akcji (dodano do koszyka, błąd, sukces)
+- [ ] Toast/Notification component (sonner/react-hot-toast)
+- [ ] Action feedback (added to cart, error, success)
 
 #### 6.2 Quick view
-- [ ] Modal z podglądem produktu
-- [ ] Dodawanie do koszyka z modal
+- [ ] Product preview modal
+- [ ] Add to cart from modal
 
-#### 6.3 Filtry zaawansowane
-- [ ] Filtr po marce
-- [ ] Filtr po atrybutach (rozmiar, kolor)
-- [ ] Filtr po ratingu
+#### 6.3 Advanced filters
+- [ ] Filter by brand
+- [ ] Filter by attributes (size, color)
+- [ ] Filter by rating
 
-#### 6.4 Faktury PDF
-- [ ] Generowanie PDF z zamówienia (@react-pdf/renderer)
-- [ ] Pobieranie z panelu konta
-
----
-
-### FAZA 7: PANEL ADMINISTRACYJNY (Priorytet: OPCJONALNY)
-
-Obecnie zarządzanie przez backend PrestaShop. Opcjonalnie:
-- [ ] Dashboard z statystykami
-- [ ] Zarządzanie zamówieniami
-- [ ] Zarządzanie produktami
-- [ ] Zarządzanie klientami
-- [ ] CMS dla stron informacyjnych
+#### 6.4 PDF invoices
+- [ ] Generate PDF from order (@react-pdf/renderer)
+- [ ] Download from account panel
 
 ---
 
-## PODSUMOWANIE PRIORYTETÓW
+### PHASE 7: ADMIN PANEL (Priority: OPTIONAL)
+
+Currently managed via PrestaShop backend. Optionally:
+- [ ] Dashboard with statistics
+- [ ] Order management
+- [ ] Product management
+- [ ] Customer management
+- [ ] CMS for informational pages
+
+---
+
+## PRIORITY SUMMARY
 
 ```
-✅ UKOŃCZONE:
-└── FAZA 1: Bezpieczeństwo + Autentykacja
-    ├── ✅ Usunięto hardkodowany API key
-    ├── ✅ Wymuszono AUTH_SECRET (min. 32 znaki)
-    ├── ✅ Utworzono proxy.ts z rate limiting
-    ├── ✅ Włączono security check zamówień
-    ├── ✅ Usunięto UNSAFE_DEV_AUTH
-    ├── ✅ Dodano CSP i security headers
-    ├── ✅ Moduł headlessauth zainstalowany (logowanie działa!)
-    └── ✅ UI: user menu, social login tiles (Google, Apple, Facebook, TikTok)
+✅ COMPLETED:
+├── PHASE 1: Security + Authentication
+│   ├── ✅ Removed hardcoded API key
+│   ├── ✅ Enforced AUTH_SECRET (min. 32 chars)
+│   ├── ✅ Created proxy.ts with rate limiting
+│   ├── ✅ Enabled order security check
+│   ├── ✅ Removed UNSAFE_DEV_AUTH
+│   ├── ✅ Added CSP and security headers
+│   ├── ✅ headlessauth module installed (login works!)
+│   └── ✅ UI: user menu, social login tiles (Google, Apple, Facebook, TikTok)
+│
+└── PHASE 1.5: Binshops REST API Migration
+    ├── ✅ All read operations via Binshops
+    ├── ✅ Reduced API permissions (16 → 7 resources)
+    └── ✅ Dual-API architecture
 
-NASTĘPNE (przed produkcją):
+NEXT (before production):
 ├── Checkout
-│   ├── Naprawić desynchronizację Frontend/Backend
-│   └── Integracja min. 1 bramki płatności
-└── Strony prawne (regulamin, privacy)
+│   ├── Fix Frontend/Backend desync
+│   └── Integrate min. 1 payment gateway
+└── Legal pages (terms, privacy)
 
-WYSOKI (tydzień po starcie):
-├── Pełna integracja płatności (PayU + Stripe)
-├── Integracja dostaw (InPost)
-├── Reset hasła
-└── Tracking zamówień
+HIGH (week after launch):
+├── Full payment integration (PayU + Stripe)
+├── Shipping integration (carriers mapping)
+├── Password reset
+└── Order tracking
 
-ŚREDNI (rozwój):
-├── Kody rabatowe
-├── Opinie i recenzje
+MEDIUM (development):
+├── Discount codes
+├── Reviews and ratings
 ├── Newsletter
-├── Porównywarka
-└── Paginacja
+├── Product comparison
+└── Advanced pagination
 
-NISKI (nice-to-have):
+LOW (nice-to-have):
 ├── Toast notifications
 ├── Quick view
-├── Zaawansowane filtry
-└── Panel admina
+├── Advanced filters
+└── Admin panel
 ```
 
 ---
 
-## PLIKI ZMODYFIKOWANE (FAZA 1)
+## FILES MODIFIED (PHASE 1)
 
-| Plik | Zmiana | Status |
+| File | Change | Status |
 |------|--------|--------|
-| `scripts/sync-categories.ts` | Usunięto hardkodowany API key | ✅ |
-| `lib/auth/session.ts` | Wymuszono AUTH_SECRET min. 32 znaki | ✅ |
-| `app/actions/auth.ts` | Usunięto UNSAFE_DEV_AUTH, endpoint headlessauth | ✅ |
-| `app/account/orders/[id]/page.tsx` | Włączono weryfikację właściciela | ✅ |
-| `next.config.ts` | Dodano security headers | ✅ |
-| `proxy.ts` | NOWY - rate limiting | ✅ |
-| `.env.local` | Dodano AUTH_SECRET | ✅ |
-| `prestashop-modules/headlessauth/` | NOWY - moduł PHP do logowania | ✅ |
-| `components/layout/header.tsx` | User menu zamyka się po nawigacji | ✅ |
-| `app/login/page.tsx` | Social login jako kafelki (Google, Apple, Facebook, TikTok) | ✅ |
-| `app/register/page.tsx` | Social login jako kafelki (Google, Apple, Facebook, TikTok) | ✅ |
-
-## PLIKI DO MODYFIKACJI (NASTĘPNE)
-
-| Plik | Problem | Akcja |
-|------|---------|-------|
-| `app/api/checkout/route.ts:53-68` | Ignoruje payment/shipping | Rozszerzyć interface |
-| `components/layout/footer.tsx` | 12x href="#" | Naprawić linki |
+| `scripts/sync-categories.ts` | Removed hardcoded API key | ✅ |
+| `lib/auth/session.ts` | Enforced AUTH_SECRET min. 32 chars | ✅ |
+| `app/actions/auth.ts` | Removed UNSAFE_DEV_AUTH, headlessauth endpoint | ✅ |
+| `app/account/orders/[id]/page.tsx` | Enabled owner verification | ✅ |
+| `next.config.ts` | Added security headers | ✅ |
+| `proxy.ts` | NEW - rate limiting | ✅ |
+| `.env.local` | Added AUTH_SECRET | ✅ |
+| `prestashop-modules/headlessauth/` | NEW - PHP login module | ✅ |
+| `components/layout/header.tsx` | User menu closes on navigation | ✅ |
+| `app/login/page.tsx` | Social login as tiles (Google, Apple, Facebook, TikTok) | ✅ |
+| `app/register/page.tsx` | Social login as tiles (Google, Apple, Facebook, TikTok) | ✅ |
 
 ---
 
-## SZACOWANY ZAKRES PRAC
+## FILES TO MODIFY (NEXT)
 
-- ~~**Faza 1 (Bezpieczeństwo):** ~8 plików do modyfikacji + 1 nowy (proxy.ts)~~ ✅ UKOŃCZONA
-- **Faza 2 (Checkout/Płatności):** ~10 nowych plików + integracje SDK
-- **Faza 3 (Dostawy):** ~8 nowych plików + integracje API
-- **Faza 4 (Strony):** ~10 nowych stron + footer fix
-- **Faza 5 (Funkcje):** ~15 plików (nowe + modyfikacje)
-- **Faza 6 (UX):** ~8 komponentów
-- **Faza 7 (Admin):** Opcjonalnie, duży scope
+| File | Problem | Action |
+|------|---------|--------|
+| `app/api/checkout/route.ts:53-68` | Ignores payment/shipping | Extend interface |
+| `components/layout/footer.tsx` | 12x href="#" | Fix links |
 
 ---
 
-## HISTORIA ZMIAN
+## ESTIMATED SCOPE
 
-| Data | Wersja | Zmiany |
-|------|--------|--------|
-| 2025-12-31 | 3.1 | Moduł `headlessauth` zainstalowany na serwerze, logowanie działa, UI improvements (user menu, social login tiles) |
-| 2025-12-31 | 3.0 | **FAZA 1 UKOŃCZONA** - wszystkie problemy bezpieczeństwa naprawione, utworzono proxy.ts, dodano security headers |
-| 2025-12-31 | 2.0 | Pełna weryfikacja przez 4 agentów AI, dodano sekcję o desynchronizacji checkout, zaktualizowano ścieżki plików, dodano szczegóły Footer.tsx |
-| 2025-12-30 | 1.0 | Pierwsza wersja roadmapy |
+- ~~**Phase 1 (Security):** ~8 files to modify + 1 new (proxy.ts)~~ ✅ COMPLETED
+- ~~**Phase 1.5 (Binshops):** ~25 files migrated~~ ✅ COMPLETED
+- **Phase 2 (Checkout/Payments):** ~10 new files + SDK integrations
+- **Phase 3 (Shipping):** ~8 new files + API integrations
+- **Phase 4 (Pages):** ~10 new pages + footer fix
+- **Phase 5 (Features):** ~15 files (new + modifications)
+- **Phase 6 (UX):** ~8 components
+- **Phase 7 (Admin):** Optional, large scope
+
+---
+
+## CHANGELOG
+
+| Date | Version | Changes |
+|------|---------|---------|
+| 2026-01-02 | 4.0 | **PHASE 1.5 COMPLETED** - Binshops REST API migration. All read operations via Binshops, reduced PrestaShop API permissions from 16 to 7 resources. Dual-API architecture. |
+| 2025-12-31 | 3.1 | `headlessauth` module installed on server, login works, UI improvements (user menu, social login tiles) |
+| 2025-12-31 | 3.0 | **PHASE 1 COMPLETED** - all security issues fixed, created proxy.ts, added security headers |
+| 2025-12-31 | 2.0 | Full verification by 4 AI agents, added checkout desync section, updated file paths, added Footer.tsx details |
+| 2025-12-30 | 1.0 | First roadmap version |

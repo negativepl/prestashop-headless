@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
-import { prestashop } from "@/lib/prestashop/client";
+import { binshops } from "@/lib/binshops/client";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -15,9 +15,9 @@ export async function GET(request: NextRequest) {
   try {
     // Fetch all user data
     const [customer, orders, addresses] = await Promise.all([
-      prestashop.getCustomer(session.customerId),
-      prestashop.getCustomerOrders(session.customerId),
-      prestashop.getCustomerAddresses(session.customerId),
+      binshops.getAccountInfo(),
+      binshops.getCustomerOrders(),
+      binshops.getCustomerAddresses(),
     ]);
 
     if (format === "csv") {

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Package, ChevronRight, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { prestashop } from "@/lib/prestashop/client";
+import { binshops } from "@/lib/binshops/client";
 import { getSession } from "@/lib/auth/session";
 import type { Order } from "@/lib/prestashop/types";
 
@@ -54,7 +54,7 @@ export default async function OrdersPage() {
 
   let orders: Order[] = [];
   try {
-    orders = await prestashop.getCustomerOrders(session.customerId);
+    orders = await binshops.getCustomerOrders();
   } catch (error) {
     console.error("Error fetching orders:", error);
   }

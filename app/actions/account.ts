@@ -1,6 +1,6 @@
 "use server";
 
-import { prestashop } from "@/lib/prestashop/client";
+import { binshops } from "@/lib/binshops/client";
 import { getSession } from "@/lib/auth/session";
 import { revalidatePath } from "next/cache";
 
@@ -20,7 +20,7 @@ export async function updateProfile(formData: FormData) {
   }
 
   try {
-    const success = await prestashop.updateCustomer(session.customerId, {
+    const success = await binshops.updateAccount({
       firstName: firstName || undefined,
       lastName: lastName || undefined,
       email,
@@ -57,18 +57,14 @@ export async function changePassword(formData: FormData) {
   }
 
   try {
-    // First verify current password by trying to login
-    const loginResult = await prestashop.loginCustomer(session.email, currentPassword);
-
-    if (!loginResult) {
-      return { success: false, error: "Aktualne hasło jest nieprawidłowe" };
-    }
-
-    // Update password
-    const success = await prestashop.updateCustomerPassword(session.customerId, newPassword);
+    // Verify current password and update to new one
+    const success = await binshops.updateAccount({
+      password: currentPassword,
+      newPassword: newPassword,
+    });
 
     if (!success) {
-      return { success: false, error: "Nie udało się zmienić hasła" };
+      return { success: false, error: "Aktualne hasło jest nieprawidłowe lub nie udało się zmienić hasła" };
     }
 
     return { success: true };

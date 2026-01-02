@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prestashop } from "@/lib/prestashop/client";
+import { binshops } from "@/lib/binshops/client";
 
 // ISR - revalidate every 5 minutes
 export const revalidate = 300;
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const productIds = await prestashop.getProductIdsWithStock(parseInt(categoryId));
+    const productIds = await binshops.getProductIdsWithStock(parseInt(categoryId));
 
     // Sort: in-stock first, out-of-stock last
     productIds.sort((a, b) => {

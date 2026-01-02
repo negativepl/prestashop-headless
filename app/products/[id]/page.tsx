@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Star } from "lucide-react";
-import { prestashop } from "@/lib/prestashop/client";
+import { binshops } from "@/lib/binshops/client";
 import { AddToCartButton } from "@/components/cart/add-to-cart-button";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ProductGallery } from "@/components/products/product-gallery";
@@ -16,7 +16,7 @@ interface ProductPageProps {
 
 export async function generateMetadata({ params }: ProductPageProps) {
   const { id } = await params;
-  const product = await prestashop.getProduct(parseInt(id));
+  const product = await binshops.getProduct(parseInt(id));
 
   if (!product) {
     return { title: "Produkt nie znaleziony" };
@@ -31,26 +31,19 @@ export async function generateMetadata({ params }: ProductPageProps) {
 export default async function ProductPage({ params }: ProductPageProps) {
   const { id } = await params;
   const productId = parseInt(id);
-  const product = await prestashop.getProduct(productId);
+  const product = await binshops.getProduct(productId);
 
   if (!product) {
     notFound();
   }
 
-  // Get category path for breadcrumbs and related products in parallel
-  const [categoryPath, relatedProducts] = await Promise.all([
-    product.categoryId
-      ? prestashop.getCategoryPath(product.categoryId)
-      : Promise.resolve([]),
-    product.categoryId
-      ? prestashop.getProducts({
-          categoryId: product.categoryId,
-          limit: 8,
-          withImages: true,
-          withStock: true,
-        }).then((products) => products.filter((p) => p.id !== productId).slice(0, 4))
-      : Promise.resolve([]),
-  ]);
+  // Get related products from same category
+  const relatedProducts = product.categoryId
+    ? await binshops.getRelatedProducts(productId, 4)
+    : [];
+
+  // Simple breadcrumb - just product name (category path not available in Binshops)
+  const categoryPath: { id: number; name: string }[] = [];
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pl-PL", {

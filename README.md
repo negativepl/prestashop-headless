@@ -7,21 +7,25 @@ Kestrel is a high-performance Next.js 16 storefront that transforms PrestaShop i
 ## The Kestrel Ecosystem
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           KESTREL ECOSYSTEM                                  │
-│                                                                              │
-│   ┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐     │
-│   │   PrestaShop    │      │     Kestrel     │      │   Kestrel CMS   │     │
-│   │                 │      │   (This Repo)   │      │                 │     │
-│   │  Product Data   │─────►│                 │◄─────│  Marketing      │     │
-│   │  Orders, Cart   │ API  │   Next.js 16    │ API  │  Content        │     │
-│   │  Customers      │      │   Port: 3000    │      │  Port: 3001     │     │
-│   └─────────────────┘      └─────────────────┘      └─────────────────┘     │
-│                                    │                                         │
-│                                    ▼                                         │
-│                            Your Customers                                    │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                              KESTREL ECOSYSTEM                                    │
+│                                                                                   │
+│   ┌─────────────────┐                              ┌─────────────────┐           │
+│   │   PrestaShop    │      ┌─────────────────┐     │   Kestrel CMS   │           │
+│   │                 │      │     Kestrel     │     │                 │           │
+│   │  ┌───────────┐  │      │   (This Repo)   │     │  Marketing      │           │
+│   │  │ Binshops  │──┼─────►│                 │◄────│  Content        │           │
+│   │  │ REST API  │  │ READ │   Next.js 16    │ API │  Port: 3001     │           │
+│   │  └───────────┘  │      │   Port: 3000    │     └─────────────────┘           │
+│   │  ┌───────────┐  │      │                 │                                    │
+│   │  │ Native    │──┼─────►│                 │                                    │
+│   │  │ XML API   │  │WRITE │                 │                                    │
+│   │  └───────────┘  │      └─────────────────┘                                    │
+│   └─────────────────┘              │                                              │
+│                                    ▼                                              │
+│                             Your Customers                                        │
+│                                                                                   │
+└──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 | Component | Purpose | Repository |
@@ -29,6 +33,7 @@ Kestrel is a high-performance Next.js 16 storefront that transforms PrestaShop i
 | **Kestrel** | Customer-facing storefront | This repo |
 | **Kestrel CMS** | Admin panel for marketing content | [kestrel-cms](https://github.com/negativepl/kestrel-cms) |
 | **PrestaShop** | Product catalog, orders, customers | Your PrestaShop instance |
+| **Binshops REST API** | Read API for products, categories, account | [binshops.com](https://binshops.com) |
 
 ## Why Kestrel?
 
@@ -121,9 +126,12 @@ App will be available at: http://localhost:3000
 Edit the `.env.local` file with your values:
 
 ```env
-# PrestaShop API
+# PrestaShop API (for checkout/orders - write operations)
 PRESTASHOP_URL=https://your-prestashop.com
 PRESTASHOP_API_KEY=YOUR_PRESTASHOP_API_KEY
+
+# Binshops REST API (for products, categories, account - read operations)
+BINSHOPS_API_KEY=YOUR_BINSHOPS_API_KEY
 
 # App URLs
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -139,35 +147,78 @@ CMS_URL=http://localhost:3001
 NEXT_PUBLIC_INPOST_TOKEN=your-inpost-token
 ```
 
+### API Architecture
+
+Kestrel uses a **dual-API architecture** for optimal performance and security:
+
+| API | Purpose | Operations |
+|-----|---------|------------|
+| **Binshops REST API** | Product catalog, categories, search, account, orders history | READ |
+| **PrestaShop XML API** | Checkout, order creation, customer creation | WRITE |
+
+This architecture allows you to minimize PrestaShop API permissions while providing fast JSON-based reads through Binshops.
+
+### Meilisearch (Optional - AI-Powered Search)
+
+Kestrel supports [Meilisearch](https://www.meilisearch.com/) for lightning-fast, typo-tolerant product search with AI-powered relevance.
+
+**Features:**
+- Sub-50ms search responses
+- Typo tolerance and fuzzy matching
+- Faceted filtering (price, category, availability)
+- Real-time indexing via sync scripts
+
+**Setup:**
+```bash
+# 1. Run Meilisearch (Docker)
+docker run -d -p 7700:7700 -v $(pwd)/meili_data:/meili_data \
+  getmeili/meilisearch:latest
+
+# 2. Add to .env.local
+MEILISEARCH_HOST=http://localhost:7700
+MEILISEARCH_API_KEY=your-master-key
+
+# 3. Sync products from PrestaShop
+npx tsx scripts/sync-meilisearch.ts
+```
+
+**Architecture:**
+```
+User Search → /api/search → Meilisearch (primary)
+                               ↓ (if unavailable)
+                          Binshops API (fallback)
+```
+
+The search automatically falls back to Binshops REST API if Meilisearch is unavailable.
+
+### How to get Binshops API key?
+
+1. Purchase [PrestaShop REST API Pro](https://binshops.com) module
+2. Install the module on your PrestaShop instance
+3. Go to: **Modules → Binshops REST API → Settings**
+4. Copy the API key to `BINSHOPS_API_KEY` in `.env.local`
+
 ### How to get PrestaShop API key?
 
 1. Log in to PrestaShop admin panel
 2. Go to: **Advanced Parameters → Webservice**
 3. Enable webservice (toggle to "Yes")
 4. Click **Add new key**
-5. Generate key and set **only these permissions**:
+5. Generate key and set **only these permissions** (minimal set for checkout):
 
-| Resource | GET | PUT | POST | PATCH | DELETE | HEAD |
-|----------|-----|-----|------|-------|--------|------|
-| `addresses` | ✅ | | ✅ | | ✅ | |
-| `carriers` | ✅ | | | | | |
-| `carts` | ✅ | ✅ | ✅ | | | |
-| `categories` | ✅ | | | | | |
-| `countries` | ✅ | | | | | |
-| `customers` | ✅ | ✅ | ✅ | | | |
-| `images` | ✅ | | | | | |
-| `manufacturers` | ✅ | | | | | |
-| `order_states` | ✅ | | | | | |
-| `orders` | ✅ | | ✅ | | | |
-| `messages` | | | ✅ | | | |
-| `products` | ✅ | | | | | |
-| `stock_availables` | ✅ | | | | | |
-| `taxes` | ✅ | | | | | |
-| `tax_rules` | ✅ | | | | | |
+| Resource | GET | PUT | POST | Notes |
+|----------|-----|-----|------|-------|
+| `addresses` | | | ✅ | Create address during checkout |
+| `carts` | | ✅ | ✅ | Create/update cart |
+| `customers` | ✅ | | ✅ | Find/create customer |
+| `orders` | ✅ | ✅ | ✅ | Create order, update status |
+| `messages` | | | ✅ | Customer notes |
+| `products` | ✅ | | | Calculate totals |
+| `order_histories` | | | ✅ | Status change history |
 
 6. Save and copy the generated key to `.env.local`
 
-> **Security note:** Do not enable more permissions than listed above. The frontend only needs these specific resources.
+> **Note:** With Binshops REST API handling all read operations, you only need 7 resources instead of 16. This significantly reduces the attack surface of your API key.
 
 ---
 
@@ -258,9 +309,10 @@ kestrel/
 ├── hooks/                  # Custom React hooks
 │
 ├── lib/                    # Utilities and config
+│   ├── binshops/           # Binshops REST API client (reads)
 │   ├── cms/                # Kestrel CMS client
 │   ├── payments/           # Payment integrations
-│   ├── prestashop/         # PrestaShop API client
+│   ├── prestashop/         # PrestaShop XML API client (writes)
 │   └── shipping/           # Shipping integrations
 │
 └── prisma/                 # Database schema

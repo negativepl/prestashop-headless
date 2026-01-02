@@ -1,7 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
-import { prestashop } from "@/lib/prestashop/client";
+import { binshops } from "@/lib/binshops/client";
 import { createSession, deleteSession, getSession } from "@/lib/auth/session";
 import {
   checkRateLimit,
@@ -18,62 +18,6 @@ async function getClientIP(): Promise<string> {
     headersList.get("x-real-ip") ||
     "unknown"
   );
-}
-
-/**
- * UWAGA BEZPIECZEŃSTWA:
- *
- * PrestaShop API nie udostępnia endpointu do weryfikacji hasła.
- * W środowisku produkcyjnym MUSISZ:
- *
- * 1. Zainstalować moduł PrestaShop do autentykacji (np. custom REST API module)
- * 2. Lub użyć PrestaShop OAuth module
- * 3. Lub stworzyć własny endpoint PHP w PrestaShop do weryfikacji hasła
- *
- * Obecna implementacja sprawdza hasło przez dedykowany endpoint.
- * Jeśli endpoint nie istnieje, logowanie NIE powiedzie się.
- */
-
-const PRESTASHOP_URL = process.env.PRESTASHOP_URL;
-const API_KEY = process.env.PRESTASHOP_API_KEY;
-
-if (!PRESTASHOP_URL || !API_KEY) {
-  throw new Error("PRESTASHOP_URL and PRESTASHOP_API_KEY environment variables are required");
-}
-
-// Funkcja do weryfikacji hasła przez PrestaShop
-// Używa modułu headlessauth zainstalowanego w PrestaShop
-async function verifyPassword(email: string, password: string): Promise<{ valid: boolean; customer?: any }> {
-  try {
-    // Wywołanie endpointu modułu headlessauth
-    const response = await fetch(`${PRESTASHOP_URL}/modules/headlessauth/api.php`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${Buffer.from(API_KEY + ":").toString("base64")}`,
-      },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await response.json();
-
-    if (response.ok && data.success) {
-      return { valid: true, customer: data.customer };
-    }
-
-    // Logowanie błędu dla debugowania (nie ujawniaj szczegółów użytkownikowi)
-    if (!response.ok) {
-      console.error(
-        `Auth verification failed (${response.status}): ${data.error || 'Unknown error'}. ` +
-        "Make sure headlessauth module is installed in PrestaShop."
-      );
-    }
-
-    return { valid: false };
-  } catch (error) {
-    console.error("Password verification error:", error);
-    return { valid: false };
-  }
 }
 
 export async function registerUser(formData: FormData) {
@@ -128,7 +72,8 @@ export async function registerUser(formData: FormData) {
     return { success: false, error: "Imię i nazwisko mogą zawierać tylko litery" };
   }
 
-  const result = await prestashop.registerCustomer({
+  // Use Binshops API for registration
+  const result = await binshops.register({
     email,
     password,
     firstName,
@@ -174,24 +119,24 @@ export async function loginUser(formData: FormData) {
     };
   }
 
-  // Verify password through PrestaShop
-  const verification = await verifyPassword(email, password);
+  // Use Binshops API for login (includes password verification!)
+  const result = await binshops.login(email, password);
 
-  if (!verification.valid || !verification.customer) {
-    return { success: false, error: "Nieprawidłowy email lub hasło" };
+  if (!result.success || !result.customer) {
+    return { success: false, error: result.error || "Nieprawidłowy email lub hasło" };
   }
 
   // Reset rate limit on successful login
   resetRateLimit(rateLimitKey);
 
-  const customer = verification.customer;
+  const customer = result.customer;
 
   // Create secure JWT session
   await createSession({
     customerId: customer.id,
     email: customer.email,
-    firstName: customer.firstname,
-    lastName: customer.lastname,
+    firstName: customer.firstName,
+    lastName: customer.lastName,
   });
 
   return {
@@ -199,8 +144,8 @@ export async function loginUser(formData: FormData) {
     customer: {
       id: customer.id,
       email: customer.email,
-      firstName: customer.firstname,
-      lastName: customer.lastname,
+      firstName: customer.firstName,
+      lastName: customer.lastName,
     },
   };
 }

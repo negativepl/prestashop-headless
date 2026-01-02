@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Package, ChevronRight, ShoppingBag, User, MapPin, Download, Shield, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { prestashop } from "@/lib/prestashop/client";
+import { binshops } from "@/lib/binshops/client";
 import { getSession } from "@/lib/auth/session";
 import { AddAddressDialog } from "@/components/account/add-address-dialog";
 import { AddressCard } from "@/components/account/address-card";
@@ -60,9 +60,9 @@ export default async function AccountPage() {
 
   try {
     [orders, addresses, customer] = await Promise.all([
-      prestashop.getCustomerOrders(session.customerId),
-      prestashop.getCustomerAddresses(session.customerId),
-      prestashop.getCustomer(session.customerId),
+      binshops.getCustomerOrders(),
+      binshops.getCustomerAddresses(),
+      binshops.getAccountInfo(),
     ]);
   } catch (error) {
     console.error("Error fetching account data:", error);

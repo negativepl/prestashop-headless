@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prestashop } from "@/lib/prestashop/client";
+import { binshops } from "@/lib/binshops/client";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -11,10 +11,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const products = await prestashop.getProducts({
+    const { products } = await binshops.getProducts({
       categoryId: parseInt(categoryId),
       limit,
-      withImages: true,
     });
 
     // Return simplified product data for mega menu

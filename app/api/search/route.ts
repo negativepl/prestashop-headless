@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { meilisearch } from "@/lib/meilisearch/client";
-import { prestashop } from "@/lib/prestashop/client";
+import { binshops } from "@/lib/binshops/client";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -57,9 +57,9 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Fallback to PrestaShop if Meilisearch is unavailable
-    console.warn("Meilisearch unavailable, falling back to PrestaShop search");
-    const products = await prestashop.searchProducts(query, limit);
+    // Fallback to Binshops if Meilisearch is unavailable
+    console.warn("Meilisearch unavailable, falling back to Binshops search");
+    const products = await binshops.searchProducts(query, limit);
 
     return NextResponse.json({
       products,
@@ -70,14 +70,14 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Search API error:", error);
 
-    // Try PrestaShop as last resort
+    // Try Binshops as last resort
     try {
-      const products = await prestashop.searchProducts(query, limit);
+      const products = await binshops.searchProducts(query, limit);
       return NextResponse.json({
         products,
         categories: [],
         totalHits: products.length,
-        source: "prestashop",
+        source: "binshops",
       });
     } catch (fallbackError) {
       console.error("Fallback search also failed:", fallbackError);
