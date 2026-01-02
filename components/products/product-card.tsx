@@ -119,7 +119,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
             )}
             {!isOutOfStock && product.quantity !== null && product.quantity <= 5 && (
               <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700 hover:bg-orange-100">
-                Ostatnie sztuki
+                Ostatnie sztuki!
               </Badge>
             )}
           </div>
@@ -135,7 +135,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
       {/* Content */}
       <div className="p-4 flex flex-col flex-1">
         <Link href={`/products/${product.id}`}>
-          <h3 className="font-medium text-base md:text-lg line-clamp-3 hover:text-primary transition-colors leading-tight">
+          <h3 className="font-medium text-sm md:text-base line-clamp-3 hover:text-primary transition-colors leading-tight">
             {product.name}
           </h3>
         </Link>
@@ -163,14 +163,14 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
           ) : (
             <div className="flex gap-1.5 sm:gap-2 items-stretch">
               {/* Quantity selector */}
-              <div className="flex items-center border rounded-md bg-muted/50 h-9 sm:h-10">
+              <div className="flex items-center border rounded-md bg-muted/50 h-8">
                 <button
                   onClick={decrementQuantity}
-                  className="h-full w-8 sm:w-9 flex items-center justify-center hover:bg-muted transition-colors rounded-l-md"
+                  className="h-full w-7 flex items-center justify-center hover:bg-muted transition-colors rounded-l-md"
                   disabled={quantity <= 1}
                   aria-label="Zmniejsz ilość"
                 >
-                  <Minus className="size-3.5 sm:size-4" />
+                  <Minus className="size-3" />
                 </button>
                 <input
                   type="text"
@@ -179,16 +179,16 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
                   onChange={handleInputChange}
                   onBlur={handleInputBlur}
                   onClick={handleInputClick}
-                  className="w-7 sm:w-8 text-center text-sm font-medium bg-transparent focus:outline-none"
+                  className="w-6 text-center text-xs font-medium bg-transparent focus:outline-none"
                   aria-label="Ilość produktu"
                 />
                 <button
                   onClick={incrementQuantity}
-                  className="h-full w-8 sm:w-9 flex items-center justify-center hover:bg-muted transition-colors rounded-r-md"
+                  className="h-full w-7 flex items-center justify-center hover:bg-muted transition-colors rounded-r-md"
                   disabled={quantity >= maxQuantity}
                   aria-label="Zwiększ ilość"
                 >
-                  <Plus className="size-3.5 sm:size-4" />
+                  <Plus className="size-3" />
                 </button>
               </div>
 
@@ -196,7 +196,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
               <Button
                 onClick={handleAddToCart}
                 size="sm"
-                className="flex-1 h-9 sm:h-10 gap-1 min-w-0 px-2 text-xs sm:text-sm"
+                className="flex-1 h-8 gap-1 min-w-0 px-2 text-xs"
               >
                 <ShoppingCart className="size-3.5 sm:size-4 shrink-0" />
                 <span className="truncate">Do koszyka</span>

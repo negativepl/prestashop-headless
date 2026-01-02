@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, use, useMemo } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useState, use, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { ChevronRight, SlidersHorizontal, X, Grid3X3, LayoutList, Loader2 } from "lucide-react";
 import { ProductCard } from "@/components/products/product-card";
@@ -23,24 +23,27 @@ interface CategoryPageProps {
 
 const PRODUCTS_PER_PAGE = 24;
 
-// Fetcher for SWR
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function CategoryPage({ params }: CategoryPageProps) {
   const { id } = use(params);
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(PRODUCTS_PER_PAGE);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [total, setTotal] = useState(0);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Filters state
-  const [priceMin, setPriceMin] = useState(searchParams.get("priceMin") || "");
-  const [priceMax, setPriceMax] = useState(searchParams.get("priceMax") || "");
-  const [inStock, setInStock] = useState(searchParams.get("inStock") === "true");
-  const [sortBy, setSortBy] = useState(searchParams.get("sort") || "default");
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
+  const [inStock, setInStock] = useState(false);
+  const [sortBy, setSortBy] = useState("default");
 
   // Fetch category and subcategories
   const { data: category } = useSWR<Category>(`/api/categories/${id}`, fetcher);
@@ -49,83 +52,87 @@ export default function CategoryPage({ params }: CategoryPageProps) {
     fetcher
   );
 
-  // Step 1: Fetch sorted product IDs (lightweight, fast)
-  const { data: productIds, isLoading: loadingIds } = useSWR<{ id: number; quantity: number }[]>(
-    `/api/products/ids?categoryId=${id}`,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      revalidateIfStale: false,
+  // Build products URL
+  const getProductsUrl = useCallback((page: number) => {
+    const params = new URLSearchParams({
+      categoryId: id,
+      page: page.toString(),
+      limit: PRODUCTS_PER_PAGE.toString(),
+    });
+    if (sortBy !== "default") {
+      params.set("sort", sortBy);
     }
+    return `/api/products?${params.toString()}`;
+  }, [id, sortBy]);
+
+  // Fetch first page
+  const { data: initialData, isLoading } = useSWR<{ products: Product[]; total: number }>(
+    getProductsUrl(1),
+    fetcher,
+    { revalidateOnFocus: false }
   );
 
-  // Get IDs for current visible products
-  const visibleIds = useMemo(() => {
-    if (!productIds) return [];
-    return productIds.slice(0, visibleCount).map(p => p.id);
-  }, [productIds, visibleCount]);
-
-  // Step 2: Fetch full product details for visible IDs
-  const { data: products = [], isLoading: loadingProducts, isValidating } = useSWR<Product[]>(
-    visibleIds.length > 0 ? `/api/products/by-ids?ids=${visibleIds.join(",")}` : null,
+  // Prefetch next page
+  const nextPageUrl = currentPage * PRODUCTS_PER_PAGE < total ? getProductsUrl(currentPage + 1) : null;
+  const { data: prefetchedData } = useSWR<{ products: Product[]; total: number }>(
+    nextPageUrl,
     fetcher,
-    {
-      revalidateOnFocus: false,
-      revalidateIfStale: false,
-      keepPreviousData: true, // Keep showing old products while loading new ones
-    }
+    { revalidateOnFocus: false }
   );
 
-  // Sort products to match the order of visibleIds
-  const sortedProducts = useMemo(() => {
-    if (!products.length) return [];
-    const productMap = new Map(products.map(p => [p.id, p]));
-    return visibleIds.map(id => productMap.get(id)).filter((p): p is Product => p !== undefined);
-  }, [products, visibleIds]);
+  // Initialize products from first page
+  useEffect(() => {
+    if (initialData) {
+      setAllProducts(initialData.products);
+      setTotal(initialData.total);
+      setCurrentPage(1);
+    }
+  }, [initialData]);
 
-  // Check if there are more products to load
-  const hasMore = productIds ? visibleCount < productIds.length : false;
-  const totalProducts = productIds?.length || 0;
+  // Reset when category or sort changes
+  useEffect(() => {
+    setAllProducts([]);
+    setCurrentPage(1);
+    setTotal(0);
+  }, [id, sortBy]);
 
   // Load more handler
-  const loadMore = () => {
-    setVisibleCount(prev => prev + PRODUCTS_PER_PAGE);
+  const loadMore = async () => {
+    if (prefetchedData) {
+      // Use prefetched data - instant!
+      setAllProducts(prev => [...prev, ...prefetchedData.products]);
+      setCurrentPage(prev => prev + 1);
+    } else {
+      // Fallback: fetch if prefetch not ready
+      setIsLoadingMore(true);
+      try {
+        const res = await fetch(getProductsUrl(currentPage + 1));
+        const data = await res.json();
+        setAllProducts(prev => [...prev, ...data.products]);
+        setCurrentPage(prev => prev + 1);
+      } catch (error) {
+        console.error("Error loading more products:", error);
+      } finally {
+        setIsLoadingMore(false);
+      }
+    }
   };
 
-  // Reset visible count when category changes
-  useMemo(() => {
-    setVisibleCount(PRODUCTS_PER_PAGE);
-  }, [id]);
+  // Filter products (client-side)
+  const filteredProducts = allProducts.filter((product) => {
+    if (priceMin && product.price < parseFloat(priceMin)) return false;
+    if (priceMax && product.price > parseFloat(priceMax)) return false;
+    if (inStock && product.quantity !== null && product.quantity <= 0) return false;
+    return true;
+  });
 
-  // Filter and sort products (client-side)
-  const filteredProducts = sortedProducts
-    .filter((product) => {
-      if (priceMin && product.price < parseFloat(priceMin)) return false;
-      if (priceMax && product.price > parseFloat(priceMax)) return false;
-      if (inStock && product.quantity !== null && product.quantity <= 0) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      // Apply selected sorting (stock order is already handled by API)
-      switch (sortBy) {
-        case "price-asc":
-          return a.price - b.price;
-        case "price-desc":
-          return b.price - a.price;
-        case "name-asc":
-          return a.name.localeCompare(b.name);
-        case "name-desc":
-          return b.name.localeCompare(a.name);
-        default:
-          return 0;
-      }
-    });
+  const hasMore = allProducts.length < total;
+  const remaining = total - allProducts.length;
 
   const clearFilters = () => {
     setPriceMin("");
     setPriceMax("");
     setInStock(false);
-    setSortBy("default");
   };
 
   const hasActiveFilters = priceMin || priceMax || inStock;
@@ -202,8 +209,6 @@ export default function CategoryPage({ params }: CategoryPageProps) {
       )}
     </div>
   );
-
-  const isLoading = loadingIds || (loadingProducts && products.length === 0);
 
   if (isLoading) {
     return (
@@ -301,7 +306,7 @@ export default function CategoryPage({ params }: CategoryPageProps) {
               </Sheet>
 
               <span className="text-sm text-muted-foreground">
-                {filteredProducts.length} z {totalProducts} produktów
+                {filteredProducts.length} z {total} produktów
               </span>
             </div>
 
@@ -332,14 +337,13 @@ export default function CategoryPage({ params }: CategoryPageProps) {
                   <SelectItem value="price-asc">Cena: rosnąco</SelectItem>
                   <SelectItem value="price-desc">Cena: malejąco</SelectItem>
                   <SelectItem value="name-asc">Nazwa: A-Z</SelectItem>
-                  <SelectItem value="name-desc">Nazwa: Z-A</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           {/* Products Grid */}
-          {filteredProducts.length === 0 ? (
+          {filteredProducts.length === 0 && !isLoading ? (
             <div className="text-center py-16 bg-muted/50 rounded-xl">
               <p className="text-muted-foreground">Brak produktów w tej kategorii</p>
               {hasActiveFilters && (
@@ -371,16 +375,16 @@ export default function CategoryPage({ params }: CategoryPageProps) {
                     variant="outline"
                     size="lg"
                     onClick={loadMore}
-                    disabled={isValidating}
-                    className="min-w-[180px]"
+                    disabled={isLoadingMore}
+                    className="min-w-[200px]"
                   >
-                    {isValidating ? (
+                    {isLoadingMore ? (
                       <>
                         <Loader2 className="size-4 mr-2 animate-spin" />
                         Ładowanie...
                       </>
                     ) : (
-                      `Załaduj więcej (${totalProducts - visibleCount} pozostało)`
+                      "Załaduj więcej"
                     )}
                   </Button>
                 </div>

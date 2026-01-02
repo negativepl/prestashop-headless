@@ -27,6 +27,31 @@ interface SearchCategory {
   productCount: number;
 }
 
+interface SuggestionProduct {
+  id: number;
+  name: string;
+  price: number;
+  imageUrl: string | null;
+  manufacturerName: string | null;
+}
+
+interface SuggestionCategory {
+  id: number;
+  name: string;
+}
+
+interface SuggestionManufacturer {
+  id: number;
+  name: string;
+}
+
+interface Suggestions {
+  products: SuggestionProduct[];
+  categories: SuggestionCategory[];
+  manufacturers: SuggestionManufacturer[];
+  popularSearches: string[];
+}
+
 interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -41,6 +66,8 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [selectedCategory, setSelectedCategory] = useState<SearchCategory | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [suggestions, setSuggestions] = useState<Suggestions | null>(null);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -49,7 +76,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
     setMounted(true);
   }, []);
 
-  // Focus input when modal opens
+  // Focus input and fetch suggestions when modal opens
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 100);
@@ -58,8 +85,24 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
       setSearchCategories([]);
       setSelectedCategory(null);
       setSelectedIndex(0);
+
+      // Fetch suggestions if not already loaded
+      if (!suggestions && !loadingSuggestions) {
+        setLoadingSuggestions(true);
+        fetch("/api/search/suggestions")
+          .then((res) => res.json())
+          .then((data) => {
+            setSuggestions(data);
+          })
+          .catch((err) => {
+            console.error("Error fetching suggestions:", err);
+          })
+          .finally(() => {
+            setLoadingSuggestions(false);
+          });
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, suggestions, loadingSuggestions]);
 
   // Close on ESC
   useEffect(() => {
@@ -194,17 +237,17 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100]"
+            className="fixed inset-0 bg-black/50 z-[110]"
             onClick={onClose}
           />
 
           {/* Modal */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: -20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -20 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed inset-0 md:inset-auto md:left-1/2 md:top-[15%] md:-translate-x-1/2 w-full md:max-w-2xl z-[100] md:px-4"
+            initial={{ opacity: 0, y: "100%" }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: "100%" }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="fixed inset-0 md:inset-auto md:left-1/2 md:top-[8%] md:-translate-x-1/2 w-full md:max-w-5xl z-[110] md:px-4"
           >
             <div className="bg-white dark:bg-neutral-900 md:rounded-2xl shadow-2xl md:border overflow-hidden h-full md:h-auto flex flex-col">
               {/* Search input */}
@@ -251,7 +294,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
 
               {/* Results */}
               <div className={cn(
-                "flex-1 md:flex-none md:max-h-[60vh] overflow-y-auto transition-opacity duration-150",
+                "flex-1 md:flex-none md:max-h-[70vh] overflow-y-auto transition-opacity duration-150",
                 isSearching && searchResults.length > 0 && "opacity-70"
               )}>
                 {isSearching && searchResults.length === 0 ? (
@@ -347,8 +390,8 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                             href={`/products/${product.id}`}
                             onClick={onClose}
                             className={cn(
-                              "flex items-start gap-4 px-4 py-3 transition-colors",
-                              selectedIndex === index + 1 ? "bg-primary/10" : "hover:bg-muted"
+                              "flex items-start gap-4 px-4 py-3 transition-all border-l-2 border-transparent",
+                              selectedIndex === index + 1 ? "bg-primary/10 border-l-primary" : "hover:bg-primary/10 hover:border-l-primary/50"
                             )}
                           >
                             <div className="w-20 h-20 rounded-xl bg-white border overflow-hidden shrink-0 shadow-sm">
@@ -382,21 +425,10 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                                 className="font-medium text-sm leading-snug line-clamp-2"
                                 dangerouslySetInnerHTML={{ __html: product.nameHighlighted }}
                               />
-                              {/* Price & Stock */}
-                              <div className="flex items-center gap-3 mt-1.5">
-                                <span className="text-base text-primary font-bold">
-                                  {formatPrice(product.price)}
-                                </span>
-                                {product.quantity > 0 ? (
-                                  <span className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded font-medium">
-                                    W magazynie
-                                  </span>
-                                ) : (
-                                  <span className="text-xs text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded font-medium">
-                                    Na zamówienie
-                                  </span>
-                                )}
-                              </div>
+                              {/* Price */}
+                              <p className="text-base text-primary font-bold mt-1.5">
+                                {formatPrice(product.price)}
+                              </p>
                             </div>
                           </Link>
                         ))}
@@ -412,56 +444,71 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                   </>
                 ) : (
                   /* Empty state - popular content */
-                  <div className="flex flex-col md:flex-row">
-                    {/* Left column - searches, categories, brands */}
-                    <div className="flex-1 p-4 space-y-4 border-b md:border-b-0 md:border-r">
+                  <div className="p-5 md:p-6 space-y-6">
+                    {/* Top row - searches, categories, brands */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                       {/* Popular searches */}
                       <div>
-                        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
                           <TrendingUp className="size-3" />
                           Popularne wyszukiwania
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {["iPhone 16 Pro", "etui MagSafe", "ładowarka USB-C", "szkło hartowane", "AirPods"].map((query) => (
-                            <button
-                              key={query}
-                              onClick={() => setSearchQuery(query)}
-                              className="px-3 py-1.5 bg-muted hover:bg-primary/10 rounded-full text-sm transition-colors"
-                            >
-                              {query}
-                            </button>
-                          ))}
+                          {loadingSuggestions ? (
+                            [1, 2, 3, 4].map((i) => (
+                              <div key={i} className="h-8 w-24 bg-muted rounded-full animate-pulse" />
+                            ))
+                          ) : (
+                            suggestions?.popularSearches?.slice(0, 5).map((query) => (
+                              <button
+                                key={query}
+                                onClick={() => setSearchQuery(query)}
+                                className="px-3 py-1.5 bg-muted hover:bg-primary/10 rounded-full text-sm transition-colors"
+                              >
+                                {query}
+                              </button>
+                            ))
+                          )}
                         </div>
                       </div>
 
                       {/* Popular categories */}
                       <div>
-                        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
                           <Layers className="size-3" />
-                          Popularne kategorie
+                          Kategorie
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {["Etui do iPhone", "Ładowarki", "Kable", "Szkła ochronne", "Powerbanki"].map((cat) => (
-                            <button
-                              key={cat}
-                              className="px-3 py-1.5 bg-muted hover:bg-primary/10 rounded-full text-sm transition-colors"
-                            >
-                              {cat}
-                            </button>
-                          ))}
+                          {loadingSuggestions ? (
+                            [1, 2, 3, 4].map((i) => (
+                              <div key={i} className="h-8 w-20 bg-muted rounded-full animate-pulse" />
+                            ))
+                          ) : (
+                            suggestions?.categories?.slice(0, 5).map((cat) => (
+                              <Link
+                                key={cat.id}
+                                href={`/categories/${cat.id}`}
+                                onClick={onClose}
+                                className="px-3 py-1.5 bg-muted hover:bg-primary/10 rounded-full text-sm transition-colors"
+                              >
+                                {cat.name}
+                              </Link>
+                            ))
+                          )}
                         </div>
                       </div>
 
-                      {/* Popular brands */}
+                      {/* Popular brands - hardcoded */}
                       <div>
-                        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
                           <Building2 className="size-3" />
-                          Popularne marki
+                          Marki
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {["Spigen", "Ringke", "ESR", "Baseus", "Anker", "UGREEN"].map((brand) => (
+                          {["Spigen", "Ringke", "Tech-Protect", "ESR", "UAG"].map((brand) => (
                             <button
                               key={brand}
+                              onClick={() => setSearchQuery(brand)}
                               className="px-3 py-1.5 bg-muted hover:bg-primary/10 rounded-full text-sm transition-colors"
                             >
                               {brand}
@@ -471,40 +518,56 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                       </div>
                     </div>
 
-                    {/* Right column - popular products */}
-                    <div className="flex-1 p-4">
-                      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                    {/* Products section */}
+                    <div>
+                      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4">
                         <Star className="size-3" />
-                        Popularne produkty
+                        Polecane produkty
                       </div>
 
-                      {/* Featured product placeholder */}
-                      <div className="mb-4 p-3 rounded-xl border bg-gradient-to-br from-primary/5 to-transparent hover:border-primary/30 transition-colors cursor-pointer">
-                        <div className="flex gap-3">
-                          <div className="w-20 h-20 rounded-lg bg-muted shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <span className="text-xs text-primary font-medium">Bestseller</span>
-                            <p className="font-medium text-sm line-clamp-2 mt-0.5">Placeholder - Popularny produkt</p>
-                            <p className="text-primary font-bold mt-1">99,99 zł</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Grid of popular products */}
-                      <div className="grid grid-cols-2 gap-2">
-                        {[1, 2, 3, 4, 5, 6].map((i) => (
-                          <div
-                            key={i}
-                            className="flex items-center gap-2 p-2 rounded-lg border hover:border-primary/30 transition-colors cursor-pointer"
-                          >
-                            <div className="w-10 h-10 rounded bg-muted shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs line-clamp-1">Produkt {i}</p>
-                              <p className="text-xs text-primary font-medium">49,99 zł</p>
+                      {loadingSuggestions ? (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                            <div key={i} className="rounded-xl border p-3 animate-pulse">
+                              <div className="aspect-square bg-muted rounded-lg mb-3" />
+                              <div className="space-y-2">
+                                <div className="h-4 bg-muted rounded w-full" />
+                                <div className="h-4 bg-muted rounded w-3/4" />
+                                <div className="h-5 bg-muted rounded w-20 mt-2" />
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      ) : suggestions?.products && suggestions.products.length > 0 ? (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {suggestions.products.slice(0, 8).map((product) => (
+                            <Link
+                              key={product.id}
+                              href={`/products/${product.id}`}
+                              onClick={onClose}
+                              className="group rounded-xl border p-3 hover:border-primary/30 hover:shadow-md transition-all"
+                            >
+                              <div className="aspect-square bg-white rounded-lg border overflow-hidden mb-3">
+                                {product.imageUrl ? (
+                                  <img
+                                    src={product.imageUrl}
+                                    alt={product.name}
+                                    className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                                    Brak zdjęcia
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium line-clamp-2 min-h-[2.5rem] leading-tight">{product.name}</p>
+                                <p className="text-primary font-bold mt-2">{formatPrice(product.price)}</p>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 )}

@@ -62,7 +62,7 @@ class BinshopsClient {
   private async fetch<T>(
     endpoint: string,
     options?: RequestInit & { withAuth?: boolean },
-    cacheTime: number = 60
+    cacheTime: number = 300 // 5 minutes default cache
   ): Promise<T> {
     // Use non-friendly URL format (works without route registration)
     // endpoint format: "controller?param=value" -> "index.php?fc=module&module=binshopsrest&controller=XXX&param=value"
@@ -290,16 +290,34 @@ class BinshopsClient {
 
   async getProductIdsWithStock(categoryId: number): Promise<{ id: number; quantity: number }[]> {
     try {
-      // Get all products from category with a large limit
-      const { products } = await this.getProducts({
-        categoryId,
-        limit: 500, // Large limit to get all products
-      });
+      const allProducts: { id: number; quantity: number }[] = [];
+      let page = 1;
+      const pageSize = 50; // Binshops can handle 50 products per request
+      let hasMore = true;
 
-      return products.map((p) => ({
-        id: p.id,
-        quantity: p.quantity || 0,
-      }));
+      while (hasMore) {
+        const { products, total } = await this.getProducts({
+          categoryId,
+          limit: pageSize,
+          page,
+        });
+
+        allProducts.push(
+          ...products.map((p) => ({
+            id: p.id,
+            quantity: p.quantity || 0,
+          }))
+        );
+
+        // Check if there are more pages
+        hasMore = allProducts.length < total && products.length === pageSize;
+        page++;
+
+        // Safety limit to prevent infinite loops
+        if (page > 20) break;
+      }
+
+      return allProducts;
     } catch (error) {
       console.error("Error fetching product IDs with stock:", error);
       return [];
@@ -940,14 +958,16 @@ class BinshopsClient {
 
   private mapProductListItem(p: any): Product {
     // Handle both list item format and full product format
+    // NOTE: We intentionally skip description/descriptionShort here to reduce response size
+    // Full descriptions are only fetched in getProduct() for product detail page
     const price = p.price_amount ?? p.float_price ?? p.price_without_reduction ?? 0;
     const imageUrl = p.cover_image || p.cover?.url || null;
 
     return {
       id: p.id_product,
       name: p.name,
-      description: p.description || "",
-      descriptionShort: p.description_short || "",
+      description: "", // Skipped for list performance
+      descriptionShort: "", // Skipped for list performance
       price: typeof price === "number" ? price : parseFloat(String(price).replace(",", ".").replace(/[^\d.]/g, "")) || 0,
       reference: p.reference || "",
       ean13: p.ean13 || null,

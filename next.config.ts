@@ -44,7 +44,7 @@ const securityHeaders = [
       "img-src 'self' data: blob: https://presta.trkhspl.com https://images.unsplash.com https://upload.wikimedia.org https://blog.trkhspl.com https://*.tile.openstreetmap.org https://geowidget.inpost.pl https://cdnjs.cloudflare.com https://unpkg.com https://static.easypack24.net https://sklep.bizonmobile.pl",
       "font-src 'self' data: https://geowidget.inpost.pl",
       "connect-src 'self' https://presta.trkhspl.com https://blog.trkhspl.com https://geowidget.inpost.pl https://api-pl-points.inpost.pl https://nominatim.openstreetmap.org",
-      "frame-src 'self' https://geowidget.inpost.pl https://geowidget-app.inpost.pl",
+      "frame-src 'self' https://geowidget.inpost.pl https://geowidget-app.inpost.pl https://www.google.com https://maps.google.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

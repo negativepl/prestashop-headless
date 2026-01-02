@@ -16,8 +16,7 @@ export default function FavoritesPage() {
   };
 
   return (
-    <div className="min-h-[80vh] py-8">
-      <div className="container">
+    <div className="container py-8 md:py-12">
         <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Ulubione</h1>
@@ -91,6 +90,5 @@ export default function FavoritesPage() {
         </div>
       )}
       </div>
-    </div>
   );
 }

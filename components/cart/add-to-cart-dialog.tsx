@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { FeedbackButton } from "@/components/ui/feedback-button";
 import { Separator } from "@/components/ui/separator";
 import { useCart } from "@/hooks/use-cart";
 import type { Product } from "@/lib/prestashop/types";
@@ -102,8 +103,8 @@ export function AddToCartDialog({
             {/* Action buttons */}
             <div className="flex flex-col sm:flex-row gap-3 pt-6 mt-auto">
               <Button
-                variant="ghost"
-                className="flex-1 hover:bg-transparent hover:text-primary"
+                variant="outline"
+                className="flex-1"
                 onClick={() => onOpenChange(false)}
               >
                 Kontynuuj zakupy
@@ -181,14 +182,14 @@ export function AddToCartDialog({
                             </Link>
                             <div className="flex items-center justify-between mt-auto">
                               <p className="font-bold">{formatPrice(relatedProduct.price)}</p>
-                              <Button
+                              <FeedbackButton
                                 size="sm"
-                                className="h-8 gap-1.5"
-                                onClick={() => handleAddRelated(relatedProduct)}
+                                className="h-8"
+                                onSuccessClick={() => handleAddRelated(relatedProduct)}
                               >
                                 <ShoppingCart className="size-3.5" />
                                 Do koszyka
-                              </Button>
+                              </FeedbackButton>
                             </div>
                           </div>
                         </div>

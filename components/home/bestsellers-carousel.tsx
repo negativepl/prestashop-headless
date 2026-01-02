@@ -60,7 +60,7 @@ export function BestsellersCarousel({ products }: BestsellersCarouselProps) {
         {products.map((product, index) => (
           <div
             key={product.id}
-            className="snap-start shrink-0 w-[75%] md:w-[32%] lg:w-[24%] xl:w-[19%]"
+            className="snap-start shrink-0 w-[75%] md:w-[48%] lg:w-[32%] xl:w-[24%] 2xl:w-[19%]"
           >
             <ProductCard product={product} priority={index < 5} />
           </div>

@@ -103,24 +103,24 @@ export function Footer() {
             <h3 className="font-semibold mb-4">Pomoc</h3>
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li>
-                <a href="#" className="hover:text-foreground transition-colors">
+                <Link href="/dostawa" className="hover:text-foreground transition-colors">
                   Dostawa
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-foreground transition-colors">
+                <Link href="/zwroty" className="hover:text-foreground transition-colors">
                   Zwroty i reklamacje
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-foreground transition-colors">
+                <Link href="/platnosci" className="hover:text-foreground transition-colors">
                   Płatności
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-foreground transition-colors">
+                <Link href="/faq" className="hover:text-foreground transition-colors">
                   FAQ
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -130,24 +130,24 @@ export function Footer() {
             <h3 className="font-semibold mb-4">Firma</h3>
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li>
-                <a href="#" className="hover:text-foreground transition-colors">
+                <Link href="/o-nas" className="hover:text-foreground transition-colors">
                   O nas
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-foreground transition-colors">
+                <Link href="/regulamin" className="hover:text-foreground transition-colors">
                   Regulamin
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-foreground transition-colors">
+                <Link href="/polityka-prywatnosci" className="hover:text-foreground transition-colors">
                   Polityka prywatności
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-foreground transition-colors">
+                <Link href="/kontakt" className="hover:text-foreground transition-colors">
                   Kontakt
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

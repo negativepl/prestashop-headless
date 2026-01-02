@@ -344,8 +344,17 @@ export function Header({ categories = [] }: HeaderProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-96 bg-white dark:bg-black p-0">
-                  <div className="p-3 border-b">
+                  <div className="p-3 border-b flex items-center justify-between">
                     <p className="font-semibold">Koszyk ({itemCount})</p>
+                    {items.length > 0 && (
+                      <button
+                        onClick={() => clearCart()}
+                        className="text-xs text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1"
+                      >
+                        <Trash2 className="size-3" />
+                        Wyczyść
+                      </button>
+                    )}
                   </div>
 
                   {items.length === 0 ? (

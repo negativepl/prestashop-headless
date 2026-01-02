@@ -1,0 +1,151 @@
+import { Metadata } from "next";
+import { Mail, Phone, MapPin, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+export const metadata: Metadata = {
+  title: "Kontakt | HomeScreen",
+  description: "Skontaktuj się z nami - HomeScreen. Telefon, e-mail, adres i formularz kontaktowy.",
+};
+
+export default function KontaktPage() {
+  return (
+    <div className="container py-8 md:py-12">
+      <h1 className="text-3xl md:text-4xl font-bold mb-4">Kontakt</h1>
+      <p className="text-lg text-muted-foreground mb-10">
+        Masz pytania? Chętnie pomożemy! Skontaktuj się z nami w dogodny dla Ciebie sposób.
+      </p>
+
+      {/* Contact cards */}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+        <a href="tel:+48793237970" className="group flex items-center gap-4 p-4 bg-card border rounded-2xl hover:border-primary transition-colors">
+          <Phone className="h-6 w-6 text-primary shrink-0" />
+          <div>
+            <h3 className="font-semibold">Telefon</h3>
+            <p className="text-primary font-medium">+48 793 237 970</p>
+            <p className="text-sm text-muted-foreground">Pon-Pt: 8:00 - 16:00</p>
+          </div>
+        </a>
+
+        <a href="mailto:info@homescreen.pl" className="group flex items-center gap-4 p-4 bg-card border rounded-2xl hover:border-primary transition-colors">
+          <Mail className="h-6 w-6 text-primary shrink-0" />
+          <div>
+            <h3 className="font-semibold">E-mail</h3>
+            <p className="text-primary font-medium">info@homescreen.pl</p>
+            <p className="text-sm text-muted-foreground">Odpowiadamy w ciągu 24h</p>
+          </div>
+        </a>
+
+        <div className="flex items-center gap-4 p-4 bg-card border rounded-2xl">
+          <MapPin className="h-6 w-6 text-primary shrink-0" />
+          <div>
+            <h3 className="font-semibold">Adres</h3>
+            <p className="text-muted-foreground">ul. Szeroka 20</p>
+            <p className="text-sm text-muted-foreground">75-814 Koszalin</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 p-4 bg-card border rounded-2xl">
+          <Clock className="h-6 w-6 text-primary shrink-0" />
+          <div>
+            <h3 className="font-semibold">Godziny pracy</h3>
+            <p className="text-muted-foreground">Pon - Pt: 8:00 - 16:00</p>
+            <p className="text-sm text-muted-foreground">Sob - Nd: nieczynne</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-8">
+        {/* Contact form */}
+        <div className="bg-card border rounded-2xl p-6 md:p-8">
+          <h2 className="text-xl font-semibold mb-6">Napisz do nas</h2>
+
+          <form className="space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium mb-2">
+                  Imię i nazwisko
+                </label>
+                <Input id="name" placeholder="Jan Kowalski" />
+              </div>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium mb-2">
+                  E-mail
+                </label>
+                <Input id="email" type="email" placeholder="jan@example.com" />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="subject" className="block text-sm font-medium mb-2">
+                Temat
+              </label>
+              <Input id="subject" placeholder="W czym możemy pomóc?" />
+            </div>
+
+            <div>
+              <label htmlFor="order" className="block text-sm font-medium mb-2">
+                Numer zamówienia (opcjonalnie)
+              </label>
+              <Input id="order" placeholder="np. HS12345" />
+            </div>
+
+            <div>
+              <label htmlFor="message" className="block text-sm font-medium mb-2">
+                Wiadomość
+              </label>
+              <textarea
+                id="message"
+                rows={5}
+                placeholder="Opisz swoje pytanie lub problem..."
+                className="w-full px-3 py-2 border rounded-lg bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            <div className="flex items-start gap-2">
+              <input type="checkbox" id="consent" className="mt-1" />
+              <label htmlFor="consent" className="text-sm text-muted-foreground">
+                Wyrażam zgodę na przetwarzanie moich danych osobowych w celu obsługi zapytania.
+                Zapoznałem się z <a href="/polityka-prywatnosci" className="text-primary hover:underline">polityką prywatności</a>.
+              </label>
+            </div>
+
+            <Button type="submit" size="lg" className="w-full">
+              Wyślij wiadomość
+            </Button>
+          </form>
+        </div>
+
+        {/* Map */}
+        <div className="bg-card border rounded-2xl overflow-hidden">
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2356.5!2d16.1825562!3d54.1845479!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x4701d7d0d71aea5b%3A0x826796aee1f99845!2sHome%20Screen%20-%20hurtownia%20akcesori%C3%B3w%20GSM!5e0!3m2!1spl!2spl!4v1704200000000!5m2!1spl!2spl"
+            width="100%"
+            height="100%"
+            style={{ border: 0, minHeight: "400px" }}
+            allowFullScreen
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            title="Lokalizacja HomeScreen"
+          />
+        </div>
+      </div>
+
+      {/* Company info */}
+      <div className="mt-8 p-6 bg-muted rounded-xl">
+        <h3 className="font-semibold mb-3">Dane firmy</h3>
+        <div className="grid sm:grid-cols-2 gap-4 text-muted-foreground">
+          <div>
+            <p className="font-medium text-foreground">Home Screen Magdalena Cylke</p>
+            <p>ul. Szeroka 20</p>
+            <p>75-814 Koszalin</p>
+          </div>
+          <div>
+            <p>NIP: 4990574327</p>
+            <p>REGON: 520836138</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

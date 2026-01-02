@@ -19,8 +19,7 @@ export default function CartPage() {
   const remainingForFreeShipping = freeShippingThreshold - total;
 
   return (
-    <div className="min-h-[80vh] py-8">
-      <div className="container">
+    <div className="container py-8 md:py-12">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -250,6 +249,5 @@ export default function CartPage() {
           </div>
         )}
       </div>
-    </div>
   );
 }

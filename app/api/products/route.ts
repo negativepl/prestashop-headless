@@ -8,24 +8,40 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const categoryId = searchParams.get("categoryId");
   const limit = searchParams.get("limit");
-  const offset = searchParams.get("offset");
   const page = searchParams.get("page");
-  const sortByStock = searchParams.get("sortByStock") === "true";
+  const sort = searchParams.get("sort");
+
+  // Map sort options
+  const sortMap: Record<string, string> = {
+    "price-asc": "price_asc",
+    "price-desc": "price_desc",
+    "name-asc": "name",
+    "date": "date",
+    "sales": "sales",
+  };
 
   try {
-    const { products } = await binshops.getProducts({
+    const sortBy = sort ? (sortMap[sort] as "date" | "price_asc" | "price_desc" | "name" | "sales") : "date";
+
+    const { products, total } = await binshops.getProducts({
       categoryId: categoryId ? parseInt(categoryId) : 2,
       limit: limit ? parseInt(limit) : 24,
-      offset: offset ? parseInt(offset) : 0,
-      page: page ? parseInt(page) : undefined,
-      sortBy: sortByStock ? "sales" : "date",
+      page: page ? parseInt(page) : 1,
+      sortBy,
     });
 
-    return NextResponse.json(products);
+    return NextResponse.json(
+      { products, total },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error fetching products:", error);
     return NextResponse.json(
-      { error: "Failed to fetch products" },
+      { error: "Failed to fetch products", products: [], total: 0 },
       { status: 500 }
     );
   }
