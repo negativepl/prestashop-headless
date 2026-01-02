@@ -202,7 +202,7 @@ class MeilisearchClient {
     }
   }
 
-  // Search products
+  // Search products (with optional AI hybrid search)
   async searchProducts(
     query: string,
     options: {
@@ -210,14 +210,15 @@ class MeilisearchClient {
       offset?: number;
       filter?: string;
       sort?: string[];
+      hybrid?: boolean;
     } = {}
   ): Promise<{ products: SearchResult[]; totalHits: number }> {
-    const { limit = 10, offset = 0, filter, sort } = options;
+    const { limit = 10, offset = 0, filter, sort, hybrid = true } = options;
 
     try {
       const index = await this.getProductsIndex();
 
-      const results = await index.search(query, {
+      const searchOptions: Parameters<typeof index.search>[1] = {
         limit,
         offset,
         filter: filter ? `${filter} AND active = true AND quantity > 0` : "active = true AND quantity > 0",
@@ -226,7 +227,29 @@ class MeilisearchClient {
         attributesToHighlight: ["name"],
         highlightPreTag: '<mark class="bg-primary/20 text-foreground">',
         highlightPostTag: "</mark>",
-      });
+      };
+
+      // Add hybrid search if enabled (AI semantic search)
+      if (hybrid) {
+        (searchOptions as Record<string, unknown>).hybrid = {
+          embedder: "default",
+          semanticRatio: 0.5, // 50% semantic, 50% keyword
+        };
+      }
+
+      let results;
+      try {
+        results = await index.search(query, searchOptions);
+      } catch (hybridError) {
+        // If hybrid search fails (embeddings not ready), fallback to regular search
+        if (hybrid) {
+          console.warn("Hybrid search failed, falling back to keyword search:", hybridError);
+          delete (searchOptions as Record<string, unknown>).hybrid;
+          results = await index.search(query, searchOptions);
+        } else {
+          throw hybridError;
+        }
+      }
 
       return {
         products: results.hits.map((hit) => ({

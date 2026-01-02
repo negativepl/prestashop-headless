@@ -1,24 +1,25 @@
 "use client";
 
-import { useState } from "react";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { FreeMode } from "swiper/modules";
-import type { Swiper as SwiperType } from "swiper";
+import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ProductCard } from "@/components/products/product-card";
 import type { Product } from "@/lib/prestashop/types";
-
-import "swiper/css";
-import "swiper/css/free-mode";
 
 interface FeaturedProductsProps {
   products: Product[];
 }
 
 export function FeaturedProducts({ products }: FeaturedProductsProps) {
-  const [swiper, setSwiper] = useState<SwiperType | null>(null);
-  const [isBeginning, setIsBeginning] = useState(true);
-  const [isEnd, setIsEnd] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: "left" | "right") => {
+    if (!scrollRef.current) return;
+    const scrollAmount = scrollRef.current.offsetWidth * 0.75;
+    scrollRef.current.scrollBy({
+      left: direction === "left" ? -scrollAmount : scrollAmount,
+      behavior: "smooth",
+    });
+  };
 
   if (products.length === 0) return null;
 
@@ -37,89 +38,42 @@ export function FeaturedProducts({ products }: FeaturedProductsProps) {
         </p>
       </div>
 
-      {/* Mobile carousel */}
-      <div className="md:hidden relative group/carousel -mx-6">
-        <Swiper
-          modules={[FreeMode]}
-          onSwiper={setSwiper}
-          onSlideChange={(s) => {
-            setIsBeginning(s.isBeginning);
-            setIsEnd(s.isEnd);
+      {/* Responsive carousel */}
+      <div className="-mx-6 md:-mx-10 relative group/carousel">
+        <div
+          ref={scrollRef}
+          className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth px-6 md:px-10 pb-4 -mb-4 scroll-pl-6 md:scroll-pl-10"
+          style={{
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            WebkitOverflowScrolling: "touch",
           }}
-          onReachBeginning={() => setIsBeginning(true)}
-          onReachEnd={() => setIsEnd(true)}
-          onFromEdge={() => {
-            setIsBeginning(swiper?.isBeginning ?? false);
-            setIsEnd(swiper?.isEnd ?? false);
-          }}
-          freeMode={{
-            enabled: true,
-            momentum: true,
-            momentumRatio: 0.5,
-            sticky: true,
-          }}
-          centeredSlides={true}
-          slidesPerView={1.25}
-          spaceBetween={12}
-          slidesOffsetBefore={0}
-          slidesOffsetAfter={0}
-          breakpoints={{
-            480: {
-              slidesPerView: 1.6,
-              spaceBetween: 12,
-            },
-            640: {
-              slidesPerView: 2,
-              spaceBetween: 16,
-            },
-          }}
-          className="select-none"
         >
-          {products.slice(0, 10).map((product) => (
-            <SwiperSlide key={product.id} className="!h-auto">
-              <ProductCard product={product} />
-            </SwiperSlide>
+          {products.slice(0, 10).map((product, index) => (
+            <div
+              key={product.id}
+              className="snap-start shrink-0 w-[75%] md:w-[32%] lg:w-[24%] xl:w-[19%]"
+            >
+              <ProductCard product={product} priority={index === 0} />
+            </div>
           ))}
-        </Swiper>
+        </div>
 
-        {/* Navigation buttons */}
+        {/* Navigation arrows - visible on hover (desktop) */}
         <button
-          onClick={() => swiper?.slidePrev()}
-          className={`absolute left-2 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full bg-black/50 backdrop-blur-sm border border-white/20 text-white hover:bg-black/70 flex items-center justify-center transition-all duration-300 ${
-            isBeginning ? "opacity-0 pointer-events-none" : "opacity-0 group-hover/carousel:opacity-100"
-          }`}
+          onClick={() => scroll("left")}
+          className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm border shadow-lg text-foreground hover:bg-background hidden md:flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-opacity"
           aria-label="Poprzednie produkty"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-5 w-5" />
         </button>
         <button
-          onClick={() => swiper?.slideNext()}
-          className={`absolute right-2 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full bg-black/50 backdrop-blur-sm border border-white/20 text-white hover:bg-black/70 flex items-center justify-center transition-all duration-300 ${
-            isEnd ? "opacity-0 pointer-events-none" : "opacity-0 group-hover/carousel:opacity-100"
-          }`}
+          onClick={() => scroll("right")}
+          className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm border shadow-lg text-foreground hover:bg-background hidden md:flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-opacity"
           aria-label="Następne produkty"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-5 w-5" />
         </button>
-      </div>
-
-      {/* Desktop grid */}
-      {/* md: 9 products (3x3), lg: 8 products (4x2), 2xl: 10 products (5x2) */}
-      <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-5">
-        {products.slice(0, 10).map((product, index) => (
-          <div
-            key={product.id}
-            className={
-              index === 8
-                ? "hidden md:block lg:hidden 2xl:block"
-                : index === 9
-                  ? "hidden 2xl:block"
-                  : undefined
-            }
-          >
-            <ProductCard product={product} priority={index === 0} />
-          </div>
-        ))}
       </div>
     </div>
   );
