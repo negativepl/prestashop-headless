@@ -10,9 +10,10 @@ export async function GET(request: NextRequest) {
   const category = searchParams.get("category");
   const filterParam = searchParams.get("filter");
   const sortParam = searchParams.get("sort");
+  const includeCategories = searchParams.get("categories") !== "false";
 
   if (!query || query.trim().length < 2) {
-    return NextResponse.json({ products: [], totalHits: 0 });
+    return NextResponse.json({ products: [], categories: [], totalHits: 0 });
   }
 
   try {
@@ -40,16 +41,18 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      const { products, totalHits } = await meilisearch.searchProducts(query, {
-        limit,
-        offset,
-        filter,
-        sort,
-      });
+      // Search products and categories in parallel
+      const [productsResult, categoriesResult] = await Promise.all([
+        meilisearch.searchProducts(query, { limit, offset, filter, sort }),
+        includeCategories && offset === 0
+          ? meilisearch.searchCategories(query, { limit: 5 })
+          : Promise.resolve({ categories: [], totalHits: 0 }),
+      ]);
 
       return NextResponse.json({
-        products,
-        totalHits,
+        products: productsResult.products,
+        categories: categoriesResult.categories,
+        totalHits: productsResult.totalHits,
         source: "meilisearch",
       });
     }
@@ -60,6 +63,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       products,
+      categories: [],
       totalHits: products.length,
       source: "prestashop",
     });
@@ -71,13 +75,14 @@ export async function GET(request: NextRequest) {
       const products = await prestashop.searchProducts(query, limit);
       return NextResponse.json({
         products,
+        categories: [],
         totalHits: products.length,
         source: "prestashop",
       });
     } catch (fallbackError) {
       console.error("Fallback search also failed:", fallbackError);
       return NextResponse.json(
-        { products: [], totalHits: 0, error: "Search failed" },
+        { products: [], categories: [], totalHits: 0, error: "Search failed" },
         { status: 500 }
       );
     }

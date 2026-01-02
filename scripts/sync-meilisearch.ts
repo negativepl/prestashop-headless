@@ -32,6 +32,20 @@ interface PSProduct {
   id_manufacturer: string;
   id_default_image: string;
   active: string;
+  associations?: {
+    product_features?: { id: string; id_feature_value: string }[];
+  };
+}
+
+interface PSFeature {
+  id: number;
+  name: Array<{ id: number; value: string }> | string;
+}
+
+interface PSFeatureValue {
+  id: number;
+  id_feature: string;
+  value: Array<{ id: number; value: string }> | string;
 }
 
 interface PSCategory {
@@ -62,6 +76,10 @@ interface MeiliProduct {
   imageUrl: string | null;
   quantity: number;
   active: boolean;
+  // Features
+  features: string; // Combined text for search: "Kolor: czarny, Materiał: silikon"
+  featuresList: string[]; // Array for filtering: ["Kolor: czarny", "Materiał: silikon"]
+  [key: string]: unknown; // Dynamic feature fields like feat_Kolor, feat_Materiał
 }
 
 // Helpers
@@ -93,7 +111,7 @@ async function fetchPrestaShop<T>(endpoint: string, retries = MAX_RETRIES): Prom
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 60000); // 60s timeout
+      const timeout = setTimeout(() => controller.abort(), 180000); // 180s timeout for large responses
 
       const response = await fetch(url, {
         headers: {
@@ -104,10 +122,23 @@ async function fetchPrestaShop<T>(endpoint: string, retries = MAX_RETRIES): Prom
 
       clearTimeout(timeout);
 
+      // PrestaShop sometimes returns 500 status with valid JSON data (known bug)
+      // Try to parse JSON even on error status
+      const text = await response.text();
+      try {
+        const data = JSON.parse(text);
+        // If we got valid JSON with data, use it even if status was 500
+        if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+          return data as T;
+        }
+      } catch {
+        // JSON parse failed, throw the original error
+      }
+
       if (!response.ok) {
         throw new Error(`PrestaShop API error: ${response.status}`);
       }
-      return response.json();
+      return JSON.parse(text);
     } catch (error) {
       const isLastAttempt = attempt === retries;
       if (isLastAttempt) throw error;
@@ -187,21 +218,45 @@ async function syncProducts() {
   for (const s of Array.isArray(stockResp.stock_availables) ? stockResp.stock_availables : []) {
     stock.set(parseInt(s.id_product), parseInt(s.quantity));
   }
-  console.log(`  ${stock.size} stock entries\n`);
+  console.log(`  ${stock.size} stock entries`);
+
+  // Features disabled for now - will use external optimized API later
+  const featureNames = new Map<number, string>();
+  const featureValues = new Map<number, { featureId: number; value: string }>();
+  console.log("Skipping features (will use external API later)");
+  console.log(`  ${featureValues.size} feature values\n`);
 
   // Configure Meilisearch index (only if starting fresh)
   const index = meili.index<MeiliProduct>("products");
 
+  // Build list of all feature names for filtering
+  const allFeatureKeys = Array.from(featureNames.values()).map(name =>
+    `feat_${name.replace(/[^a-zA-Z0-9ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/g, "_")}`
+  );
+
   if (startOffset === 0) {
     console.log("Configuring index settings...");
     await index.updateSettings({
-      searchableAttributes: ["name", "reference", "ean13", "description", "manufacturerName", "categoryName"],
-      displayedAttributes: ["id", "name", "price", "imageUrl", "quantity", "reference", "categoryName", "manufacturerName"],
-      filterableAttributes: ["categoryId", "categoryName", "manufacturerName", "price", "quantity", "active"],
+      searchableAttributes: [
+        "name",
+        "reference",
+        "ean13",
+        "features",  // Combined features text for search
+        "manufacturerName",
+        "categoryName",
+        "description",
+      ],
+      displayedAttributes: ["*"], // Show all fields
+      filterableAttributes: [
+        "categoryId", "categoryName", "manufacturerName",
+        "price", "quantity", "active",
+        "featuresList", // Array of "Feature: value" strings
+        ...allFeatureKeys, // Dynamic feat_Kolor, feat_Materiał, etc.
+      ],
       sortableAttributes: ["price", "name", "quantity"],
       typoTolerance: { enabled: true, minWordSizeForTypos: { oneTypo: 4, twoTypos: 8 } },
-    }).waitTask({ timeOutMs: 30000 });
-    console.log("  Settings applied\n");
+    }).waitTask({ timeout: 30000 });
+    console.log(`  Settings applied (${allFeatureKeys.length} feature filters)\n`);
   }
 
   // Process products in batches using ID-based pagination
@@ -234,6 +289,33 @@ async function syncProducts() {
       const meiliProducts: MeiliProduct[] = productList.map((p) => {
         const categoryId = parseInt(p.id_category_default) || 0;
         const manufacturerId = parseInt(p.id_manufacturer) || 0;
+
+        // Extract all features
+        const productFeatures: { name: string; value: string }[] = [];
+        const dynamicFeatures: Record<string, string> = {};
+
+        if (p.associations?.product_features) {
+          for (const pf of p.associations.product_features) {
+            const fvId = parseInt(pf.id_feature_value);
+            const fv = featureValues.get(fvId);
+            if (fv) {
+              const fName = featureNames.get(fv.featureId) || "";
+              const fValue = fv.value;
+              if (fName && fValue) {
+                productFeatures.push({ name: fName, value: fValue });
+                // Create dynamic field key (feat_Kolor, feat_Materiał, etc.)
+                const featureKey = `feat_${fName.replace(/[^a-zA-Z0-9ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/g, "_")}`;
+                dynamicFeatures[featureKey] = fValue;
+              }
+            }
+          }
+        }
+
+        // Combined features text for search
+        const featuresText = productFeatures.map(f => `${f.name}: ${f.value}`).join(", ");
+        // Array for filtering
+        const featuresList = productFeatures.map(f => `${f.name}: ${f.value}`);
+
         return {
           id: p.id,
           name: getLocalizedValue(p.name),
@@ -247,11 +329,14 @@ async function syncProducts() {
           imageUrl: buildImageUrl(p.id_default_image),
           quantity: stock.get(p.id) ?? 0,
           active: p.active === "1",
+          features: featuresText,
+          featuresList,
+          ...dynamicFeatures, // feat_Kolor: "czarny", feat_Materiał: "silikon", etc.
         };
       });
 
       // Index and wait for task to complete
-      const result = await index.addDocuments(meiliProducts, { primaryKey: "id" }).waitTask({ timeOutMs: 60000 });
+      const result = await index.addDocuments(meiliProducts, { primaryKey: "id" }).waitTask({ timeout: 60000 });
 
       if (result.status !== "succeeded") {
         console.error(`  Task ${result.uid} failed:`, result.error);

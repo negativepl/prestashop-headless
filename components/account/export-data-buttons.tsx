@@ -43,9 +43,9 @@ export function ExportDataButtons() {
         disabled={loadingFormat !== null}
       >
         {loadingFormat === "pdf" ? (
-          <Loader2 className="size-4 mr-2 animate-spin" />
+          <Loader2 className="size-4 animate-spin" />
         ) : (
-          <FileText className="size-4 mr-2" />
+          <FileText className="size-4" />
         )}
         Pobierz jako PDF
       </Button>
@@ -56,9 +56,9 @@ export function ExportDataButtons() {
         disabled={loadingFormat !== null}
       >
         {loadingFormat === "csv" ? (
-          <Loader2 className="size-4 mr-2 animate-spin" />
+          <Loader2 className="size-4 animate-spin" />
         ) : (
-          <FileText className="size-4 mr-2" />
+          <FileText className="size-4" />
         )}
         Pobierz jako CSV
       </Button>

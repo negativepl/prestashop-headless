@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, ArrowRight, CornerDownLeft } from "lucide-react";
+import { Search, X, ArrowRight, CornerDownLeft, Loader2, TrendingUp, Layers, Building2, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SearchProduct {
@@ -20,6 +20,13 @@ interface SearchProduct {
   reference: string;
 }
 
+interface SearchCategory {
+  id: number;
+  name: string;
+  nameHighlighted: string;
+  productCount: number;
+}
+
 interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -30,6 +37,8 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchProduct[]>([]);
+  const [searchCategories, setSearchCategories] = useState<SearchCategory[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<SearchCategory | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -46,6 +55,8 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
       setTimeout(() => inputRef.current?.focus(), 100);
       setSearchQuery("");
       setSearchResults([]);
+      setSearchCategories([]);
+      setSelectedCategory(null);
       setSelectedIndex(0);
     }
   }, [isOpen]);
@@ -69,21 +80,28 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
     };
   }, [isOpen, onClose]);
 
-  const fetchSearchResults = useCallback(async (query: string) => {
+  const fetchSearchResults = useCallback(async (query: string, categoryId?: number) => {
     if (query.trim().length < 2) {
       setSearchResults([]);
+      setSearchCategories([]);
       return;
     }
 
     setIsSearching(true);
     try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=8`);
+      const categoryFilter = categoryId ? `&category=${categoryId}` : "";
+      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=8${categoryFilter}`);
       const data = await response.json();
       setSearchResults(data.products || []);
+      // Only show category suggestions if no category is selected
+      if (!categoryId) {
+        setSearchCategories(data.categories || []);
+      }
       setSelectedIndex(0);
     } catch (error) {
       console.error("Search error:", error);
       setSearchResults([]);
+      setSearchCategories([]);
     } finally {
       setIsSearching(false);
     }
@@ -97,10 +115,11 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
 
     if (searchQuery.trim().length >= 2) {
       debounceRef.current = setTimeout(() => {
-        fetchSearchResults(searchQuery);
+        fetchSearchResults(searchQuery, selectedCategory?.id);
       }, 300);
     } else {
       setSearchResults([]);
+      setSearchCategories([]);
     }
 
     return () => {
@@ -108,7 +127,19 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
         clearTimeout(debounceRef.current);
       }
     };
-  }, [searchQuery, fetchSearchResults]);
+  }, [searchQuery, selectedCategory, fetchSearchResults]);
+
+  // Re-fetch when category is selected/deselected
+  const handleCategoryClick = (category: SearchCategory) => {
+    setSelectedCategory(category);
+    setSearchCategories([]);
+    fetchSearchResults(searchQuery, category.id);
+  };
+
+  const clearCategory = () => {
+    setSelectedCategory(null);
+    fetchSearchResults(searchQuery);
+  };
 
   // Keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -197,12 +228,17 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                     placeholder="Szukaj produktów..."
                     className="flex-1 h-14 bg-transparent outline-none text-lg placeholder:text-muted-foreground"
                   />
-                  {searchQuery && (
+                  {isSearching && (
+                    <Loader2 className="size-4 text-primary animate-spin" />
+                  )}
+                  {searchQuery && !isSearching && (
                     <button
                       type="button"
                       onClick={() => {
                         setSearchQuery("");
                         setSearchResults([]);
+                        setSearchCategories([]);
+                        setSelectedCategory(null);
                         inputRef.current?.focus();
                       }}
                       className="p-1.5 rounded-lg hover:bg-muted transition-colors"
@@ -214,8 +250,11 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
               </form>
 
               {/* Results */}
-              <div className="flex-1 md:flex-none md:max-h-[60vh] overflow-y-auto">
-                {isSearching ? (
+              <div className={cn(
+                "flex-1 md:flex-none md:max-h-[60vh] overflow-y-auto transition-opacity duration-150",
+                isSearching && searchResults.length > 0 && "opacity-70"
+              )}>
+                {isSearching && searchResults.length === 0 ? (
                   <div className="p-4 space-y-3">
                     {[1, 2, 3].map((i) => (
                       <div key={i} className="flex items-start gap-4 animate-pulse">
@@ -258,6 +297,43 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                       </div>
                       <ArrowRight className="size-4 text-muted-foreground" />
                     </button>
+
+                    {/* Selected category badge */}
+                    {selectedCategory && (
+                      <div className="px-4 py-2 flex items-center gap-2 bg-primary/5 border-b">
+                        <span className="text-sm text-muted-foreground">Filtr:</span>
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
+                          {selectedCategory.name}
+                          <button
+                            onClick={clearCategory}
+                            className="hover:bg-primary/20 rounded-full p-0.5 transition-colors"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Category suggestions */}
+                    {searchCategories.length > 0 && !selectedCategory && (
+                      <>
+                        <div className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider bg-muted/30">
+                          Filtruj po kategorii
+                        </div>
+                        <div className="px-4 py-2 flex flex-wrap gap-2">
+                          {searchCategories.map((category) => (
+                            <button
+                              key={category.id}
+                              onClick={() => handleCategoryClick(category)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted hover:bg-primary/10 rounded-full text-sm transition-colors"
+                            >
+                              <span dangerouslySetInnerHTML={{ __html: category.nameHighlighted }} />
+                              <span className="text-xs text-muted-foreground">({category.productCount})</span>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
 
                     {/* Product results */}
                     {searchResults.length > 0 && (
@@ -335,8 +411,101 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                     )}
                   </>
                 ) : (
-                  <div className="px-4 py-8 text-center text-muted-foreground">
-                    <p>Wpisz co najmniej 2 znaki, aby wyszukać</p>
+                  /* Empty state - popular content */
+                  <div className="flex flex-col md:flex-row">
+                    {/* Left column - searches, categories, brands */}
+                    <div className="flex-1 p-4 space-y-4 border-b md:border-b-0 md:border-r">
+                      {/* Popular searches */}
+                      <div>
+                        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                          <TrendingUp className="size-3" />
+                          Popularne wyszukiwania
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {["iPhone 16 Pro", "etui MagSafe", "ładowarka USB-C", "szkło hartowane", "AirPods"].map((query) => (
+                            <button
+                              key={query}
+                              onClick={() => setSearchQuery(query)}
+                              className="px-3 py-1.5 bg-muted hover:bg-primary/10 rounded-full text-sm transition-colors"
+                            >
+                              {query}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Popular categories */}
+                      <div>
+                        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                          <Layers className="size-3" />
+                          Popularne kategorie
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {["Etui do iPhone", "Ładowarki", "Kable", "Szkła ochronne", "Powerbanki"].map((cat) => (
+                            <button
+                              key={cat}
+                              className="px-3 py-1.5 bg-muted hover:bg-primary/10 rounded-full text-sm transition-colors"
+                            >
+                              {cat}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Popular brands */}
+                      <div>
+                        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                          <Building2 className="size-3" />
+                          Popularne marki
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {["Spigen", "Ringke", "ESR", "Baseus", "Anker", "UGREEN"].map((brand) => (
+                            <button
+                              key={brand}
+                              className="px-3 py-1.5 bg-muted hover:bg-primary/10 rounded-full text-sm transition-colors"
+                            >
+                              {brand}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right column - popular products */}
+                    <div className="flex-1 p-4">
+                      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                        <Star className="size-3" />
+                        Popularne produkty
+                      </div>
+
+                      {/* Featured product placeholder */}
+                      <div className="mb-4 p-3 rounded-xl border bg-gradient-to-br from-primary/5 to-transparent hover:border-primary/30 transition-colors cursor-pointer">
+                        <div className="flex gap-3">
+                          <div className="w-20 h-20 rounded-lg bg-muted shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs text-primary font-medium">Bestseller</span>
+                            <p className="font-medium text-sm line-clamp-2 mt-0.5">Placeholder - Popularny produkt</p>
+                            <p className="text-primary font-bold mt-1">99,99 zł</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Grid of popular products */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-2 p-2 rounded-lg border hover:border-primary/30 transition-colors cursor-pointer"
+                          >
+                            <div className="w-10 h-10 rounded bg-muted shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs line-clamp-1">Produkt {i}</p>
+                              <p className="text-xs text-primary font-medium">49,99 zł</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

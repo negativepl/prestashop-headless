@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,6 +53,7 @@ export function EditProfileDialog({ currentEmail, currentFirstName, currentLastN
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="w-full">
+          <Pencil className="size-4" />
           Edytuj dane
         </Button>
       </DialogTrigger>
@@ -116,7 +117,7 @@ export function EditProfileDialog({ currentEmail, currentFirstName, currentLastN
             <Button type="submit" className="flex-1" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="size-4 mr-2 animate-spin" />
+                  <Loader2 className="size-4 animate-spin" />
                   Zapisywanie...
                 </>
               ) : (

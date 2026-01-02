@@ -1,110 +1,137 @@
-import { writeFileSync } from "fs";
-import { join } from "path";
+/**
+ * Sync categories from PrestaShop to Meilisearch
+ *
+ * Usage:
+ *   npx tsx scripts/sync-categories.ts
+ */
+
+import { MeiliSearch } from "meilisearch";
+
+// Configuration
+const PRESTASHOP_API_URL = process.env.PRESTASHOP_API_URL || (process.env.PRESTASHOP_URL ? `${process.env.PRESTASHOP_URL}/api` : "");
+const PRESTASHOP_API_KEY = process.env.PRESTASHOP_API_KEY || "";
+const MEILISEARCH_HOST = process.env.MEILISEARCH_HOST || "http://localhost:7700";
+const MEILISEARCH_API_KEY = process.env.MEILISEARCH_API_KEY || "";
 
 interface PSCategory {
   id: number;
-  id_parent: number;
-  level_depth: number;
+  id_parent: string;
+  level_depth: string;
+  nb_products_recursive: string;
   active: string;
-  name: { id: string; value: string }[];
-  description: { id: string; value: string }[];
+  name: Array<{ id: number; value: string }> | string;
 }
 
-interface Category {
+interface MeiliCategory {
   id: number;
   name: string;
-  description: string;
   parentId: number;
   level: number;
-  active: boolean;
-  children?: Category[];
+  productCount: number;
 }
 
-const PRESTASHOP_URL = process.env.PRESTASHOP_URL;
-const PRESTASHOP_API_KEY = process.env.PRESTASHOP_API_KEY;
-
-if (!PRESTASHOP_URL || !PRESTASHOP_API_KEY) {
-  throw new Error(
-    "Missing required environment variables: PRESTASHOP_URL and PRESTASHOP_API_KEY must be set"
-  );
+function getLocalizedValue(field: unknown, langId: number = 1): string {
+  if (!field) return "";
+  if (typeof field === "string") return field;
+  if (Array.isArray(field)) {
+    const found = field.find((f) => f.id === langId);
+    return found?.value || field[0]?.value || "";
+  }
+  if (typeof field === "object" && field !== null && "value" in field) {
+    return (field as { value: string }).value;
+  }
+  return "";
 }
 
-async function fetchCategories(): Promise<PSCategory[]> {
-  const url = `${PRESTASHOP_URL}/api/categories?filter[active]=1&display=full&output_format=JSON`;
+async function fetchPrestaShop<T>(endpoint: string): Promise<T> {
+  const url = `${PRESTASHOP_API_URL}/${endpoint}${endpoint.includes("?") ? "&" : "?"}output_format=JSON`;
 
   const response = await fetch(url, {
     headers: {
-      Authorization: `Basic ${Buffer.from(PRESTASHOP_API_KEY + ":").toString("base64")}`,
+      Authorization: `Basic ${Buffer.from(`${PRESTASHOP_API_KEY}:`).toString("base64")}`,
     },
   });
 
   if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
+    throw new Error(`PrestaShop API error: ${response.status}`);
+  }
+  return response.json();
+}
+
+async function syncCategories() {
+  console.log("\n=== Meilisearch Category Sync ===\n");
+  console.log(`PrestaShop: ${PRESTASHOP_API_URL}`);
+  console.log(`Meilisearch: ${MEILISEARCH_HOST}\n`);
+
+  if (!PRESTASHOP_API_URL || !PRESTASHOP_API_KEY) {
+    console.error("Error: PRESTASHOP_API_URL and PRESTASHOP_API_KEY required");
+    process.exit(1);
   }
 
-  const data = await response.json();
-  return data.categories || [];
-}
+  const meili = new MeiliSearch({
+    host: MEILISEARCH_HOST,
+    apiKey: MEILISEARCH_API_KEY,
+  });
 
-function getMultiLangValue(field: { id: string; value: string }[] | undefined, langId: string = "1"): string {
-  if (!field || field.length === 0) return "";
-  const langValue = field.find((f) => f.id === langId);
-  return langValue?.value || field[0]?.value || "";
-}
+  try {
+    await meili.health();
+    console.log("Meilisearch: OK\n");
+  } catch {
+    console.error("Cannot connect to Meilisearch");
+    process.exit(1);
+  }
 
-function buildCategoryTree(categories: PSCategory[], rootParentId: number = 2): Category[] {
-  const mapped = categories.map((c) => ({
-    id: c.id,
-    name: getMultiLangValue(c.name),
-    description: getMultiLangValue(c.description),
-    parentId: c.id_parent,
-    level: c.level_depth,
-    active: c.active === "1",
-  }));
-
-  const visited = new Set<number>();
-
-  const buildTree = (parentId: number, depth: number = 0): Category[] => {
-    if (depth > 3 || visited.has(parentId)) return [];
-    visited.add(parentId);
-
-    const children = mapped
-      .filter((cat) => cat.parentId === parentId && cat.id !== parentId)
-      .map((cat) => {
-        const subChildren = buildTree(cat.id, depth + 1);
-        return {
-          ...cat,
-          children: subChildren.length > 0 ? subChildren : undefined,
-        };
-      });
-
-    visited.delete(parentId);
-    return children;
-  };
-
-  return buildTree(rootParentId);
-}
-
-async function main() {
+  // Fetch categories
   console.log("Fetching categories from PrestaShop...");
+  const catResp = await fetchPrestaShop<{ categories?: PSCategory[] }>(
+    "categories?display=[id,name,id_parent,level_depth,nb_products_recursive,active]"
+  );
 
-  const categories = await fetchCategories();
-  console.log(`Fetched ${categories.length} categories`);
+  const categories = Array.isArray(catResp.categories) ? catResp.categories : [];
+  console.log(`  Found ${categories.length} categories`);
 
-  const tree = buildCategoryTree(categories);
-  console.log(`Built tree with ${tree.length} top-level categories`);
+  // Transform to Meilisearch format
+  const meiliCategories: MeiliCategory[] = categories
+    .filter((c) => c.active === "1" && parseInt(c.nb_products_recursive) > 0)
+    .map((c) => ({
+      id: c.id,
+      name: getLocalizedValue(c.name),
+      parentId: parseInt(c.id_parent) || 0,
+      level: parseInt(c.level_depth) || 0,
+      productCount: parseInt(c.nb_products_recursive) || 0,
+    }));
 
-  const outputPath = join(process.cwd(), "data", "categories.json");
+  console.log(`  ${meiliCategories.length} active categories with products\n`);
 
-  // Create data directory if not exists
-  const { mkdirSync, existsSync } = await import("fs");
-  const dataDir = join(process.cwd(), "data");
-  if (!existsSync(dataDir)) {
-    mkdirSync(dataDir, { recursive: true });
-  }
+  // Configure and index
+  const index = meili.index<MeiliCategory>("categories");
 
-  writeFileSync(outputPath, JSON.stringify(tree, null, 2));
-  console.log(`Saved to ${outputPath}`);
+  console.log("Configuring index settings...");
+  await index
+    .updateSettings({
+      searchableAttributes: ["name"],
+      displayedAttributes: ["id", "name", "productCount"],
+      filterableAttributes: ["level", "productCount"],
+      sortableAttributes: ["productCount", "name"],
+      typoTolerance: {
+        enabled: true,
+        minWordSizeForTypos: { oneTypo: 4, twoTypos: 8 },
+        disableOnNumbers: true,
+      },
+    })
+    .waitTask({ timeout: 30000 });
+  console.log("  Settings applied");
+
+  console.log("Indexing categories...");
+  await index.addDocuments(meiliCategories, { primaryKey: "id" }).waitTask({ timeout: 30000 });
+  console.log(`  Indexed ${meiliCategories.length} categories`);
+
+  // Stats
+  const stats = await index.getStats();
+  console.log(`\n=== Complete: ${stats.numberOfDocuments} categories in index ===\n`);
 }
 
-main().catch(console.error);
+syncCategories().catch((e) => {
+  console.error("Sync failed:", e);
+  process.exit(1);
+});

@@ -20,6 +20,15 @@ export interface MeiliProduct {
   active: boolean;
 }
 
+// Category document structure for Meilisearch
+export interface MeiliCategory {
+  id: number;
+  name: string;
+  parentId: number;
+  level: number;
+  productCount: number;
+}
+
 // Search result type
 export interface SearchResult {
   id: number;
@@ -33,9 +42,18 @@ export interface SearchResult {
   reference: string;
 }
 
+// Category search result type
+export interface CategorySearchResult {
+  id: number;
+  name: string;
+  nameHighlighted: string;
+  productCount: number;
+}
+
 class MeilisearchClient {
   private client: MeiliSearch;
   private productsIndex: Index<MeiliProduct> | null = null;
+  private categoriesIndex: Index<MeiliCategory> | null = null;
 
   constructor() {
     this.client = new MeiliSearch({
@@ -122,6 +140,68 @@ class MeilisearchClient {
     }
   }
 
+  // Get or create categories index
+  async getCategoriesIndex(): Promise<Index<MeiliCategory>> {
+    if (this.categoriesIndex) {
+      return this.categoriesIndex;
+    }
+
+    try {
+      this.categoriesIndex = this.client.index<MeiliCategory>("categories");
+
+      await this.categoriesIndex.updateSettings({
+        searchableAttributes: ["name"],
+        displayedAttributes: ["id", "name", "productCount"],
+        filterableAttributes: ["level", "productCount"],
+        sortableAttributes: ["productCount", "name"],
+        typoTolerance: {
+          enabled: true,
+          minWordSizeForTypos: { oneTypo: 4, twoTypos: 8 },
+          disableOnNumbers: true,
+        },
+      });
+
+      return this.categoriesIndex;
+    } catch (error) {
+      console.error("Failed to get/create categories index:", error);
+      throw error;
+    }
+  }
+
+  // Search categories
+  async searchCategories(
+    query: string,
+    options: { limit?: number } = {}
+  ): Promise<{ categories: CategorySearchResult[]; totalHits: number }> {
+    const { limit = 5 } = options;
+
+    try {
+      const index = await this.getCategoriesIndex();
+
+      const results = await index.search(query, {
+        limit,
+        filter: "productCount > 0",
+        attributesToRetrieve: ["id", "name", "productCount"],
+        attributesToHighlight: ["name"],
+        highlightPreTag: '<mark class="bg-primary/20 text-foreground">',
+        highlightPostTag: "</mark>",
+      });
+
+      return {
+        categories: results.hits.map((hit) => ({
+          id: hit.id,
+          name: hit.name,
+          nameHighlighted: hit._formatted?.name || hit.name,
+          productCount: hit.productCount || 0,
+        })),
+        totalHits: results.estimatedTotalHits || results.hits.length,
+      };
+    } catch (error) {
+      console.error("Meilisearch category search error:", error);
+      return { categories: [], totalHits: 0 };
+    }
+  }
+
   // Search products
   async searchProducts(
     query: string,
@@ -140,7 +220,7 @@ class MeilisearchClient {
       const results = await index.search(query, {
         limit,
         offset,
-        filter: filter ? `${filter} AND active = true` : "active = true",
+        filter: filter ? `${filter} AND active = true AND quantity > 0` : "active = true AND quantity > 0",
         sort,
         attributesToRetrieve: ["id", "name", "price", "imageUrl", "categoryName", "manufacturerName", "quantity", "reference"],
         attributesToHighlight: ["name"],
@@ -183,6 +263,18 @@ class MeilisearchClient {
       }
     } catch (error) {
       console.error("Failed to index products:", error);
+      throw error;
+    }
+  }
+
+  // Index categories (for sync script)
+  async indexCategories(categories: MeiliCategory[]): Promise<void> {
+    try {
+      const index = await this.getCategoriesIndex();
+      await index.addDocuments(categories, { primaryKey: "id" });
+      console.log(`Indexed ${categories.length} categories`);
+    } catch (error) {
+      console.error("Failed to index categories:", error);
       throw error;
     }
   }

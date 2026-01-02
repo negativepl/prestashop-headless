@@ -40,7 +40,7 @@ export function AddAddressDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="w-full">
-          <Plus className="size-4 mr-2" />
+          <Plus className="size-4" />
           Dodaj adres
         </Button>
       </DialogTrigger>
@@ -159,7 +159,7 @@ export function AddAddressDialog() {
             <Button type="submit" className="flex-1" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="size-4 mr-2 animate-spin" />
+                  <Loader2 className="size-4 animate-spin" />
                   Dodawanie...
                 </>
               ) : (

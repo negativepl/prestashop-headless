@@ -97,13 +97,45 @@ class PrestaShopClient {
     const separator = url.includes("?") ? "&" : "?";
     const fullUrl = `${url}${separator}output_format=JSON`;
 
+    // Disable cache for requests with filters (customer-specific data)
+    const shouldCache = !endpoint.includes("filter[") && cacheTime > 0;
+
     const response = await fetch(fullUrl, {
       ...options,
       headers: this.getHeaders(),
-      next: { revalidate: cacheTime },
+      ...(shouldCache ? { next: { revalidate: cacheTime } } : { cache: "no-store" }),
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`PrestaShop API error (${response.status}) for ${fullUrl}:`, errorText.slice(0, 200));
+      throw new Error(`PrestaShop API error: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  // Fetch with XML body for POST/PUT requests (PrestaShop requires XML for write operations)
+  private async fetchXml<T>(
+    endpoint: string,
+    options?: RequestInit
+  ): Promise<T> {
+    const url = `${this.baseUrl}/api/${endpoint}`;
+    const separator = url.includes("?") ? "&" : "?";
+    const fullUrl = `${url}${separator}output_format=JSON`;
+
+    const response = await fetch(fullUrl, {
+      ...options,
+      headers: {
+        Authorization: `Basic ${Buffer.from(this.apiKey + ":").toString("base64")}`,
+        "Content-Type": "application/xml",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error("PrestaShop API error response:", text);
       throw new Error(`PrestaShop API error: ${response.status} ${response.statusText}`);
     }
 
@@ -947,16 +979,23 @@ class PrestaShopClient {
       const rawAddresses = response.addresses as PSAddress | PSAddress[] | undefined;
       const addresses: PSAddress[] = Array.isArray(rawAddresses) ? rawAddresses : rawAddresses ? [rawAddresses] : [];
 
-      // Get countries for names
-      const countriesResponse = await this.fetch<PSResponse<PSCountry[]>>(
-        "countries?display=full"
-      );
-      const rawCountries = countriesResponse.countries as PSCountry | PSCountry[] | undefined;
-      const countries: PSCountry[] = Array.isArray(rawCountries) ? rawCountries : rawCountries ? [rawCountries] : [];
+      // Get countries for names - with fallback for PrestaShop API issues
       const countriesMap = new Map<number, string>();
-      countries.forEach((country) => {
-        countriesMap.set(country.id, this.getMultiLangValue(country.name));
-      });
+      // Hardcoded Poland as fallback (id=14)
+      countriesMap.set(14, "Polska");
+
+      try {
+        const countriesResponse = await this.fetch<PSResponse<PSCountry[]>>(
+          "countries?display=full"
+        );
+        const rawCountries = countriesResponse.countries as PSCountry | PSCountry[] | undefined;
+        const countries: PSCountry[] = Array.isArray(rawCountries) ? rawCountries : rawCountries ? [rawCountries] : [];
+        countries.forEach((country) => {
+          countriesMap.set(country.id, this.getMultiLangValue(country.name));
+        });
+      } catch (countriesError) {
+        console.warn("Could not fetch countries, using fallback:", countriesError);
+      }
 
       return addresses.map((addr) => ({
         id: addr.id,
@@ -995,25 +1034,27 @@ class PrestaShopClient {
     }
   ): Promise<Address | null> {
     try {
-      const addressData = {
-        address: {
-          id_customer: String(customerId),
-          id_country: String(data.countryId),
-          alias: data.alias,
-          lastname: data.lastName,
-          firstname: data.firstName,
-          address1: data.address1,
-          address2: data.address2 || "",
-          postcode: data.postcode,
-          city: data.city,
-          phone: data.phone || "",
-          company: data.company || "",
-        },
-      };
+      // PrestaShop API requires XML for POST requests
+      const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+<prestashop xmlns:xlink="http://www.w3.org/1999/xlink">
+  <address>
+    <id_customer>${customerId}</id_customer>
+    <id_country>${data.countryId}</id_country>
+    <alias><![CDATA[${data.alias}]]></alias>
+    <lastname><![CDATA[${data.lastName}]]></lastname>
+    <firstname><![CDATA[${data.firstName}]]></firstname>
+    <address1><![CDATA[${data.address1}]]></address1>
+    <address2><![CDATA[${data.address2 || ""}]]></address2>
+    <postcode><![CDATA[${data.postcode}]]></postcode>
+    <city><![CDATA[${data.city}]]></city>
+    <phone><![CDATA[${data.phone || ""}]]></phone>
+    <company><![CDATA[${data.company || ""}]]></company>
+  </address>
+</prestashop>`;
 
-      const response = await this.fetch<PSResponse<PSAddress>>("addresses", {
+      const response = await this.fetchXml<PSResponse<PSAddress>>("addresses", {
         method: "POST",
-        body: JSON.stringify(addressData),
+        body: xmlBody,
       });
 
       const addr = response.address as PSAddress;
@@ -1048,10 +1089,19 @@ class PrestaShopClient {
 
   async deleteAddress(addressId: number): Promise<boolean> {
     try {
-      await this.fetch(`addresses/${addressId}`, {
+      const url = `${this.baseUrl}/api/addresses/${addressId}`;
+      const response = await fetch(url, {
         method: "DELETE",
+        headers: this.getHeaders(),
       });
-      return true;
+
+      // DELETE returns 200/204 with empty body on success
+      if (response.ok) {
+        return true;
+      }
+
+      console.error(`Failed to delete address ${addressId}: ${response.status}`);
+      return false;
     } catch (error) {
       console.error("Error deleting address:", error);
       return false;

@@ -65,7 +65,7 @@ export function ChangePasswordDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="w-full">
-          <Key className="size-4 mr-2" />
+          <Key className="size-4" />
           Zmień hasło
         </Button>
       </DialogTrigger>
@@ -161,7 +161,7 @@ export function ChangePasswordDialog() {
             <Button type="submit" className="flex-1" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="size-4 mr-2 animate-spin" />
+                  <Loader2 className="size-4 animate-spin" />
                   Zmieniam...
                 </>
               ) : (

@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Package, ChevronRight, ShoppingBag, User, MapPin, Download, Shield } from "lucide-react";
+import { Package, ChevronRight, ShoppingBag, User, MapPin, Download, Shield, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { prestashop } from "@/lib/prestashop/client";
 import { getSession } from "@/lib/auth/session";
 import { AddAddressDialog } from "@/components/account/add-address-dialog";
+import { AddressCard } from "@/components/account/address-card";
 import { EditProfileDialog } from "@/components/account/edit-profile-dialog";
 import { ChangePasswordDialog } from "@/components/account/change-password-dialog";
 import { ExportDataButtons } from "@/components/account/export-data-buttons";
@@ -132,28 +133,7 @@ export default async function AccountPage() {
               {addresses.length > 0 ? (
                 <div className="space-y-3">
                   {addresses.map((address) => (
-                    <div key={address.id} className="p-3 rounded-lg border text-sm">
-                      <p className="font-medium">{address.alias}</p>
-                      <p className="text-muted-foreground">
-                        {address.firstName} {address.lastName}
-                      </p>
-                      {address.company && (
-                        <p className="text-muted-foreground">{address.company}</p>
-                      )}
-                      <p className="text-muted-foreground">{address.address1}</p>
-                      {address.address2 && (
-                        <p className="text-muted-foreground">{address.address2}</p>
-                      )}
-                      <p className="text-muted-foreground">
-                        {address.postcode} {address.city}
-                      </p>
-                      <p className="text-muted-foreground">{address.country}</p>
-                      {(address.phone || address.phoneMobile) && (
-                        <p className="text-muted-foreground mt-1">
-                          Tel: {address.phone || address.phoneMobile}
-                        </p>
-                      )}
-                    </div>
+                    <AddressCard key={address.id} address={address} />
                   ))}
                 </div>
               ) : (
@@ -291,6 +271,7 @@ export default async function AccountPage() {
               </p>
               <Link href="/contact">
                 <Button variant="outline" size="sm">
+                  <Mail className="size-4" />
                   Skontaktuj się z nami
                 </Button>
               </Link>

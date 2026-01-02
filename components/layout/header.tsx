@@ -429,22 +429,27 @@ export function Header({ categories = [] }: HeaderProps) {
                 <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-black">
                   {isLoggedIn ? (
                     <>
-                      <DropdownMenuLabel>{user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : "Moje konto"}</DropdownMenuLabel>
+                      <DropdownMenuLabel className="font-normal">
+                        <div className="flex flex-col gap-0.5">
+                          <p className="text-sm font-medium">{user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : "Moje konto"}</p>
+                          {user?.email && <p className="text-xs text-muted-foreground truncate">{user.email}</p>}
+                        </div>
+                      </DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link href="/account" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2 cursor-pointer">
+                        <Link href="/account" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2">
                           <User className="size-4" />
                           Moje konto
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href="/favorites" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2 cursor-pointer">
+                        <Link href="/favorites" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2">
                           <Heart className="size-4" />
                           Ulubione
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => { setUserMenuOpen(false); handleLogout(); }} className="flex items-center gap-2 cursor-pointer text-destructive">
+                      <DropdownMenuItem variant="destructive" onClick={() => { setUserMenuOpen(false); handleLogout(); }} className="flex items-center gap-2">
                         <LogOut className="size-4" />
                         Wyloguj się
                       </DropdownMenuItem>

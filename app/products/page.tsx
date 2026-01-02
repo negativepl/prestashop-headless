@@ -26,7 +26,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const isSearchMode = !!search?.trim();
 
   // For search mode, render client component with filters
-  if (isSearchMode) {
+  if (isSearchMode && search) {
     return <SearchResults query={search.trim()} />;
   }
 

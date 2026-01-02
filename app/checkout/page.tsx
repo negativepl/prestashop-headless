@@ -236,6 +236,36 @@ export default function CheckoutPage() {
     setError(null);
   };
 
+  const formatPhoneNumber = (value: string) => {
+    // Remove all non-digit characters except +
+    const cleaned = value.replace(/[^\d+]/g, '');
+
+    // If starts with +48, format as: +48 XXX XXX XXX
+    if (cleaned.startsWith('+48')) {
+      const digits = cleaned.slice(3);
+      const parts = digits.match(/.{1,3}/g) || [];
+      return '+48 ' + parts.join(' ').trim();
+    }
+
+    // If starts with +, keep it and format rest
+    if (cleaned.startsWith('+')) {
+      const countryCode = cleaned.slice(0, 3); // e.g., +48
+      const digits = cleaned.slice(3);
+      const parts = digits.match(/.{1,3}/g) || [];
+      return countryCode + ' ' + parts.join(' ').trim();
+    }
+
+    // Otherwise just format as XXX XXX XXX
+    const parts = cleaned.match(/.{1,3}/g) || [];
+    return parts.join(' ');
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setForm({ ...form, phone: formatted });
+    setError(null);
+  };
+
   const selectedShippingMethod = ALL_SHIPPING_METHODS.find(m => m.id === selectedShipping);
   const selectedPaymentMethod = PAYMENT_METHODS.find(m => m.id === selectedPayment);
   const FREE_SHIPPING_THRESHOLD = 100;
@@ -427,7 +457,7 @@ export default function CheckoutPage() {
                           type="tel"
                           required
                           value={form.phone}
-                          onChange={handleChange}
+                          onChange={handlePhoneChange}
                           placeholder="+48 123 456 789"
                           className="h-12 text-base pl-11"
                         />
@@ -750,10 +780,10 @@ export default function CheckoutPage() {
                                           <button
                                             type="button"
                                             onClick={() => setUseDifferentDeliveryAddress(false)}
-                                            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                                            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all border ${
                                               !useDifferentDeliveryAddress
-                                                ? "bg-primary text-primary-foreground"
-                                                : "bg-background border hover:bg-muted"
+                                                ? "bg-primary text-primary-foreground border-primary"
+                                                : "bg-background border-border hover:bg-muted"
                                             }`}
                                           >
                                             Wyślij pod mój adres
@@ -761,10 +791,10 @@ export default function CheckoutPage() {
                                           <button
                                             type="button"
                                             onClick={() => setUseDifferentDeliveryAddress(true)}
-                                            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                                            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all border ${
                                               useDifferentDeliveryAddress
-                                                ? "bg-primary text-primary-foreground"
-                                                : "bg-background border hover:bg-muted"
+                                                ? "bg-primary text-primary-foreground border-primary"
+                                                : "bg-background border-border hover:bg-muted"
                                             }`}
                                           >
                                             Wyślij pod inny adres

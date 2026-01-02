@@ -59,6 +59,29 @@ export interface TrustItem {
   enabled: boolean
 }
 
+export interface SEOSettings {
+  metaTitle?: string
+  metaDescription?: string
+  metaKeywords?: string
+  ogTitle?: string
+  ogDescription?: string
+  ogImage?: {
+    url: string
+    width?: number
+    height?: number
+  }
+  ogType?: 'website' | 'article' | 'product'
+  twitterCard?: 'summary' | 'summary_large_image'
+  twitterSite?: string
+  robotsIndex?: boolean
+  robotsFollow?: boolean
+  googleAnalyticsId?: string
+  googleTagManagerId?: string
+  facebookPixelId?: string
+  googleVerification?: string
+  bingVerification?: string
+}
+
 async function fetchCMS<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
   const url = new URL(`${CMS_URL}/api/${endpoint}`)
 
@@ -195,6 +218,46 @@ export async function getFooter() {
     return await fetchCMS<any>('globals/footer')
   } catch (error) {
     console.error('Failed to fetch footer from CMS:', error)
+    return null
+  }
+}
+
+export async function getSEO(): Promise<SEOSettings | null> {
+  try {
+    const data = await fetchCMS<any>('globals/seo', {
+      depth: '1',
+    })
+
+    // Process OG image URL
+    let ogImage = undefined
+    if (data.ogImage?.url) {
+      ogImage = {
+        url: `${CMS_URL}${data.ogImage.url}`,
+        width: data.ogImage.width,
+        height: data.ogImage.height,
+      }
+    }
+
+    return {
+      metaTitle: data.metaTitle,
+      metaDescription: data.metaDescription,
+      metaKeywords: data.metaKeywords,
+      ogTitle: data.ogTitle,
+      ogDescription: data.ogDescription,
+      ogImage,
+      ogType: data.ogType,
+      twitterCard: data.twitterCard,
+      twitterSite: data.twitterSite,
+      robotsIndex: data.robotsIndex ?? true,
+      robotsFollow: data.robotsFollow ?? true,
+      googleAnalyticsId: data.googleAnalyticsId,
+      googleTagManagerId: data.googleTagManagerId,
+      facebookPixelId: data.facebookPixelId,
+      googleVerification: data.googleVerification,
+      bingVerification: data.bingVerification,
+    }
+  } catch (error) {
+    console.error('Failed to fetch SEO settings from CMS:', error)
     return null
   }
 }

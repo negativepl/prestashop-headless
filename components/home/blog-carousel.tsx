@@ -11,15 +11,7 @@ import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import "swiper/css";
 import "swiper/css/free-mode";
 
-interface BlogPost {
-  id: string;
-  slug: string;
-  title: string;
-  excerpt: string;
-  image: string | null;
-  imageAlt: string | null;
-  date: string;
-}
+import type { BlogPost } from "@/lib/wordpress/client";
 
 interface BlogCarouselProps {
   posts: BlogPost[];

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import useSWR from "swr";
-import { Search, SlidersHorizontal, X, Grid3X3, LayoutList, Loader2 } from "lucide-react";
+import { Search, SlidersHorizontal, X, Grid3X3, LayoutList, Loader2, FolderOpen } from "lucide-react";
 import Link from "next/link";
 import { ProductCard } from "@/components/products/product-card";
 import { ProductCardRow } from "@/components/products/product-card-row";
@@ -21,18 +21,28 @@ interface SearchResultsProps {
   query: string;
 }
 
+interface SearchProduct {
+  id: number;
+  name: string;
+  nameHighlighted: string;
+  price: number;
+  imageUrl: string | null;
+  categoryName: string;
+  manufacturerName: string;
+  quantity: number;
+  reference: string;
+}
+
+interface SearchCategory {
+  id: number;
+  name: string;
+  nameHighlighted: string;
+  productCount: number;
+}
+
 interface SearchResponse {
-  products: {
-    id: number;
-    name: string;
-    nameHighlighted: string;
-    price: number;
-    imageUrl: string | null;
-    categoryName: string;
-    manufacturerName: string;
-    quantity: number;
-    reference: string;
-  }[];
+  products: SearchProduct[];
+  categories: SearchCategory[];
   totalHits: number;
 }
 
@@ -49,7 +59,6 @@ export function SearchResults({ query }: SearchResultsProps) {
   // Filters state
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
-  const [inStock, setInStock] = useState(false);
   const [selectedManufacturers, setSelectedManufacturers] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("default");
 
@@ -58,7 +67,6 @@ export function SearchResults({ query }: SearchResultsProps) {
     const filters: string[] = [];
     if (priceMin) filters.push(`price >= ${parseFloat(priceMin) / 1.23}`); // Convert to net price
     if (priceMax) filters.push(`price <= ${parseFloat(priceMax) / 1.23}`);
-    if (inStock) filters.push("quantity > 0");
     if (selectedManufacturers.length > 0) {
       const manuFilter = selectedManufacturers.map(m => `manufacturerName = "${m}"`).join(" OR ");
       filters.push(`(${manuFilter})`);
@@ -97,6 +105,7 @@ export function SearchResults({ query }: SearchResultsProps) {
   );
 
   const searchResults = data?.products || [];
+  const searchCategories = data?.categories || [];
   const totalHits = data?.totalHits || 0;
 
   // Convert to Product format
@@ -143,12 +152,11 @@ export function SearchResults({ query }: SearchResultsProps) {
   const clearFilters = () => {
     setPriceMin("");
     setPriceMax("");
-    setInStock(false);
     setSelectedManufacturers([]);
     setSortBy("default");
   };
 
-  const hasActiveFilters = priceMin || priceMax || inStock || selectedManufacturers.length > 0;
+  const hasActiveFilters = priceMin || priceMax || selectedManufacturers.length > 0;
 
   const toggleManufacturer = (manu: string) => {
     setSelectedManufacturers((prev) =>
@@ -177,23 +185,6 @@ export function SearchResults({ query }: SearchResultsProps) {
             onChange={(e) => setPriceMax(e.target.value)}
             className="h-9"
           />
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* Availability */}
-      <div>
-        <h3 className="font-semibold mb-3">Dostępność</h3>
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="inStock"
-            checked={inStock}
-            onCheckedChange={(checked) => setInStock(checked === true)}
-          />
-          <Label htmlFor="inStock" className="text-sm cursor-pointer">
-            Tylko dostępne
-          </Label>
         </div>
       </div>
 
@@ -386,6 +377,28 @@ export function SearchResults({ query }: SearchResultsProps) {
                 </Select>
               </div>
             </div>
+
+            {/* Categories */}
+            {searchCategories.length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <FolderOpen className="size-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-muted-foreground">Kategorie</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {searchCategories.map((cat) => (
+                    <Link
+                      key={cat.id}
+                      href={`/categories/${cat.id}`}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-muted hover:bg-muted/80 rounded-full text-sm font-medium transition-colors"
+                    >
+                      <span dangerouslySetInnerHTML={{ __html: cat.nameHighlighted }} />
+                      <span className="text-xs text-muted-foreground">({cat.productCount})</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Products Grid */}
             {viewMode === "grid" ? (
