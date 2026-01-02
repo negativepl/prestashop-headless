@@ -26,6 +26,9 @@ export async function registerUser(formData: FormData) {
   const confirmPassword = formData.get("confirmPassword") as string;
   const firstName = formData.get("firstName") as string;
   const lastName = formData.get("lastName") as string;
+  const gender = formData.get("gender") as string | null;
+  const birthday = formData.get("birthday") as string | null;
+  const newsletter = formData.get("newsletter") === "on";
 
   // Rate limiting - max 5 registrations per IP per 15 minutes
   const ip = await getClientIP();
@@ -78,6 +81,9 @@ export async function registerUser(formData: FormData) {
     password,
     firstName,
     lastName,
+    gender: gender || undefined,
+    birthday: birthday || undefined,
+    newsletter,
   });
 
   if (result.success && result.customerId) {

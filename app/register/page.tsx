@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, Eye, EyeOff, ArrowRight, User, AlertCircle, CheckCircle } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, User, AlertCircle, CheckCircle, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { registerUser } from "@/app/actions/auth";
+import { cn } from "@/lib/utils";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -17,6 +19,10 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [gender, setGender] = useState<string>("");
+  const [birthDay, setBirthDay] = useState<string>("");
+  const [birthMonth, setBirthMonth] = useState<string>("");
+  const [birthYear, setBirthYear] = useState<string>("");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -24,6 +30,14 @@ export default function RegisterPage() {
     setError(null);
 
     const formData = new FormData(e.currentTarget);
+    // Add gender from state (Select doesn't use native form data)
+    if (gender) {
+      formData.set("gender", gender);
+    }
+    // Add birthday from state if all parts are filled
+    if (birthDay && birthMonth && birthYear) {
+      formData.set("birthday", `${birthYear}-${birthMonth.padStart(2, "0")}-${birthDay.padStart(2, "0")}`);
+    }
     const result = await registerUser(formData);
 
     setIsLoading(false);
@@ -160,6 +174,78 @@ export default function RegisterPage() {
               >
                 {showConfirmPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
               </button>
+            </div>
+          </div>
+
+          {/* Optional fields */}
+          <div className="space-y-2">
+            <Label htmlFor="gender">Płeć <span className="text-muted-foreground text-xs">(opcjonalne)</span></Label>
+            <Select value={gender} onValueChange={setGender}>
+              <SelectTrigger className="w-full !h-12 bg-white dark:bg-neutral-900">
+                <SelectValue placeholder="Wybierz płeć..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">Mężczyzna</SelectItem>
+                <SelectItem value="2">Kobieta</SelectItem>
+                <SelectItem value="0">Wolę nie podawać</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Data urodzenia <span className="text-muted-foreground text-xs">(opcjonalne)</span></Label>
+            <div className="grid grid-cols-3 gap-2">
+              <Select value={birthDay} onValueChange={setBirthDay}>
+                <SelectTrigger className="w-full !h-12 bg-white dark:bg-neutral-900">
+                  <SelectValue placeholder="Dzień" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                    <SelectItem key={day} value={String(day)}>{day}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={birthMonth} onValueChange={setBirthMonth}>
+                <SelectTrigger className="w-full !h-12 bg-white dark:bg-neutral-900">
+                  <SelectValue placeholder="Miesiąc" />
+                </SelectTrigger>
+                <SelectContent>
+                  {["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"].map((month, i) => (
+                    <SelectItem key={i + 1} value={String(i + 1)}>{month}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={birthYear} onValueChange={setBirthYear}>
+                <SelectTrigger className="w-full !h-12 bg-white dark:bg-neutral-900">
+                  <SelectValue placeholder="Rok" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: new Date().getFullYear() - 1939 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+                    <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Newsletter with discount incentive */}
+          <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="newsletter"
+                name="newsletter"
+                className="mt-0.5"
+              />
+              <div className="flex-1">
+                <Label htmlFor="newsletter" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                  <Gift className="size-4 text-primary" />
+                  Zapisz się do newslettera
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Odbierz <span className="font-semibold text-primary">15% rabatu</span> na pierwsze zakupy!
+                  Bądź na bieżąco z nowościami i ekskluzywnymi promocjami.
+                </p>
+              </div>
             </div>
           </div>
 

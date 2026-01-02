@@ -84,6 +84,7 @@ class BinshopsClient {
     const response = await fetch(url, {
       ...fetchOptions,
       headers: this.getHeaders(withAuth),
+      credentials: "include" as RequestCredentials,
       ...(shouldCache ? { next: { revalidate: cacheTime } } : { cache: "no-store" }),
     });
 
@@ -94,9 +95,35 @@ class BinshopsClient {
     }
 
     // Save session cookie for subsequent requests
-    const setCookie = response.headers.get("set-cookie");
-    if (setCookie) {
-      this.sessionCookie = setCookie;
+    // Try getSetCookie() first (modern method), fallback to get("set-cookie")
+    const setCookieHeaders = (response.headers as any).getSetCookie?.() || [];
+    const setCookieHeader = response.headers.get("set-cookie");
+
+    const allCookies: string[] = [];
+    if (setCookieHeaders.length > 0) {
+      allCookies.push(...setCookieHeaders);
+    } else if (setCookieHeader) {
+      // Fallback: might be comma-separated or single value
+      allCookies.push(setCookieHeader);
+    }
+
+    for (const cookie of allCookies) {
+      // Extract just the cookie name=value part (before any semicolons)
+      const cookiePart = cookie.split(";")[0];
+      if (!cookiePart) continue;
+
+      // Merge with existing cookies if we have any
+      if (this.sessionCookie) {
+        const existingCookies = this.sessionCookie.split("; ").filter(c => {
+          const existingName = c.split("=")[0];
+          const newName = cookiePart.split("=")[0];
+          return existingName !== newName;
+        });
+        existingCookies.push(cookiePart);
+        this.sessionCookie = existingCookies.join("; ");
+      } else {
+        this.sessionCookie = cookiePart;
+      }
     }
 
     return response.json();
@@ -417,26 +444,31 @@ class BinshopsClient {
     password: string
   ): Promise<{ success: boolean; customer?: any; error?: string }> {
     try {
-      const response = await this.fetch<BinshopsLoginResponse>("login", {
+      // Binshops uses Tools::getValue() which expects URL params or form-urlencoded, not JSON
+      const params = new URLSearchParams({ email, password });
+
+      const response = await this.fetch<any>(`login?${params.toString()}`, {
         method: "POST",
-        body: JSON.stringify({ email, password }),
       });
 
-      if (response.success && response.psdata?.customer) {
+      // Binshops returns user data in psdata.user, not psdata.customer
+      const user = response.psdata?.user || response.psdata?.customer;
+
+      if (response.success && response.code === 200 && user) {
         return {
           success: true,
           customer: {
-            id: response.psdata.customer.id,
-            email: response.psdata.customer.email,
-            firstName: response.psdata.customer.firstname,
-            lastName: response.psdata.customer.lastname,
+            id: user.id,
+            email: user.email,
+            firstName: user.firstname,
+            lastName: user.lastname,
           },
         };
       }
 
       return {
         success: false,
-        error: response.message || "Nieprawidłowy email lub hasło",
+        error: response.psdata?.message || response.message || "Nieprawidłowy email lub hasło",
       };
     } catch (error) {
       console.error("Login error:", error);
@@ -449,32 +481,125 @@ class BinshopsClient {
     password: string;
     firstName: string;
     lastName: string;
+    gender?: string;
+    birthday?: string;
+    newsletter?: boolean;
   }): Promise<{ success: boolean; customerId?: number; error?: string }> {
     try {
-      const response = await this.fetch<BinshopsRegisterResponse>("register", {
-        method: "POST",
-        body: JSON.stringify({
-          email: data.email,
-          password: data.password,
-          firstName: data.firstName,
-          lastName: data.lastName,
-        }),
+      // Binshops register only accepts basic fields
+      const params = new URLSearchParams({
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
       });
 
-      if (response.success && response.psdata?.customer) {
+      const response = await this.fetch<any>(`register?${params.toString()}`, {
+        method: "POST",
+      });
+
+      if (response.success && response.code === 200 && response.psdata?.registered) {
+        const customerId = parseInt(response.psdata.customer_id);
+
+        // After successful registration, login first then update profile
+        if (data.gender || data.birthday || data.newsletter) {
+          // First call lightbootstrap (no cache) to get session cookies (as per Binshops docs)
+          await this.initSession();
+
+          // Login to get session cookie
+          const loginResult = await this.login(data.email, data.password);
+
+          if (loginResult.success) {
+            await this.updateAccountAfterRegister({
+              email: data.email,
+              password: data.password,
+              firstName: data.firstName,
+              lastName: data.lastName,
+              gender: data.gender,
+              birthday: data.birthday,
+              newsletter: data.newsletter,
+            });
+          }
+        }
+
+        // Also subscribe via emailsubscription endpoint for module compatibility
+        if (data.newsletter) {
+          await this.subscribeToNewsletter(data.email);
+        }
+
         return {
           success: true,
-          customerId: response.psdata.customer.id,
+          customerId,
         };
       }
 
+      // Handle specific error codes from Binshops
+      const errorMessages: Record<number, string> = {
+        301: "Email jest wymagany",
+        304: "Imię jest wymagane",
+        305: "Nazwisko jest wymagane",
+        306: "Hasło jest wymagane",
+        310: response.psdata || "Hasło jest zbyt słabe",
+      };
+
       return {
         success: false,
-        error: response.errors?.[0] || response.message || "Wystąpił błąd podczas rejestracji",
+        error: errorMessages[response.code] || response.psdata || response.message || "Wystąpił błąd podczas rejestracji",
       };
     } catch (error) {
       console.error("Registration error:", error);
       return { success: false, error: "Wystąpił błąd podczas rejestracji" };
+    }
+  }
+
+  private async updateAccountAfterRegister(data: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    gender?: string;
+    birthday?: string;
+    newsletter?: boolean;
+  }): Promise<boolean> {
+    try {
+      // Use URL params like other Binshops endpoints
+      const params = new URLSearchParams({
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+      });
+
+      if (data.gender) {
+        params.set("gender", data.gender);
+      }
+      if (data.birthday) {
+        params.set("birthday", data.birthday);
+      }
+      if (data.newsletter !== undefined) {
+        params.set("newsletter", data.newsletter ? "1" : "0");
+      }
+
+      const response = await this.fetch<any>(`accountedit?${params.toString()}`, {
+        method: "POST",
+      });
+
+      return response.success;
+    } catch (error) {
+      console.error("Error updating account after register:", error);
+      return false;
+    }
+  }
+
+  async subscribeToNewsletter(email: string): Promise<boolean> {
+    try {
+      const response = await this.fetch<any>(`emailsubscription?email=${encodeURIComponent(email)}`, {
+        method: "POST",
+      });
+      return response.success;
+    } catch (error) {
+      console.error("Error subscribing to newsletter:", error);
+      return false;
     }
   }
 
@@ -907,6 +1032,18 @@ class BinshopsClient {
       phone: a.phone || undefined,
       phoneMobile: a.phone_mobile || undefined,
     };
+  }
+
+  // Initialize session (get cookies without cache)
+  async initSession(): Promise<void> {
+    try {
+      // Reset session cookie first
+      this.sessionCookie = null;
+      // Call lightbootstrap without cache to get fresh session cookies
+      await this.fetch<any>("lightbootstrap", { cache: "no-store" }, 0);
+    } catch {
+      // Ignore errors, we just want the cookies
+    }
   }
 
   // Test connection
