@@ -450,6 +450,7 @@ class PrestaShopClient {
       imageUrl: images.length > 0 ? images[0] : null,
       images,
       categoryId: p.id_category_default,
+      categorySlug: null,
       active: p.active === "1",
       quantity,
       weight: parseFloat(p.weight) || 0,

@@ -37,13 +37,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound();
   }
 
-  // Get related products from same category
-  const relatedProducts = product.categoryId
-    ? await binshops.getRelatedProducts(productId, 4)
-    : [];
-
-  // Simple breadcrumb - just product name (category path not available in Binshops)
-  const categoryPath: { id: number; name: string }[] = [];
+  // Get related products and category path in parallel
+  const [relatedProducts, categoryPath] = await Promise.all([
+    product.categoryId ? binshops.getRelatedProducts(productId, 4) : Promise.resolve([]),
+    product.categorySlug ? binshops.getCategoryPathBySlug(product.categorySlug) : Promise.resolve([]),
+  ]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pl-PL", {

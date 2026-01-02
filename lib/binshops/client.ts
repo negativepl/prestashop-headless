@@ -297,41 +297,91 @@ class BinshopsClient {
 
   async getCategoryTree(): Promise<Category[]> {
     const bootstrap = await this.getBootstrap();
-    if (!bootstrap?.psdata?.categories) {
+
+    // Binshops returns categories in menuItems, not categories
+    if (!bootstrap?.psdata?.menuItems) {
       return [];
     }
 
-    return this.mapCategoryTree(bootstrap.psdata.categories);
+    // Filter only category-type menu items and map them
+    const categoryItems = bootstrap.psdata.menuItems.filter(
+      (item: any) => item.type === "category"
+    );
+
+    return this.mapMenuItemsToCategories(categoryItems);
   }
 
   async getCategory(id: number): Promise<Category | null> {
     const bootstrap = await this.getBootstrap();
-    if (!bootstrap?.psdata?.categories) {
+    if (!bootstrap?.psdata?.menuItems) {
       return null;
     }
 
-    const findCategory = (categories: BinshopsCategoryTree[]): Category | null => {
-      for (const cat of categories) {
-        if (cat.id === id) {
+    const findCategory = (items: any[]): Category | null => {
+      for (const item of items) {
+        if (item.type !== "category") continue;
+
+        if (item.id === id) {
           return {
-            id: cat.id,
-            name: cat.name,
+            id: item.id,
+            name: item.label,
             description: "",
             parentId: 0,
-            level: 0,
+            level: item.depth || 0,
             active: true,
-            children: cat.children ? this.mapCategoryTree(cat.children) : undefined,
+            children: item.children?.length > 0
+              ? this.mapMenuItemsToCategories(item.children.filter((c: any) => c.type === "category"))
+              : undefined,
           };
         }
-        if (cat.children) {
-          const found = findCategory(cat.children);
+        if (item.children) {
+          const found = findCategory(item.children);
           if (found) return found;
         }
       }
       return null;
     };
 
-    return findCategory(bootstrap.psdata.categories);
+    return findCategory(bootstrap.psdata.menuItems);
+  }
+
+  async getCategoryPathBySlug(slug: string): Promise<Category[]> {
+    const bootstrap = await this.getBootstrap();
+    if (!bootstrap?.psdata?.menuItems) {
+      return [];
+    }
+
+    const path: Category[] = [];
+
+    const findPath = (items: any[], currentPath: Category[]): boolean => {
+      for (const item of items) {
+        if (item.type !== "category") continue;
+
+        const category: Category = {
+          id: item.id,
+          name: item.label,
+          description: "",
+          parentId: 0,
+          level: item.depth || 0,
+          active: true,
+        };
+
+        const newPath = [...currentPath, category];
+
+        if (item.slug === slug) {
+          path.push(...newPath);
+          return true;
+        }
+
+        if (item.children && findPath(item.children, newPath)) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    findPath(bootstrap.psdata.menuItems, []);
+    return path;
   }
 
   async getCategories(params?: { parentId?: number }): Promise<Category[]> {
@@ -749,6 +799,7 @@ class BinshopsClient {
       imageUrl,
       images,
       categoryId: p.id_category_default || 0,
+      categorySlug: p.category_name || null,
       active: p.active === 1 || p.active === "1" || p.active === true,
       quantity: p.quantity ?? 0,
       weight: parseFloat(p.weight) || 0,
@@ -778,6 +829,7 @@ class BinshopsClient {
       imageUrl,
       images: imageUrl ? [imageUrl] : [],
       categoryId: p.id_category_default || 0,
+      categorySlug: p.category_name || null,
       active: p.active === 1 || p.active === "1" || p.active === true,
       quantity: p.quantity ?? 0,
       weight: parseFloat(p.weight) || 0,
@@ -797,6 +849,22 @@ class BinshopsClient {
       active: true,
       children: c.children ? this.mapCategoryTree(c.children) : undefined,
     }));
+  }
+
+  private mapMenuItemsToCategories(items: any[]): Category[] {
+    return items
+      .filter((item) => item.type === "category")
+      .map((item) => ({
+        id: item.id,
+        name: item.label,
+        description: "",
+        parentId: 0,
+        level: item.depth || 0,
+        active: true,
+        children: item.children?.length > 0
+          ? this.mapMenuItemsToCategories(item.children)
+          : undefined,
+      }));
   }
 
   private mapOrder(o: BinshopsOrder): Order {

@@ -283,6 +283,7 @@ export interface Product {
   imageUrl: string | null;
   images: string[];
   categoryId: number;
+  categorySlug: string | null;
   active: boolean;
   quantity: number | null;
   weight: number;

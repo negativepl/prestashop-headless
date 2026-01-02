@@ -122,6 +122,7 @@ export function SearchResults({ query }: SearchResultsProps) {
       reference: r.reference,
       ean13: null,
       categoryId: 0,
+      categorySlug: null,
       active: true,
       weight: 0,
       manufacturerId: 0,

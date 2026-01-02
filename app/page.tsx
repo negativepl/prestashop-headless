@@ -13,7 +13,9 @@ import type { Product } from "@/lib/prestashop/types";
 import { wordpress, type BlogPost } from "@/lib/wordpress/client";
 import { getHeroSlides, type HeroSlide } from "@/lib/cms/client";
 
-export const revalidate = 60; // Revalidate every 60 seconds
+// Force static generation with ISR fetch revalidation
+export const dynamic = "force-static";
+export const revalidate = 60; // Revalidate fetches every 60 seconds
 
 export default async function HomePage() {
   let featuredProducts: Product[] = [];
@@ -93,29 +95,9 @@ export default async function HomePage() {
               </Link>
             </div>
 
-            {/* Mobile carousel */}
-            {availableProducts.length > 0 && (
-              <BestsellersCarousel products={availableProducts.slice(0, 6)} />
-            )}
-
-            {/* Desktop grid: md: 6 products (3x2), lg: 4 products (4x1), 2xl: 5 products (5x1) */}
+            {/* Carousel with navigation arrows */}
             {availableProducts.length > 0 ? (
-              <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-5">
-                {availableProducts.slice(0, 6).map((product, index) => (
-                  <div
-                    key={product.id}
-                    className={
-                      index === 4
-                        ? "hidden md:block lg:hidden 2xl:block"
-                        : index === 5
-                          ? "hidden md:block lg:hidden"
-                          : undefined
-                    }
-                  >
-                    <ProductCard product={product} priority={index < 5} />
-                  </div>
-                ))}
-              </div>
+              <BestsellersCarousel products={availableProducts.slice(0, 10)} />
             ) : (
               <div className="text-center py-12 bg-card rounded-lg">
                 <p className="text-muted-foreground">
