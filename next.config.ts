@@ -1,15 +1,20 @@
 import type { NextConfig } from "next";
 
-// Security headers for production
+// Security headers for production (Vercel or Coolify)
+// Local network testing needs HTTP, so we only enable HTTPS headers in cloud deployments
+const isProduction = process.env.NODE_ENV === "production" &&
+  (process.env.VERCEL === "1" || process.env.COOLIFY_URL || process.env.FORCE_HTTPS === "true");
+
 const securityHeaders = [
   {
     key: "X-DNS-Prefetch-Control",
     value: "on",
   },
-  {
+  // HSTS only in cloud deployments - breaks local network testing
+  ...(isProduction ? [{
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains; preload",
-  },
+  }] : []),
   {
     key: "X-Frame-Options",
     value: "DENY",
@@ -43,7 +48,8 @@ const securityHeaders = [
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
-      "upgrade-insecure-requests",
+      // Only upgrade to HTTPS in production
+      ...(isProduction ? ["upgrade-insecure-requests"] : []),
     ].join("; "),
   },
 ];
