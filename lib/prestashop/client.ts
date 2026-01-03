@@ -14,6 +14,7 @@ import type {
   OrderItem,
   Address,
 } from "./types";
+import { apiLogger, logError } from "@/lib/logger";
 
 interface PSResponse<T> {
   [key: string]: T | T[];
@@ -68,7 +69,7 @@ class PrestaShopClient {
 
       return this.taxRatesCache;
     } catch (error) {
-      console.error("Failed to load tax rates:", error);
+      logError(apiLogger, "Failed to load tax rates", error);
       // Fallback: return empty map (will use 0% tax)
       this.taxRatesCache = new Map();
       return this.taxRatesCache;
@@ -108,7 +109,8 @@ class PrestaShopClient {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`PrestaShop API error (${response.status}) for ${fullUrl}:`, errorText.slice(0, 200));
+      // Log endpoint only (not full URL) to avoid exposing API keys
+      apiLogger.error({ status: response.status, endpoint, error: errorText.slice(0, 200) }, "PrestaShop API error");
       throw new Error(`PrestaShop API error: ${response.status} ${response.statusText}`);
     }
 
@@ -135,7 +137,7 @@ class PrestaShopClient {
 
     if (!response.ok) {
       const text = await response.text();
-      console.error("PrestaShop API error response:", text);
+      apiLogger.error({ status: response.status, error: text.slice(0, 200) }, "PrestaShop API XML error");
       throw new Error(`PrestaShop API error: ${response.status} ${response.statusText}`);
     }
 

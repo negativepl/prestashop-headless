@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { authLogger, logError } from "@/lib/logger";
 
 const SECRET_KEY = process.env.AUTH_SECRET;
 
@@ -72,7 +73,7 @@ export async function getSession(): Promise<SessionPayload | null> {
       expiresAt,
     };
   } catch (error) {
-    console.error("Session verification failed:", error);
+    logError(authLogger, "Session verification failed", error);
     await deleteSession();
     return null;
   }

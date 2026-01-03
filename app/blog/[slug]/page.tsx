@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, Calendar, Clock, Facebook, Twitter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { SafeHtml } from "@/components/ui/safe-html";
 import { wordpress } from "@/lib/wordpress/client";
 import { notFound } from "next/navigation";
 import { BlogProductWidgets } from "@/components/blog/blog-product-widgets";
@@ -74,10 +75,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             <Separator className="mb-8" />
 
             {/* Content */}
-            <div
-              className="wp-content"
-              dangerouslySetInnerHTML={{ __html: post.content }}
-            />
+            <SafeHtml html={post.content} className="wp-content" />
             <BlogProductWidgets />
 
             <Separator className="my-10" />

@@ -6,6 +6,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { SafeHtml } from "@/components/ui/safe-html";
 import { ProductDetailsContent } from "./product-details";
 import { ProductReviewsContent } from "./product-reviews";
 import type { Product } from "@/lib/prestashop/types";
@@ -24,9 +25,9 @@ export function ProductAccordion({ product }: ProductAccordionProps) {
             Opis produktu
           </AccordionTrigger>
           <AccordionContent>
-            <div
+            <SafeHtml
+              html={product.description}
               className="prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: product.description }}
             />
           </AccordionContent>
         </AccordionItem>

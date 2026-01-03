@@ -3,6 +3,7 @@ import { Star } from "lucide-react";
 import { binshops } from "@/lib/binshops/client";
 import { AddToCartButton } from "@/components/cart/add-to-cart-button";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { SafeHtml } from "@/components/ui/safe-html";
 import { ProductGallery } from "@/components/products/product-gallery";
 import { ProductAccordion } from "@/components/products/product-accordion";
 import { ProductCard } from "@/components/products/product-card";
@@ -98,9 +99,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
           {/* Short description */}
           {product.descriptionShort && (
-            <div
+            <SafeHtml
+              html={product.descriptionShort}
               className="prose prose-sm max-w-none text-muted-foreground"
-              dangerouslySetInnerHTML={{ __html: product.descriptionShort }}
             />
           )}
 

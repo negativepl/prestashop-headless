@@ -21,6 +21,7 @@ import type {
   PaymentStatus,
   STRIPE_STATUS_MAP,
 } from "./types";
+import { paymentLogger, logError } from "@/lib/logger";
 
 // Dynamiczny import Stripe (zainstaluj: npm install stripe)
 let Stripe: typeof import("stripe").default | null = null;
@@ -104,7 +105,7 @@ class StripeProvider implements PaymentProvider {
         status: this.mapStatus(paymentIntent.status),
       };
     } catch (error) {
-      console.error("[Stripe] createPayment error:", error);
+      logError(paymentLogger, "Stripe createPayment error", error);
       return {
         success: false,
         status: "failed",
@@ -139,7 +140,7 @@ class StripeProvider implements PaymentProvider {
 
       return this.processWebhookEvent(event as unknown as { type: string; data: { object: Record<string, unknown> } });
     } catch (error) {
-      console.error("[Stripe] handleWebhook error:", error);
+      logError(paymentLogger, "Stripe handleWebhook error", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Błąd webhooka",

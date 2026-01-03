@@ -25,6 +25,7 @@ import type {
   PaymentStatus,
 } from "./types";
 import crypto from "crypto";
+import { paymentLogger, logError } from "@/lib/logger";
 
 const PAYU_SANDBOX_URL = "https://secure.snd.payu.com";
 const PAYU_PRODUCTION_URL = "https://secure.payu.com";
@@ -179,7 +180,7 @@ class PayUProvider implements PaymentProvider {
           `PayU error: ${response.status}`
       );
     } catch (error) {
-      console.error("[PayU] createPayment error:", error);
+      logError(paymentLogger, "PayU createPayment error", error);
       return {
         success: false,
         status: "failed",
@@ -216,17 +217,27 @@ class PayUProvider implements PaymentProvider {
       const payloadStr =
         typeof payload === "string" ? payload : payload.toString();
 
-      // Weryfikacja podpisu
-      if (this.config?.secondKey && signature) {
+      // Weryfikacja podpisu - WYMAGANA w produkcji
+      const isProduction = process.env.NODE_ENV === "production";
+
+      if (!this.config?.secondKey) {
+        if (isProduction) {
+          paymentLogger.error("PayU secondKey not configured in production");
+          return { success: false, error: "Webhook verification not configured" };
+        }
+        paymentLogger.warn("PayU secondKey not configured - skipping verification (dev only)");
+      } else {
         const expectedSignature = this.calculateSignature(payloadStr);
         if (signature !== expectedSignature) {
-          console.warn("[PayU] Nieprawidłowy podpis webhooka");
-          // W produkcji: return { success: false, error: "Invalid signature" };
+          paymentLogger.error({ signature, expected: expectedSignature.slice(0, 8) + "..." }, "PayU invalid webhook signature");
+          return { success: false, error: "Invalid webhook signature" };
         }
       }
 
       const notification: PayUNotification = JSON.parse(payloadStr);
       const order = notification.order;
+
+      paymentLogger.info({ orderId: order.extOrderId, status: order.status }, "PayU webhook received");
 
       return {
         success: true,
@@ -234,7 +245,7 @@ class PayUProvider implements PaymentProvider {
         newStatus: this.mapStatus(order.status),
       };
     } catch (error) {
-      console.error("[PayU] handleWebhook error:", error);
+      logError(paymentLogger, "PayU handleWebhook error", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Błąd webhooka",

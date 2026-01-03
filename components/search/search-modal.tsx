@@ -7,6 +7,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, X, ArrowRight, Loader2, Command, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SafeHighlight } from "@/components/ui/safe-html";
 
 interface SearchProduct {
   id: number;
@@ -372,7 +373,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                               onClick={() => handleCategoryClick(category)}
                               className="inline-flex items-center gap-2 px-3 py-1.5 bg-muted hover:bg-primary rounded-full text-sm transition-colors group [&_mark]:bg-transparent [&_mark]:text-inherit"
                             >
-                              <span className="group-hover:text-primary-foreground" dangerouslySetInnerHTML={{ __html: category.nameHighlighted }} />
+                              <SafeHighlight html={category.nameHighlighted} className="group-hover:text-primary-foreground" />
                               <span className="text-muted-foreground group-hover:text-primary-foreground/70 text-xs">
                                 {category.productCount}
                               </span>
@@ -427,9 +428,10 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                                   <span className="truncate">{product.categoryName}</span>
                                 )}
                               </div>
-                              <p
+                              <SafeHighlight
+                                html={product.nameHighlighted}
+                                as="p"
                                 className="font-medium leading-snug line-clamp-2 [&_mark]:bg-primary/20 [&_mark]:text-foreground [&_mark]:rounded [&_mark]:px-0.5"
-                                dangerouslySetInnerHTML={{ __html: product.nameHighlighted }}
                               />
                               <p className="text-lg font-semibold text-primary mt-1.5">
                                 {formatPrice(product.price)}

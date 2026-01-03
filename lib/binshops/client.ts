@@ -20,6 +20,7 @@ import type {
   BinshopsResponse,
   BinshopsCategoryTree,
 } from "./types";
+import { apiLogger, logError } from "@/lib/logger";
 
 // Re-export frontend types from prestashop (they stay the same)
 import type {
@@ -97,7 +98,8 @@ export class BinshopsClient {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Binshops API error (${response.status}) for ${url}:`, errorText.slice(0, 200));
+      // Log endpoint only (not full URL) to avoid exposing sensitive data
+      apiLogger.error({ status: response.status, endpoint, error: errorText.slice(0, 200) }, "Binshops API error");
       throw new Error(`Binshops API error: ${response.status} ${response.statusText}`);
     }
 

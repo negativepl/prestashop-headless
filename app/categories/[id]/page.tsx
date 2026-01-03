@@ -4,6 +4,7 @@ import { useState, use, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { ChevronRight, SlidersHorizontal, X, Grid3X3, LayoutList, Loader2 } from "lucide-react";
+import { SafeHtml } from "@/components/ui/safe-html";
 import { ProductCard } from "@/components/products/product-card";
 import { ProductCardRow } from "@/components/products/product-card-row";
 import { Button } from "@/components/ui/button";
@@ -245,11 +246,11 @@ export default function CategoryPage({ params }: CategoryPageProps) {
         {category?.description && (
           <div className="mt-2">
             <div className="relative">
-              <div
+              <SafeHtml
+                html={category.description}
                 className={`text-muted-foreground category-description overflow-hidden transition-all duration-300 ${
                   descriptionExpanded ? "" : "max-h-[4.5em]"
                 }`}
-                dangerouslySetInnerHTML={{ __html: category.description }}
               />
               {!descriptionExpanded && (
                 <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none" />

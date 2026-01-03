@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import useSWR from "swr";
 import { Search, SlidersHorizontal, X, Grid3X3, LayoutList, Loader2, FolderOpen } from "lucide-react";
 import Link from "next/link";
+import { SafeHighlight } from "@/components/ui/safe-html";
 import { ProductCard } from "@/components/products/product-card";
 import { ProductCardRow } from "@/components/products/product-card-row";
 import { Button } from "@/components/ui/button";
@@ -393,7 +394,7 @@ export function SearchResults({ query }: SearchResultsProps) {
                       href={`/categories/${cat.id}`}
                       className="inline-flex items-center gap-2 px-3 py-1.5 bg-muted hover:bg-muted/80 rounded-full text-sm font-medium transition-colors"
                     >
-                      <span dangerouslySetInnerHTML={{ __html: cat.nameHighlighted }} />
+                      <SafeHighlight html={cat.nameHighlighted} />
                       <span className="text-xs text-muted-foreground">({cat.productCount})</span>
                     </Link>
                   ))}
