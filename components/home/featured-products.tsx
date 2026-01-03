@@ -24,18 +24,15 @@ export function FeaturedProducts({ products }: FeaturedProductsProps) {
   if (products.length === 0) return null;
 
   return (
-    <div className="bg-card rounded-2xl p-6 md:p-10 border">
-      {/* Header */}
-      <div className="mb-8">
-        <span className="text-primary font-semibold text-sm uppercase tracking-wider">
+    <div>
+      {/* Header - Editorial */}
+      <div className="mb-8 md:mb-10">
+        <p className="text-sm tracking-[0.2em] uppercase text-muted-foreground mb-3">
           Polecane
-        </span>
-        <h2 className="text-3xl md:text-4xl font-bold mt-2">
-          Polecane produkty
-        </h2>
-        <p className="mt-2 text-muted-foreground">
-          Sprawdź nasze rekomendacje dla Ciebie
         </p>
+        <h2 className="font-lora text-3xl md:text-4xl font-medium">
+          Wybrane dla Ciebie
+        </h2>
       </div>
 
       {/* Responsive carousel */}

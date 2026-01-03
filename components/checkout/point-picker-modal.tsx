@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
-import { X, Search, Navigation, Loader2, Package, Clock, ChevronRight } from "lucide-react";
+import { X, Search, Navigation, Loader2, ChevronRight } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -14,7 +15,7 @@ const LeafletMap = dynamic(
   { ssr: false, loading: () => <div className="h-full w-full bg-muted animate-pulse" /> }
 );
 
-interface InPostPoint {
+interface PickupPoint {
   name: string;
   type: string[];
   status: string;
@@ -39,7 +40,9 @@ interface InPostPoint {
   image_url?: string;
 }
 
-interface InPostPickerModalProps {
+type ServiceType = "inpost" | "zabka" | "orlen";
+
+interface PointPickerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (point: {
@@ -49,25 +52,71 @@ interface InPostPickerModalProps {
     city: string;
     postcode: string;
   }) => void;
+  service: ServiceType;
 }
 
-export function InPostPickerModal({ isOpen, onClose, onSelect }: InPostPickerModalProps) {
-  const [points, setPoints] = useState<InPostPoint[]>([]);
-  const [filteredPoints, setFilteredPoints] = useState<InPostPoint[]>([]);
+const SERVICE_CONFIG = {
+  inpost: {
+    title: "Wybierz Paczkomat®",
+    buttonText: "Wybierz ten Paczkomat®",
+    emptyText: "Nie znaleziono paczkomatów",
+    color: "#FFCD00",
+    colorHover: "#e6b800",
+    colorBg: "bg-[#FFCD00]",
+    colorBgLight: "bg-[#FFCD00]/10",
+    colorBorder: "border-[#FFCD00]",
+    textColor: "text-black",
+    logo: "/images/carriers/inpost-paczkomat.png",
+  },
+  zabka: {
+    title: "Wybierz punkt Żabka",
+    buttonText: "Wybierz ten punkt",
+    emptyText: "Nie znaleziono punktów Żabka",
+    color: "#00A651",
+    colorHover: "#008c44",
+    colorBg: "bg-[#00A651]",
+    colorBgLight: "bg-[#00A651]/10",
+    colorBorder: "border-[#00A651]",
+    textColor: "text-white",
+    logo: "/images/carriers/zabka.png",
+  },
+  orlen: {
+    title: "Wybierz punkt Orlen Paczka",
+    buttonText: "Wybierz ten punkt",
+    emptyText: "Nie znaleziono punktów Orlen",
+    color: "#E30613",
+    colorHover: "#c00510",
+    colorBg: "bg-[#E30613]",
+    colorBgLight: "bg-[#E30613]/10",
+    colorBorder: "border-[#E30613]",
+    textColor: "text-white",
+    logo: "/images/carriers/orlen-paczka.png",
+  },
+};
+
+// Minimum zoom level to show/fetch points (13 = default zoom, miasto widoczne)
+const MIN_ZOOM_FOR_POINTS = 13;
+
+export function PointPickerModal({ isOpen, onClose, onSelect, service }: PointPickerModalProps) {
+  const config = SERVICE_CONFIG[service];
+  const [points, setPoints] = useState<PickupPoint[]>([]);
+  const [filteredPoints, setFilteredPoints] = useState<PickupPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [selectedPoint, setSelectedPoint] = useState<InPostPoint | null>(null);
+  const [selectedPoint, setSelectedPoint] = useState<PickupPoint | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>([52.2297, 21.0122]); // Warsaw
   const [locatingUser, setLocatingUser] = useState(false);
+  const [isZoomSufficient, setIsZoomSufficient] = useState(true);
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 
   // Flag to skip refetch when clicking point from list
   const skipNextMapMove = useRef(false);
 
-  // Fetch points from our proxy API
+  // Fetch points from API
   const fetchPoints = useCallback(async (lat?: number, lng?: number) => {
     setLoading(true);
     try {
-      let url = "/api/inpost/points?type=parcel_locker&per_page=100";
+      let url = `/api/inpost/points?service=${service}&type=parcel_locker&per_page=100`;
 
       if (lat && lng) {
         url += `&lat=${lat}&lng=${lng}`;
@@ -81,11 +130,11 @@ export function InPostPickerModal({ isOpen, onClose, onSelect }: InPostPickerMod
         setFilteredPoints(data.items);
       }
     } catch (error) {
-      console.error("Error fetching InPost points:", error);
+      console.error(`Error fetching ${service} points:`, error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [service]);
 
   // Get user location
   const getUserLocation = useCallback(() => {
@@ -95,10 +144,15 @@ export function InPostPickerModal({ isOpen, onClose, onSelect }: InPostPickerMod
     }
 
     setLocatingUser(true);
+    setSelectedPoint(null); // Deselect any selected point
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        setMapCenter([latitude, longitude]);
+        const location: [number, number] = [latitude, longitude];
+        setUserLocation(location);
+        // Skip the map move event that will be triggered by setMapCenter
+        skipNextMapMove.current = true;
+        setMapCenter(location);
         fetchPoints(latitude, longitude);
         setLocatingUser(false);
       },
@@ -118,6 +172,13 @@ export function InPostPickerModal({ isOpen, onClose, onSelect }: InPostPickerMod
     }
   }, [isOpen, points.length, getUserLocation]);
 
+  // Reset on service change
+  useEffect(() => {
+    setPoints([]);
+    setFilteredPoints([]);
+    setSelectedPoint(null);
+  }, [service]);
+
   // Search filter (local)
   useEffect(() => {
     if (!search.trim()) {
@@ -136,13 +197,16 @@ export function InPostPickerModal({ isOpen, onClose, onSelect }: InPostPickerMod
     setFilteredPoints(filtered);
   }, [search, points]);
 
-  // Handle map move - fetch new points for area (skip if programmatic)
-  const handleMapMove = useCallback((lat: number, lng: number) => {
+  // Handle map move - fetch new points for area (skip if programmatic or zoom too low)
+  const handleMapMove = useCallback((lat: number, lng: number, zoom: number) => {
     if (skipNextMapMove.current) {
       skipNextMapMove.current = false;
       return;
     }
-    fetchPoints(lat, lng);
+    // Only fetch points if zoom is sufficient
+    if (zoom >= MIN_ZOOM_FOR_POINTS) {
+      fetchPoints(lat, lng);
+    }
   }, [fetchPoints]);
 
   // Search by city/postcode via geocoding
@@ -158,6 +222,8 @@ export function InPostPickerModal({ isOpen, onClose, onSelect }: InPostPickerMod
       if (geocodeData.length > 0) {
         const { lat, lon } = geocodeData[0];
         const newCenter: [number, number] = [parseFloat(lat), parseFloat(lon)];
+        // Skip the map move event that will be triggered by setMapCenter
+        skipNextMapMove.current = true;
         setMapCenter(newCenter);
         await fetchPoints(newCenter[0], newCenter[1]);
       }
@@ -168,7 +234,7 @@ export function InPostPickerModal({ isOpen, onClose, onSelect }: InPostPickerMod
     }
   }, [search, fetchPoints]);
 
-  const handleSelect = useCallback((point: InPostPoint) => {
+  const handleSelect = useCallback((point: PickupPoint) => {
     onSelect({
       id: point.name,
       name: point.name,
@@ -179,7 +245,7 @@ export function InPostPickerModal({ isOpen, onClose, onSelect }: InPostPickerMod
     onClose();
   }, [onSelect, onClose]);
 
-  const handlePointClick = useCallback((point: InPostPoint) => {
+  const handlePointClick = useCallback((point: PickupPoint) => {
     setSelectedPoint(point);
     // Skip refetch when centering map on selected point
     skipNextMapMove.current = true;
@@ -200,13 +266,22 @@ export function InPostPickerModal({ isOpen, onClose, onSelect }: InPostPickerMod
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b bg-card">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#FFCD00] rounded-lg flex items-center justify-center">
-            <Package className="size-5 text-black" />
+          <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+            <Image
+              src={config.logo}
+              alt={config.title}
+              width={48}
+              height={48}
+              className="object-contain"
+            />
           </div>
           <div>
-            <h2 className="font-semibold text-lg">Wybierz Paczkomat®</h2>
+            <h2 className="font-semibold text-lg">{config.title}</h2>
             <p className="text-sm text-muted-foreground">
-              {filteredPoints.length} punktów w okolicy
+              {isZoomSufficient
+                ? `${filteredPoints.length} punktów w okolicy`
+                : "Przybliż mapę aby zobaczyć punkty"
+              }
             </p>
           </div>
         </div>
@@ -241,8 +316,12 @@ export function InPostPickerModal({ isOpen, onClose, onSelect }: InPostPickerMod
               <Navigation className="size-4" />
             )}
           </Button>
-          <Button className="h-11 bg-[#FFCD00] hover:bg-[#e6b800] text-black" onClick={handleSearchSubmit}>
-            Szukaj
+          <Button
+            className="h-11"
+            style={{ backgroundColor: config.color }}
+            onClick={handleSearchSubmit}
+          >
+            <span className={config.textColor}>Szukaj</span>
           </Button>
         </div>
       </div>
@@ -251,14 +330,30 @@ export function InPostPickerModal({ isOpen, onClose, onSelect }: InPostPickerMod
       <div className="flex-1 flex overflow-hidden">
         {/* Points list - left sidebar */}
         <div className="w-full md:w-[380px] border-r overflow-y-auto bg-card">
-          {loading ? (
+          {!isZoomSufficient ? (
+            <div className="p-8 text-center text-muted-foreground">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+                <Search className="size-7 text-muted-foreground" />
+              </div>
+              <p className="font-medium">Przybliż mapę</p>
+              <p className="text-sm mt-1">aby zobaczyć punkty odbioru w okolicy</p>
+            </div>
+          ) : loading ? (
             <div className="flex items-center justify-center h-40">
               <Loader2 className="size-8 animate-spin text-muted-foreground" />
             </div>
           ) : filteredPoints.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
-              <Package className="size-12 mx-auto mb-3 opacity-50" />
-              <p>Nie znaleziono paczkomatów</p>
+              <div className="w-16 h-16 mx-auto mb-3 opacity-50">
+                <Image
+                  src={config.logo}
+                  alt={config.title}
+                  width={64}
+                  height={64}
+                  className="object-contain grayscale"
+                />
+              </div>
+              <p>{config.emptyText}</p>
               <p className="text-sm mt-1">Spróbuj innej lokalizacji</p>
             </div>
           ) : (
@@ -269,47 +364,24 @@ export function InPostPickerModal({ isOpen, onClose, onSelect }: InPostPickerMod
                   onClick={() => handlePointClick(point)}
                   className={cn(
                     "w-full p-4 text-left transition-colors hover:bg-muted/50 cursor-pointer",
-                    selectedPoint?.name === point.name && "bg-[#FFCD00]/10 border-l-4 border-[#FFCD00]"
+                    selectedPoint?.name === point.name && cn(config.colorBgLight, "border-l-4", config.colorBorder)
                   )}
                 >
                   <div className="flex items-start gap-3">
-                    {/* Point image or icon */}
+                    {/* Point logo */}
                     <div className="flex-shrink-0">
-                      {point.image_url ? (
-                        <div className={cn(
-                          "w-16 h-16 rounded-lg overflow-hidden border-2",
-                          selectedPoint?.name === point.name ? "border-[#FFCD00]" : "border-transparent"
-                        )}>
-                          <img
-                            src={point.image_url}
-                            alt={point.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = "none";
-                              (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
-                            }}
-                          />
-                          <div className={cn(
-                            "hidden w-full h-full flex items-center justify-center",
-                            selectedPoint?.name === point.name ? "bg-[#FFCD00]" : "bg-muted"
-                          )}>
-                            <Package className={cn(
-                              "size-6",
-                              selectedPoint?.name === point.name ? "text-black" : "text-muted-foreground"
-                            )} />
-                          </div>
-                        </div>
-                      ) : (
-                        <div className={cn(
-                          "w-16 h-16 rounded-lg flex items-center justify-center",
-                          selectedPoint?.name === point.name ? "bg-[#FFCD00]" : "bg-muted"
-                        )}>
-                          <Package className={cn(
-                            "size-6",
-                            selectedPoint?.name === point.name ? "text-black" : "text-muted-foreground"
-                          )} />
-                        </div>
-                      )}
+                      <div className={cn(
+                        "w-14 h-14 rounded-lg flex items-center justify-center overflow-hidden p-2",
+                        selectedPoint?.name === point.name ? config.colorBgLight : "bg-muted"
+                      )}>
+                        <Image
+                          src={config.logo}
+                          alt={config.title}
+                          width={48}
+                          height={48}
+                          className="object-contain"
+                        />
+                      </div>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
@@ -331,23 +403,23 @@ export function InPostPickerModal({ isOpen, onClose, onSelect }: InPostPickerMod
                           {point.location_description}
                         </p>
                       )}
-                      <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
-                        <Clock className="size-3" />
-                        <span>{point.opening_hours}</span>
-                      </div>
+                      <p className="text-xs text-muted-foreground mt-1.5">
+                        Godziny otwarcia: {point.opening_hours}
+                      </p>
                     </div>
                   </div>
 
                   {selectedPoint?.name === point.name && (
                     <Button
-                      className="w-full mt-3 bg-[#FFCD00] hover:bg-[#e6b800] text-black"
+                      className="w-full mt-3"
+                      style={{ backgroundColor: config.color }}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleSelect(point);
                       }}
                     >
-                      Wybierz ten Paczkomat®
-                      <ChevronRight className="size-4 ml-1" />
+                      <span className={config.textColor}>{config.buttonText}</span>
+                      <ChevronRight className={cn("size-4 ml-1", config.textColor)} />
                     </Button>
                   )}
                 </div>
@@ -365,6 +437,11 @@ export function InPostPickerModal({ isOpen, onClose, onSelect }: InPostPickerMod
             onPointClick={handlePointClick}
             onPointSelect={handleSelect}
             onMapMove={handleMapMove}
+            onZoomSufficiencyChange={setIsZoomSufficient}
+            markerColor={config.color}
+            markerLogo={config.logo}
+            minZoom={MIN_ZOOM_FOR_POINTS}
+            userLocation={userLocation}
           />
         </div>
       </div>

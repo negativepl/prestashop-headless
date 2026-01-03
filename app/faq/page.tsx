@@ -1,13 +1,23 @@
 import { Metadata } from "next";
-import { HelpCircle } from "lucide-react";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "FAQ - Najczęściej zadawane pytania | HomeScreen",
+  title: "Często zadawane pytania | HomeScreen",
   description: "Odpowiedzi na najczęściej zadawane pytania dotyczące zakupów w HomeScreen.",
 };
 
+const sections = [
+  { id: "zamowienia", title: "Zamówienia" },
+  { id: "dostawa", title: "Dostawa" },
+  { id: "platnosci", title: "Płatności" },
+  { id: "zwroty", title: "Zwroty i reklamacje" },
+  { id: "produkty", title: "Produkty" },
+  { id: "konto", title: "Konto" },
+];
+
 const faqData = [
   {
+    id: "zamowienia",
     category: "Zamówienia",
     questions: [
       {
@@ -28,11 +38,12 @@ const faqData = [
       },
       {
         q: "Czy mogę zamówić produkt, którego nie ma na stanie?",
-        a: "Produkty oznaczone jako 'Na zamówienie' można zamawiać - czas oczekiwania wynosi zazwyczaj 3-7 dni roboczych. Skontaktuj się z nami, aby potwierdzić dostępność.",
+        a: "Produkty niedostępne nie są obecnie do zamówienia. Jeśli chcesz uzyskać więcej informacji o dostępności, skontaktuj się z nami.",
       },
     ],
   },
   {
+    id: "dostawa",
     category: "Dostawa",
     questions: [
       {
@@ -54,15 +65,16 @@ const faqData = [
     ],
   },
   {
+    id: "platnosci",
     category: "Płatności",
     questions: [
       {
         q: "Jakie metody płatności akceptujecie?",
-        a: "Akceptujemy: karty płatnicze (Visa, Mastercard), BLIK, szybkie przelewy online, płatność przy odbiorze (pobranie +5 zł).",
+        a: "Akceptujemy: karty płatnicze (Visa, Mastercard, American Express), BLIK, Google Pay, Apple Pay, Klarna (raty 0%), InPost Pay oraz płatność przy odbiorze (+5 zł).",
       },
       {
         q: "Czy płatności są bezpieczne?",
-        a: "Tak, wszystkie płatności są szyfrowane (SSL) i obsługiwane przez certyfikowanego operatora płatności. Nie przechowujemy danych Twojej karty.",
+        a: "Tak, wszystkie płatności są szyfrowane (SSL) i obsługiwane przez Stripe — jeden z największych operatorów płatności na świecie. Nie przechowujemy danych Twojej karty.",
       },
       {
         q: "Czy wystawiacie faktury VAT?",
@@ -75,15 +87,16 @@ const faqData = [
     ],
   },
   {
+    id: "zwroty",
     category: "Zwroty i reklamacje",
     questions: [
       {
         q: "Czy mogę zwrócić produkt?",
-        a: "Tak, masz 14 dni na zwrot produktu bez podania przyczyny. Produkt musi być nieużywany i w oryginalnym opakowaniu.",
+        a: "Tak, masz 30 dni na zwrot produktu bez podania przyczyny. Produkt musi być nieużywany i w oryginalnym opakowaniu.",
       },
       {
         q: "Jak zwrócić produkt?",
-        a: "Skontaktuj się z nami mailowo (info@homescreen.pl), zapakuj produkt i wyślij na nasz adres. Zwrot pieniędzy nastąpi w ciągu 14 dni od otrzymania przesyłki.",
+        a: "Skontaktuj się z nami mailowo (info@homescreen.pl), zapakuj produkt i wyślij na nasz adres: ul. Szeroka 20, 75-814 Koszalin. Zwrot pieniędzy nastąpi w ciągu 14 dni od otrzymania przesyłki.",
       },
       {
         q: "Kto pokrywa koszt przesyłki zwrotnej?",
@@ -100,6 +113,7 @@ const faqData = [
     ],
   },
   {
+    id: "produkty",
     category: "Produkty",
     questions: [
       {
@@ -117,7 +131,8 @@ const faqData = [
     ],
   },
   {
-    category: "Konto i bezpieczeństwo",
+    id: "konto",
+    category: "Konto",
     questions: [
       {
         q: "Jak założyć konto?",
@@ -137,82 +152,121 @@ const faqData = [
 
 export default function FAQPage() {
   return (
-    <div className="container py-8 md:py-12">
-      <div>
-        <div className="flex items-center gap-3 mb-8">
-          <HelpCircle className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl md:text-4xl font-bold">FAQ</h1>
-        </div>
-
-        <p className="text-lg text-muted-foreground mb-8">
-          Najczęściej zadawane pytania i odpowiedzi. Nie znalazłeś odpowiedzi?{" "}
-          <a href="/kontakt" className="text-primary hover:underline">
-            Skontaktuj się z nami
-          </a>
-          .
-        </p>
-
-        <div className="space-y-10">
-          {faqData.map((section) => (
-            <section key={section.category}>
-              <h2 className="text-xl font-semibold mb-4 pb-2 border-b">
-                {section.category}
-              </h2>
-              <div className="space-y-4">
-                {section.questions.map((item, index) => (
-                  <details
-                    key={index}
-                    className="group border rounded-xl overflow-hidden"
-                  >
-                    <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors">
-                      <span className="font-medium pr-4">{item.q}</span>
-                      <span className="text-muted-foreground group-open:rotate-180 transition-transform">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="20"
-                          height="20"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="m6 9 6 6 6-6" />
-                        </svg>
-                      </span>
-                    </summary>
-                    <div className="px-4 pb-4 text-muted-foreground">
-                      {item.a}
-                    </div>
-                  </details>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-
-        <div className="mt-12 p-6 bg-muted rounded-lg">
-          <h3 className="font-semibold mb-2">Nie znalazłeś odpowiedzi?</h3>
-          <p className="text-muted-foreground mb-4">
-            Skontaktuj się z nami, chętnie pomożemy!
+    <article className="min-h-screen">
+      {/* Header */}
+      <header className="container pt-12 pb-8 md:pt-20 md:pb-12">
+        <div className="max-w-4xl">
+          <p className="text-sm tracking-[0.2em] uppercase text-muted-foreground mb-4">
+            Pomoc
           </p>
-          <div className="flex flex-wrap gap-4">
-            <a
-              href="mailto:info@homescreen.pl"
-              className="inline-flex items-center gap-2 text-primary hover:underline"
-            >
-              info@homescreen.pl
-            </a>
-            <a
-              href="tel:+48793237970"
-              className="inline-flex items-center gap-2 text-primary hover:underline"
-            >
-              +48 793 237 970
-            </a>
+          <h1 className="font-lora text-3xl md:text-4xl lg:text-5xl font-medium leading-tight mb-6">
+            Często zadawane pytania
+          </h1>
+          <p className="text-muted-foreground">
+            Znajdź odpowiedzi na najczęstsze pytania dotyczące zakupów.
+          </p>
+        </div>
+      </header>
+
+      {/* Main Content with Sidebar */}
+      <div className="container py-12 md:py-16">
+        <div className="grid lg:grid-cols-[280px_1fr] gap-12 lg:gap-16">
+          {/* Table of Contents - Sticky Sidebar */}
+          <aside className="hidden lg:block">
+            <div className="sticky top-24">
+              <p className="text-sm tracking-[0.2em] uppercase text-muted-foreground mb-4">
+                Kategorie
+              </p>
+              <nav className="space-y-1">
+                {sections.map((section, index) => (
+                  <a
+                    key={section.id}
+                    href={`#${section.id}`}
+                    className="flex items-center gap-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors group"
+                  >
+                    <span className="text-xs font-medium text-muted-foreground/60 group-hover:text-primary transition-colors">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span>{section.title}</span>
+                  </a>
+                ))}
+              </nav>
+
+              {/* Contact hint */}
+              <div className="mt-8 p-4 border-l-2 border-primary">
+                <p className="text-sm font-medium">Nie znalazłeś odpowiedzi?</p>
+                <Link href="/kontakt" className="text-sm text-primary hover:underline">
+                  Skontaktuj się z nami
+                </Link>
+              </div>
+            </div>
+          </aside>
+
+          {/* Content */}
+          <div className="max-w-3xl space-y-16">
+            {faqData.map((section, sectionIndex) => (
+              <section key={section.id} id={section.id} className="scroll-mt-24">
+                <div className="flex items-baseline gap-4 mb-6">
+                  <span className="font-lora text-4xl md:text-5xl font-medium text-muted-foreground/30">
+                    {String(sectionIndex + 1).padStart(2, "0")}
+                  </span>
+                  <h2 className="font-lora text-2xl md:text-3xl font-medium">
+                    {section.category}
+                  </h2>
+                </div>
+
+                <div className="space-y-3">
+                  {section.questions.map((item, index) => (
+                    <details
+                      key={index}
+                      className="group border rounded-xl overflow-hidden"
+                    >
+                      <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                        <span className="font-medium pr-4">{item.q}</span>
+                        <span className="text-muted-foreground group-open:rotate-180 transition-transform shrink-0">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="m6 9 6 6 6-6" />
+                          </svg>
+                        </span>
+                      </summary>
+                      <div className="px-4 pb-4 text-sm text-muted-foreground">
+                        {item.a}
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              </section>
+            ))}
+
+            {/* Contact section */}
+            <div className="p-6 border rounded-xl">
+              <p className="font-medium mb-2">Nie znalazłeś odpowiedzi?</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Skontaktuj się z nami — chętnie pomożemy.
+              </p>
+              <div className="flex flex-wrap gap-4 text-sm">
+                <Link href="mailto:info@homescreen.pl" className="text-primary hover:underline">
+                  info@homescreen.pl
+                </Link>
+                <Link href="tel:+48793237970" className="text-primary hover:underline">
+                  +48 793 237 970
+                </Link>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
-    </div>
+    </article>
   );
 }

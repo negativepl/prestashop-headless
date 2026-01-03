@@ -423,7 +423,9 @@ export interface BinshopsSearchResponse {
 export interface BinshopsCartUpdateResponse {
   psdata: {
     cart: BinshopsCart;
+    errors?: string[];
   };
   success: boolean;
   message?: string;
+  code?: number;
 }

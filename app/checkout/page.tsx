@@ -4,10 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { InPostPickerModal } from "@/components/checkout/inpost-picker-modal";
+import { PointPickerModal } from "@/components/checkout/point-picker-modal";
 import {
   ShoppingBag, Loader2, Lock, Truck, CreditCard, User, MapPin, Phone, Mail,
-  Check, Package, Banknote, Wallet, Building2, Tag, Shield, Clock,
+  Check, Package, Banknote, Wallet, Building2, Tag, Shield,
   X, ChevronRight, Gift, ArrowLeft, Store, Fuel, Map, MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,7 @@ interface ShippingMethod {
   price: number;
   time: string;
   icon: React.ComponentType<{ className?: string }>;
+  logo?: string;
   description: string;
   popular?: boolean;
   requiresPointSelection?: boolean;
@@ -61,8 +62,9 @@ const SHIPPING_GROUPS: ShippingGroup[] = [
         id: "inpost_locker",
         name: "Paczkomat® InPost",
         price: 11.99,
-        time: "1-2 dni",
+        time: "Jutro",
         icon: Package,
+        logo: "/images/carriers/inpost-paczkomat.png",
         description: "Odbiór 24/7 w wybranym paczkomacie",
         popular: true,
         requiresPointSelection: true,
@@ -72,8 +74,9 @@ const SHIPPING_GROUPS: ShippingGroup[] = [
         id: "zabka",
         name: "Odbiór w Żabce",
         price: 9.99,
-        time: "1-2 dni",
+        time: "Jutro",
         icon: Store,
+        logo: "/images/carriers/zabka.png",
         description: "Odbierz w najbliższym sklepie Żabka",
         requiresPointSelection: true,
         pointType: "zabka"
@@ -82,8 +85,9 @@ const SHIPPING_GROUPS: ShippingGroup[] = [
         id: "orlen_paczka",
         name: "Orlen Paczka",
         price: 8.99,
-        time: "1-3 dni",
+        time: "Jutro",
         icon: Fuel,
+        logo: "/images/carriers/orlen-paczka.png",
         description: "Odbierz na stacji Orlen",
         requiresPointSelection: true,
         pointType: "orlen"
@@ -97,8 +101,9 @@ const SHIPPING_GROUPS: ShippingGroup[] = [
         id: "inpost_courier",
         name: "Kurier InPost",
         price: 13.99,
-        time: "1-2 dni",
+        time: "Jutro",
         icon: Truck,
+        logo: "/images/carriers/inpost-kurier.png",
         description: "Dostawa pod wskazany adres"
       },
     ]
@@ -120,6 +125,64 @@ const SHIPPING_GROUPS: ShippingGroup[] = [
 
 // Flatten for easy lookup
 const ALL_SHIPPING_METHODS = SHIPPING_GROUPS.flatMap(g => g.methods);
+
+/**
+ * Helper function to get estimated delivery day
+ *
+ * TODO: Rozszerzyć o:
+ * - Czas wysyłki produktu (np. "wysyłka w 24h", "wysyłka w 2-3 dni")
+ * - Dostępność magazynowa produktu
+ * - Godziny cut-off dla różnych przewoźników
+ * - Święta i dni wolne od pracy
+ * - Wyświetlanie na stronach produktów
+ */
+function getEstimatedDeliveryDay(): string {
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  const hour = now.getHours();
+
+  // Cutoff time - orders after 14:00 are processed next business day
+  const cutoffPassed = hour >= 14;
+
+  // Calculate days until delivery
+  // Logic: Order must be PACKED on a business day, then DELIVERED next business day
+  let daysToAdd = 1;
+
+  if (dayOfWeek === 6) {
+    // Saturday -> packed Monday -> delivered Tuesday (3 days)
+    daysToAdd = 3;
+  } else if (dayOfWeek === 0) {
+    // Sunday -> packed Monday -> delivered Tuesday (2 days)
+    daysToAdd = 2;
+  } else if (dayOfWeek === 5) {
+    // Friday before cutoff -> packed Friday -> delivered Monday (3 days)
+    // Friday after cutoff -> packed Monday -> delivered Tuesday (4 days)
+    daysToAdd = cutoffPassed ? 4 : 3;
+  } else if (dayOfWeek === 4 && cutoffPassed) {
+    // Thursday after cutoff -> packed Friday -> delivered Monday (4 days)
+    daysToAdd = 4;
+  } else if (cutoffPassed) {
+    // Mon-Wed after cutoff -> packed next day -> delivered day after (2 days)
+    daysToAdd = 2;
+  }
+  // Mon-Thu before cutoff -> packed today -> delivered tomorrow (1 day) - default
+
+  const deliveryDate = new Date(now);
+  deliveryDate.setDate(deliveryDate.getDate() + daysToAdd);
+
+  const deliveryDayOfWeek = deliveryDate.getDay();
+
+  // If delivery is tomorrow, return "jutro"
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (deliveryDate.toDateString() === tomorrow.toDateString()) {
+    return "jutro";
+  }
+
+  // Otherwise return day name
+  const dayNames = ["niedziela", "poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota"];
+  return dayNames[deliveryDayOfWeek];
+}
 
 const PAYMENT_METHODS = [
   {
@@ -165,14 +228,17 @@ export default function CheckoutPage() {
   const [selectedPayment, setSelectedPayment] = useState("blik_p24");
   const [discountCode, setDiscountCode] = useState("");
   const [discountApplied, setDiscountApplied] = useState(false);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [discountError, setDiscountError] = useState<string | null>(null);
+  const [appliedVoucherId, setAppliedVoucherId] = useState<number | null>(null);
   const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
   const [notes, setNotes] = useState("");
 
   // Pickup point selection
-  const [pickupPointType, setPickupPointType] = useState<"inpost" | "zabka" | "orlen" | null>(null);
   const [selectedPickupPoint, setSelectedPickupPoint] = useState<PickupPoint | null>(null);
-  const [pickupPointSearch, setPickupPointSearch] = useState("");
   const [showInPostWidget, setShowInPostWidget] = useState(false);
+  const [showZabkaWidget, setShowZabkaWidget] = useState(false);
+  const [showOrlenWidget, setShowOrlenWidget] = useState(false);
 
   // Delivery address option
   const [useDifferentDeliveryAddress, setUseDifferentDeliveryAddress] = useState(false);
@@ -182,8 +248,14 @@ export default function CheckoutPage() {
     postcode: "",
   });
 
-  // Handle InPost point selection
-  const handleInPostPointSelect = (point: {
+  // Estimated delivery day (calculated on client to avoid hydration mismatch)
+  const [estimatedDeliveryDay, setEstimatedDeliveryDay] = useState<string>("jutro");
+  useEffect(() => {
+    setEstimatedDeliveryDay(getEstimatedDeliveryDay());
+  }, []);
+
+  // Handle point selection (for all services)
+  const handlePointSelect = (point: {
     id: string;
     name: string;
     address: string;
@@ -192,6 +264,8 @@ export default function CheckoutPage() {
   }) => {
     setSelectedPickupPoint(point);
     setShowInPostWidget(false);
+    setShowZabkaWidget(false);
+    setShowOrlenWidget(false);
   };
 
   const [form, setForm] = useState<CheckoutForm>({
@@ -272,18 +346,65 @@ export default function CheckoutPage() {
   const isFreeShipping = total >= FREE_SHIPPING_THRESHOLD;
   const shippingCost = isFreeShipping ? 0 : (selectedShippingMethod?.price || 0);
   const paymentSurcharge = selectedPaymentMethod?.surcharge || 0;
-  const finalTotal = total + shippingCost + paymentSurcharge;
+  const finalTotal = Math.max(0, total + shippingCost + paymentSurcharge - discountAmount);
 
   const isFormValid = form.email && form.firstName && form.lastName &&
     form.address && form.city && form.postcode && form.phone;
 
   const handleApplyDiscount = async () => {
     if (!discountCode.trim()) return;
+    if (items.length === 0) {
+      setDiscountError("Dodaj produkty do koszyka przed użyciem kodu");
+      return;
+    }
+
     setIsApplyingDiscount(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 800));
-    setDiscountApplied(true);
-    setIsApplyingDiscount(false);
+    setDiscountError(null);
+
+    try {
+      // Prepare cart items for API
+      const cartItems = items.map((item) => ({
+        productId: item.product.id,
+        quantity: item.quantity,
+        productAttributeId: item.productAttributeId || 0,
+      }));
+
+      const response = await fetch("/api/discount", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: discountCode.trim(),
+          items: cartItems,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setDiscountError(data.error || "Nieprawidłowy kod rabatowy");
+        setDiscountApplied(false);
+        setDiscountAmount(0);
+        setAppliedVoucherId(null);
+      } else {
+        setDiscountApplied(true);
+        setDiscountAmount(data.totalDiscount || 0);
+        setAppliedVoucherId(data.voucher?.id_cart_rule || null);
+        setDiscountError(null);
+      }
+    } catch {
+      setDiscountError("Wystąpił błąd podczas aplikowania kodu");
+    } finally {
+      setIsApplyingDiscount(false);
+    }
+  };
+
+  const handleRemoveDiscount = () => {
+    // Reset local state - no API call needed as we create fresh sessions
+    setDiscountApplied(false);
+    setDiscountCode("");
+    setDiscountAmount(0);
+    setDiscountError(null);
+    setAppliedVoucherId(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -598,7 +719,6 @@ export default function CheckoutPage() {
                                       setSelectedShipping(e.target.value);
                                       if (needsPointSelection) {
                                         setSelectedPickupPoint(null);
-                                        setPickupPointType(method.pointType || null);
                                       }
                                     }}
                                     className="sr-only"
@@ -611,10 +731,18 @@ export default function CheckoutPage() {
                                   )}
 
                                   <div className="flex items-start gap-3">
-                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                      isSelected ? "bg-primary text-white" : "bg-muted"
-                                    }`}>
-                                      <Icon className="size-5" />
+                                    <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden bg-muted">
+                                      {method.logo ? (
+                                        <Image
+                                          src={method.logo}
+                                          alt={method.name}
+                                          width={40}
+                                          height={40}
+                                          className="object-contain"
+                                        />
+                                      ) : (
+                                        <Icon className="size-5" />
+                                      )}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-center justify-between gap-2">
@@ -626,10 +754,9 @@ export default function CheckoutPage() {
                                         </span>
                                       </div>
                                       <p className="text-xs text-muted-foreground mt-0.5">{method.description}</p>
-                                      <div className="flex items-center gap-1.5 mt-2">
-                                        <Clock className="size-3 text-muted-foreground" />
-                                        <span className="text-xs text-muted-foreground">{method.time}</span>
-                                      </div>
+                                      <p className="text-xs text-muted-foreground mt-2">
+                                        Przewidywany czas dostawy: <span className="font-medium text-foreground">{method.time === "Jutro" ? estimatedDeliveryDay : method.time.toLowerCase()}</span>
+                                      </p>
 
                                       {/* Selected pickup point display */}
                                       {hasSelectedPoint && (
@@ -663,7 +790,7 @@ export default function CheckoutPage() {
                                             <Button
                                               type="button"
                                               variant="outline"
-                                              className="w-full h-12 gap-2 bg-background"
+                                              className="w-full h-12 gap-2 bg-background hover:border-[#FFCD00] hover:bg-[#FFCD00]/5"
                                               onClick={() => setShowInPostWidget(true)}
                                             >
                                               <Map className="size-5" />
@@ -675,85 +802,40 @@ export default function CheckoutPage() {
                                           </div>
                                         )}
 
-                                        {/* Other providers - Search + list */}
-                                        {method.pointType !== "inpost" && (
-                                          <>
-                                            <div className="relative mb-3">
-                                              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                                              <Input
-                                                placeholder="Wpisz miasto lub kod pocztowy..."
-                                                value={pickupPointSearch}
-                                                onChange={(e) => setPickupPointSearch(e.target.value)}
-                                                className="pl-10 h-10 bg-background"
-                                              />
-                                            </div>
-
-                                            {/* Points list */}
-                                            <div className="grid sm:grid-cols-2 gap-2 max-h-[240px] overflow-y-auto">
-
-                                          {method.pointType === "zabka" && [
-                                            { id: "ZAB001", name: "Żabka - Centrum", address: "ul. Nowy Świat 15", city: "Warszawa", postcode: "00-029" },
-                                            { id: "ZAB002", name: "Żabka - Mokotów", address: "ul. Puławska 150", city: "Warszawa", postcode: "02-624" },
-                                            { id: "ZAB003", name: "Żabka - Wola", address: "ul. Wolska 80", city: "Warszawa", postcode: "01-141" },
-                                            { id: "ZAB004", name: "Żabka - Praga", address: "ul. Targowa 20", city: "Warszawa", postcode: "03-731" },
-                                          ].map((point) => (
-                                            <button
-                                              key={point.id}
+                                        {/* Żabka Picker */}
+                                        {method.pointType === "zabka" && (
+                                          <div className="space-y-3">
+                                            <Button
                                               type="button"
-                                              onClick={() => setSelectedPickupPoint(point)}
-                                              className={`p-3 rounded-lg border text-left transition-all ${
-                                                selectedPickupPoint?.id === point.id
-                                                  ? "border-green-500 bg-green-50"
-                                                  : "bg-background hover:border-green-300"
-                                              }`}
+                                              variant="outline"
+                                              className="w-full h-12 gap-2 bg-background hover:border-green-500 hover:bg-green-500/5"
+                                              onClick={() => setShowZabkaWidget(true)}
                                             >
-                                              <div className="flex items-start gap-2">
-                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                                  selectedPickupPoint?.id === point.id ? "bg-green-500 text-white" : "bg-green-100"
-                                                }`}>
-                                                  <Store className={`size-4 ${selectedPickupPoint?.id === point.id ? "" : "text-green-600"}`} />
-                                                </div>
-                                                <div className="min-w-0">
-                                                  <p className="font-medium text-sm">{point.name}</p>
-                                                  <p className="text-xs text-muted-foreground truncate">{point.address}</p>
-                                                  <p className="text-xs text-muted-foreground">{point.postcode} {point.city}</p>
-                                                </div>
-                                              </div>
-                                            </button>
-                                          ))}
+                                              <Map className="size-5 text-green-600" />
+                                              Wybierz punkt Żabka na mapie
+                                            </Button>
+                                            <p className="text-xs text-center text-muted-foreground">
+                                              Kliknij aby otworzyć mapę punktów Żabka
+                                            </p>
+                                          </div>
+                                        )}
 
-                                          {method.pointType === "orlen" && [
-                                            { id: "ORL001", name: "Orlen - Centrum", address: "ul. Jana Pawła II 20", city: "Warszawa", postcode: "00-133" },
-                                            { id: "ORL002", name: "Orlen - Ursynów", address: "ul. Rosoła 50", city: "Warszawa", postcode: "02-786" },
-                                            { id: "ORL003", name: "Orlen - Bemowo", address: "ul. Górczewska 200", city: "Warszawa", postcode: "01-460" },
-                                            { id: "ORL004", name: "Orlen - Bielany", address: "ul. Marymoncka 100", city: "Warszawa", postcode: "01-813" },
-                                          ].map((point) => (
-                                            <button
-                                              key={point.id}
+                                        {/* Orlen Picker */}
+                                        {method.pointType === "orlen" && (
+                                          <div className="space-y-3">
+                                            <Button
                                               type="button"
-                                              onClick={() => setSelectedPickupPoint(point)}
-                                              className={`p-3 rounded-lg border text-left transition-all ${
-                                                selectedPickupPoint?.id === point.id
-                                                  ? "border-red-500 bg-red-50"
-                                                  : "bg-background hover:border-red-300"
-                                              }`}
+                                              variant="outline"
+                                              className="w-full h-12 gap-2 bg-background hover:border-red-500 hover:bg-red-500/5"
+                                              onClick={() => setShowOrlenWidget(true)}
                                             >
-                                              <div className="flex items-start gap-2">
-                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                                  selectedPickupPoint?.id === point.id ? "bg-red-500 text-white" : "bg-red-100"
-                                                }`}>
-                                                  <Fuel className={`size-4 ${selectedPickupPoint?.id === point.id ? "" : "text-red-600"}`} />
-                                                </div>
-                                                <div className="min-w-0">
-                                                  <p className="font-medium text-sm">{point.name}</p>
-                                                  <p className="text-xs text-muted-foreground truncate">{point.address}</p>
-                                                  <p className="text-xs text-muted-foreground">{point.postcode} {point.city}</p>
-                                                </div>
-                                              </div>
-                                            </button>
-                                          ))}
-                                            </div>
-                                          </>
+                                              <Map className="size-5 text-red-600" />
+                                              Wybierz punkt Orlen na mapie
+                                            </Button>
+                                            <p className="text-xs text-center text-muted-foreground">
+                                              Kliknij aby otworzyć mapę stacji Orlen
+                                            </p>
+                                          </div>
                                         )}
                                       </div>
                                     </motion.div>
@@ -997,18 +1079,26 @@ export default function CheckoutPage() {
                       <Input
                         id="discount"
                         value={discountCode}
-                        onChange={(e) => setDiscountCode(e.target.value)}
+                        onChange={(e) => {
+                          setDiscountCode(e.target.value);
+                          if (discountError) setDiscountError(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !discountApplied && discountCode.trim()) {
+                            e.preventDefault();
+                            handleApplyDiscount();
+                          }
+                        }}
                         placeholder="Wpisz kod"
-                        className="h-10"
-                        disabled={discountApplied}
+                        className={`h-10 ${discountError ? "border-red-500" : ""}`}
+                        disabled={discountApplied || isApplyingDiscount}
                       />
                       <Button
                         type="button"
                         variant={discountApplied ? "default" : "outline"}
                         onClick={() => {
                           if (discountApplied) {
-                            setDiscountApplied(false);
-                            setDiscountCode("");
+                            handleRemoveDiscount();
                           } else {
                             handleApplyDiscount();
                           }
@@ -1026,16 +1116,28 @@ export default function CheckoutPage() {
                       </Button>
                     </div>
                     <div className="h-5 mt-2">
-                      <AnimatePresence>
+                      <AnimatePresence mode="wait">
                         {discountApplied && (
                           <motion.p
+                            key="success"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="text-xs text-green-600 flex items-center gap-1"
                           >
                             <Check className="size-3" />
-                            Kod rabatowy został zastosowany
+                            Kod rabatowy został dodany
+                          </motion.p>
+                        )}
+                        {discountError && !discountApplied && (
+                          <motion.p
+                            key="error"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="text-xs text-red-500"
+                          >
+                            {discountError}
                           </motion.p>
                         )}
                       </AnimatePresence>
@@ -1062,10 +1164,10 @@ export default function CheckoutPage() {
                         <span className="font-medium">{formatPrice(paymentSurcharge)}</span>
                       </div>
                     )}
-                    {discountApplied && (
+                    {discountApplied && discountAmount > 0 && (
                       <div className="flex justify-between text-green-600">
-                        <span>Rabat</span>
-                        <span className="font-medium">-{formatPrice(0)}</span>
+                        <span>Rabat ({discountCode.toUpperCase()})</span>
+                        <span className="font-medium">-{formatPrice(discountAmount)}</span>
                       </div>
                     )}
 
@@ -1158,11 +1260,24 @@ export default function CheckoutPage() {
           </div>
         </form>
 
-        {/* InPost Picker Modal */}
-        <InPostPickerModal
+        {/* Point Picker Modals */}
+        <PointPickerModal
           isOpen={showInPostWidget}
           onClose={() => setShowInPostWidget(false)}
-          onSelect={handleInPostPointSelect}
+          onSelect={handlePointSelect}
+          service="inpost"
+        />
+        <PointPickerModal
+          isOpen={showZabkaWidget}
+          onClose={() => setShowZabkaWidget(false)}
+          onSelect={handlePointSelect}
+          service="zabka"
+        />
+        <PointPickerModal
+          isOpen={showOrlenWidget}
+          onClose={() => setShowOrlenWidget(false)}
+          onSelect={handlePointSelect}
+          service="orlen"
         />
       </div>
     </div>

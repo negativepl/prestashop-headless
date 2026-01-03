@@ -14,6 +14,7 @@
  */
 
 import { inpostProvider, initializeInPost } from "./inpost";
+import { furgonetkaProvider, initializeFurgonetka } from "./furgonetka";
 import type {
   ShippingProvider,
   ShippingRate,
@@ -30,6 +31,7 @@ export * from "./types";
 // Lista dostępnych providerów
 export const SHIPPING_PROVIDERS = {
   inpost: inpostProvider,
+  furgonetka: furgonetkaProvider,
 } as const;
 
 export type ShippingProviderCode = keyof typeof SHIPPING_PROVIDERS;
@@ -41,16 +43,36 @@ export function initializeShipping() {
   if (initialized) return;
 
   initializeInPost();
+  initializeFurgonetka();
 
   initialized = true;
-  console.log("[Shipping] Providers initialized");
+  console.log("[Shipping] Providers initialized (InPost + Furgonetka)");
 }
 
 // Pobranie providera po kodzie
 export function getShippingProvider(code: string): ShippingProvider | null {
   initializeShipping();
 
-  // Mapuj kody na providery
+  // Używamy Furgonetki dla wszystkich przewoźników (agregator)
+  // Furgonetka obsługuje: InPost, DHL, Orlen, DPD, GLS i inne
+  const furgonetkaServices = [
+    "inpost",
+    "dhl",
+    "zabka",
+    "orlen",
+    "dpd",
+    "gls",
+    "furgonetka",
+  ];
+
+  // Sprawdź czy kod zaczyna się od jednej z obsługiwanych usług
+  for (const service of furgonetkaServices) {
+    if (code.startsWith(service) || code.includes(service)) {
+      return SHIPPING_PROVIDERS.furgonetka;
+    }
+  }
+
+  // Fallback do InPost dla kompatybilności wstecznej
   if (code.startsWith("inpost")) {
     return SHIPPING_PROVIDERS.inpost;
   }

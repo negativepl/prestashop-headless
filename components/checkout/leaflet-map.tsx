@@ -36,25 +36,72 @@ interface LeafletMapProps {
   selectedPoint: InPostPoint | null;
   onPointClick: (point: InPostPoint) => void;
   onPointSelect: (point: InPostPoint) => void;
-  onMapMove: (lat: number, lng: number) => void;
+  onMapMove: (lat: number, lng: number, zoom: number) => void;
+  onZoomSufficiencyChange?: (isSufficient: boolean) => void;
+  markerColor?: string; // hex color like "#FFCD00"
+  markerLogo?: string; // URL to logo image for markers
+  minZoom?: number; // minimum zoom level to show points (default: 13)
+  userLocation?: [number, number] | null; // user's current location
 }
 
-// Custom InPost marker icons - pin style
-const createInPostIcon = (selected: boolean) => {
-  const size = selected ? 44 : 36;
-  const tailHeight = 10;
+// User location marker - blue pulsing dot
+const createUserLocationIcon = () => {
+  return L.divIcon({
+    className: "user-location-marker",
+    html: `
+      <div style="position: relative; width: 24px; height: 24px;">
+        <div style="
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 24px;
+          height: 24px;
+          background: rgba(59, 130, 246, 0.3);
+          border-radius: 50%;
+          animation: pulse 2s ease-out infinite;
+        "></div>
+        <div style="
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 14px;
+          height: 14px;
+          background: #3b82f6;
+          border: 3px solid #fff;
+          border-radius: 50%;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        "></div>
+      </div>
+      <style>
+        @keyframes pulse {
+          0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+          100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+        }
+      </style>
+    `,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+};
+
+// Custom marker icons - pin style with logo
+const createMarkerIcon = (selected: boolean, color: string = "#FFCD00", logoUrl?: string) => {
+  const size = selected ? 48 : 40;
+  const logoSize = selected ? 28 : 24;
 
   return L.divIcon({
-    className: selected ? "inpost-marker-selected" : "inpost-marker",
+    className: selected ? "point-marker-selected" : "point-marker",
     html: `
       <div style="
         position: relative;
         width: ${size}px;
-        height: ${size + tailHeight}px;
-        filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4));
+        height: ${size + 12}px;
+        filter: drop-shadow(0 3px 8px rgba(0,0,0,0.35));
       ">
         <div style="
-          background: ${selected ? '#000' : '#FFCD00'};
+          background: ${selected ? color : '#fff'};
           width: ${size}px;
           height: ${size}px;
           border-radius: 50% 50% 50% 0;
@@ -62,26 +109,31 @@ const createInPostIcon = (selected: boolean) => {
           display: flex;
           align-items: center;
           justify-content: center;
-          border: ${selected ? '3px solid #FFCD00' : '2px solid #000'};
+          border: 3px solid ${color};
         ">
           <div style="transform: rotate(45deg); display: flex; align-items: center; justify-content: center;">
-            <svg width="${selected ? 22 : 18}" height="${selected ? 22 : 18}" viewBox="0 0 24 24" fill="none" stroke="${selected ? '#FFCD00' : '#000'}" stroke-width="2.5">
-              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-              <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-              <line x1="12" y1="22.08" x2="12" y2="12"/>
-            </svg>
+            ${logoUrl
+              ? `<img src="${logoUrl}" style="width: ${logoSize}px; height: ${logoSize}px; object-fit: contain;" />`
+              : `<div style="width: ${logoSize}px; height: ${logoSize}px; background: ${color}; border-radius: 4px;"></div>`
+            }
           </div>
         </div>
       </div>
     `,
-    iconSize: [size, size + tailHeight],
-    iconAnchor: [size / 2, size + tailHeight],
-    popupAnchor: [0, -(size + tailHeight)],
+    iconSize: [size, size + 12],
+    iconAnchor: [size / 2, size + 12],
+    popupAnchor: [0, -(size + 12)],
   });
 };
 
 // Map event handler component
-function MapEventHandler({ onMapMove }: { onMapMove: (lat: number, lng: number) => void }) {
+function MapEventHandler({
+  onMapMove,
+  onZoomChange
+}: {
+  onMapMove: (lat: number, lng: number, zoom: number) => void;
+  onZoomChange: (zoom: number) => void;
+}) {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const map = useMapEvents({
@@ -94,12 +146,22 @@ function MapEventHandler({ onMapMove }: { onMapMove: (lat: number, lng: number) 
         try {
           if (map && map.getCenter) {
             const center = map.getCenter();
-            onMapMove(center.lat, center.lng);
+            const zoom = map.getZoom();
+            onMapMove(center.lat, center.lng, zoom);
           }
         } catch {
           // Map not ready yet
         }
       }, 500);
+    },
+    zoomend: () => {
+      try {
+        if (map) {
+          onZoomChange(map.getZoom());
+        }
+      } catch {
+        // Map not ready yet
+      }
     },
   });
 
@@ -117,9 +179,15 @@ function MapController({
   markerRefs: React.MutableRefObject<Map<string, L.Marker>>;
 }) {
   const map = useMap();
+  const lastCenter = useRef<string>("");
 
+  // Update map center when coordinates change
   useEffect(() => {
-    map.setView(center, map.getZoom());
+    const centerKey = `${center[0].toFixed(6)},${center[1].toFixed(6)}`;
+    if (centerKey !== lastCenter.current) {
+      lastCenter.current = centerKey;
+      map.flyTo(center, map.getZoom(), { duration: 0.5 });
+    }
   }, [center, map]);
 
   // Open popup when selectedPoint changes
@@ -135,6 +203,8 @@ function MapController({
   return null;
 }
 
+const MIN_ZOOM_DEFAULT = 13;
+
 export default function LeafletMap({
   center,
   points,
@@ -142,9 +212,26 @@ export default function LeafletMap({
   onPointClick,
   onPointSelect,
   onMapMove,
+  onZoomSufficiencyChange,
+  markerColor = "#FFCD00",
+  markerLogo,
+  minZoom = MIN_ZOOM_DEFAULT,
+  userLocation,
 }: LeafletMapProps) {
   const [mapKey, setMapKey] = useState(0);
+  const [currentZoom, setCurrentZoom] = useState(13);
   const markerRefs = useRef<Map<string, L.Marker>>(new Map());
+  const prevZoomSufficient = useRef(true);
+
+  const isZoomSufficient = currentZoom >= minZoom;
+
+  // Notify parent when zoom sufficiency changes
+  useEffect(() => {
+    if (prevZoomSufficient.current !== isZoomSufficient) {
+      prevZoomSufficient.current = isZoomSufficient;
+      onZoomSufficiencyChange?.(isZoomSufficient);
+    }
+  }, [isZoomSufficient, onZoomSufficiencyChange]);
 
   // Fix default marker icon issue in Leaflet
   useEffect(() => {
@@ -166,25 +253,35 @@ export default function LeafletMap({
   }, []);
 
   return (
-    <MapContainer
-      center={center}
-      zoom={13}
-      style={{ height: "100%", width: "100%" }}
-      key={mapKey}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <MapEventHandler onMapMove={onMapMove} />
-      <MapController center={center} selectedPoint={selectedPoint} markerRefs={markerRefs} />
+    <div style={{ position: "relative", height: "100%", width: "100%" }}>
+      <MapContainer
+        center={center}
+        zoom={13}
+        style={{ height: "100%", width: "100%" }}
+        key={mapKey}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> | Dane dostarcza <a href="https://furgonetka.pl">Furgonetka.pl</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <MapEventHandler onMapMove={onMapMove} onZoomChange={setCurrentZoom} />
+        <MapController center={center} selectedPoint={selectedPoint} markerRefs={markerRefs} />
 
-      {points.slice(0, 100).map((point) => (
+        {/* User location marker */}
+        {userLocation && (
+          <Marker
+            position={userLocation}
+            icon={createUserLocationIcon()}
+            zIndexOffset={1000}
+          />
+        )}
+
+        {isZoomSufficient && points.slice(0, 100).map((point) => (
         <Marker
           key={point.name}
           ref={(marker) => setMarkerRef(point.name, marker)}
           position={[point.location.latitude, point.location.longitude]}
-          icon={createInPostIcon(selectedPoint?.name === point.name)}
+          icon={createMarkerIcon(selectedPoint?.name === point.name, markerColor, markerLogo)}
           eventHandlers={{
             click: () => onPointClick(point),
           }}
@@ -229,12 +326,8 @@ export default function LeafletMap({
                     </p>
                   )}
                   {point.opening_hours && (
-                    <p style={{ fontSize: "11px", color: "#666", margin: "6px 0 0 0", display: "flex", alignItems: "center", gap: "4px" }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polyline points="12 6 12 12 16 14"/>
-                      </svg>
-                      {point.opening_hours}
+                    <p style={{ fontSize: "11px", color: "#666", margin: "6px 0 0 0" }}>
+                      Godziny otwarcia: {point.opening_hours}
                     </p>
                   )}
                 </div>
@@ -248,12 +341,12 @@ export default function LeafletMap({
                   marginTop: "12px",
                   height: "36px",
                   padding: "0 16px",
-                  backgroundColor: "#FFCD00",
+                  backgroundColor: markerColor,
                   border: "none",
                   borderRadius: "6px",
                   fontWeight: 500,
                   fontSize: "14px",
-                  color: "#000",
+                  color: markerColor === "#FFCD00" ? "#000" : "#fff",
                   cursor: "pointer",
                   display: "inline-flex",
                   alignItems: "center",
@@ -261,15 +354,65 @@ export default function LeafletMap({
                   gap: "8px",
                   fontFamily: "inherit",
                 }}
-                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#e6b800")}
-                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#FFCD00")}
               >
-                Wybierz ten Paczkomat®
+                Wybierz ten punkt
               </button>
             </div>
           </Popup>
         </Marker>
       ))}
-    </MapContainer>
+      </MapContainer>
+
+      {/* Zoom overlay - pokazuje się gdy zoom jest zbyt mały */}
+      {!isZoomSufficient && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "rgba(0, 0, 0, 0.75)",
+              color: "#fff",
+              padding: "16px 24px",
+              borderRadius: "12px",
+              textAlign: "center",
+              maxWidth: "280px",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+            }}
+          >
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              style={{ margin: "0 auto 8px" }}
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              <line x1="11" y1="8" x2="11" y2="14" />
+              <line x1="8" y1="11" x2="14" y2="11" />
+            </svg>
+            <p style={{ margin: 0, fontSize: "14px", fontWeight: 500 }}>
+              Przybliż mapę
+            </p>
+            <p style={{ margin: "4px 0 0", fontSize: "12px", opacity: 0.8 }}>
+              aby zobaczyć punkty odbioru
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

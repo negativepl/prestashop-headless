@@ -32,14 +32,21 @@ import type {
 
 export type { Product, Category, Order, OrderItem, Address };
 
-class BinshopsClient {
+interface BinshopsClientOptions {
+  sessionCookie?: string;
+  baseUrl?: string;
+  apiKey?: string;
+}
+
+export class BinshopsClient {
   private baseUrl: string;
   private apiKey: string;
   private sessionCookie: string | null = null;
 
-  constructor() {
-    this.baseUrl = process.env.PRESTASHOP_URL || "http://localhost:8080";
-    this.apiKey = process.env.BINSHOPS_API_KEY || "";
+  constructor(options?: BinshopsClientOptions) {
+    this.baseUrl = options?.baseUrl || process.env.PRESTASHOP_URL || "http://localhost:8080";
+    this.apiKey = options?.apiKey || process.env.BINSHOPS_API_KEY || "";
+    this.sessionCookie = options?.sessionCookie || null;
   }
 
   private getHeaders(withAuth: boolean = false): HeadersInit {
@@ -854,7 +861,18 @@ class BinshopsClient {
   async applyVoucher(code: string): Promise<BinshopsCartUpdateResponse | null> {
     try {
       const response = await this.fetch<BinshopsCartUpdateResponse>(
-        `cart?action=update&addDiscount=1&discount_name=${encodeURIComponent(code)}`
+        `cart?action=update&addDiscount=1&discount_name=${encodeURIComponent(code)}&image_size=medium_default`
+      );
+      return response;
+    } catch {
+      return null;
+    }
+  }
+
+  async removeVoucher(cartRuleId: number): Promise<BinshopsCartUpdateResponse | null> {
+    try {
+      const response = await this.fetch<BinshopsCartUpdateResponse>(
+        `cart?action=update&deleteDiscount=${cartRuleId}&image_size=medium_default`
       );
       return response;
     } catch {
@@ -1061,9 +1079,16 @@ class BinshopsClient {
       this.sessionCookie = null;
       // Call lightbootstrap without cache to get fresh session cookies
       await this.fetch<any>("lightbootstrap", { cache: "no-store" }, 0);
-    } catch {
+      console.log("[Binshops] Session initialized, cookie:", this.sessionCookie ? "set" : "not set");
+    } catch (error) {
+      console.error("[Binshops] Failed to initialize session:", error);
       // Ignore errors, we just want the cookies
     }
+  }
+
+  // Get current session cookie (for debugging)
+  getSessionCookie(): string | null {
+    return this.sessionCookie;
   }
 
   // Test connection
