@@ -191,7 +191,7 @@ class FurgonetkaProvider implements ShippingProvider {
   // Punkty odbioru (Paczkomaty, Żabka, Orlen)
   // ==========================================
 
-  async findPoints(query: PointSearchQuery & { service?: string }): Promise<ShippingPoint[]> {
+  async findPoints(query: PointSearchQuery): Promise<ShippingPoint[]> {
     try {
       // Prawidłowy format dla Furgonetka API
       const lat = query.location?.lat || 52.2297;

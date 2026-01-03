@@ -1,5 +1,5 @@
 /**
- * Shipping System - główny moduł
+ * Shipping System - główny moduł (Furgonetka)
  *
  * Używanie:
  * ```ts
@@ -8,12 +8,11 @@
  * // Pobranie metod dostawy
  * const methods = await getActiveShippingMethods(totalAmount);
  *
- * // Wyszukiwanie paczkomatów
- * const points = await findShippingPoints("inpost", { city: "Kraków" });
+ * // Wyszukiwanie punktów odbioru
+ * const points = await findShippingPoints("furgonetka", { city: "Kraków" });
  * ```
  */
 
-import { inpostProvider, initializeInPost } from "./inpost";
 import { furgonetkaProvider, initializeFurgonetka } from "./furgonetka";
 import type {
   ShippingProvider,
@@ -30,7 +29,6 @@ export * from "./types";
 
 // Lista dostępnych providerów
 export const SHIPPING_PROVIDERS = {
-  inpost: inpostProvider,
   furgonetka: furgonetkaProvider,
 } as const;
 
@@ -42,11 +40,10 @@ let initialized = false;
 export function initializeShipping() {
   if (initialized) return;
 
-  initializeInPost();
   initializeFurgonetka();
 
   initialized = true;
-  console.log("[Shipping] Providers initialized (InPost + Furgonetka)");
+  console.log("[Shipping] Providers initialized (Furgonetka)");
 }
 
 // Pobranie providera po kodzie
@@ -70,11 +67,6 @@ export function getShippingProvider(code: string): ShippingProvider | null {
     if (code.startsWith(service) || code.includes(service)) {
       return SHIPPING_PROVIDERS.furgonetka;
     }
-  }
-
-  // Fallback do InPost dla kompatybilności wstecznej
-  if (code.startsWith("inpost")) {
-    return SHIPPING_PROVIDERS.inpost;
   }
 
   return null;
@@ -282,7 +274,8 @@ export async function findShippingPoints(
     return [];
   }
 
-  return provider.findPoints(query);
+  // Pass providerCode as service for Furgonetka to filter by carrier
+  return provider.findPoints({ ...query, service: providerCode });
 }
 
 // ===========================================

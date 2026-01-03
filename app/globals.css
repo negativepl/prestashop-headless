@@ -240,29 +240,29 @@
   animation: accordion-up 0.2s ease-out;
 }
 
-/* InPost Leaflet Popup Styles */
-.inpost-popup .leaflet-popup-content-wrapper {
+/* Pickup Point Leaflet Popup Styles */
+.pickup-popup .leaflet-popup-content-wrapper {
   padding: 0;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
 }
 
-.inpost-popup .leaflet-popup-content {
+.pickup-popup .leaflet-popup-content {
   margin: 0;
   width: auto !important;
   min-width: 320px;
 }
 
-.inpost-popup .leaflet-popup-content * {
+.pickup-popup .leaflet-popup-content * {
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-.inpost-popup .leaflet-popup-tip {
+.pickup-popup .leaflet-popup-tip {
   background: white;
 }
 
-.inpost-popup .leaflet-popup-tip-container {
+.pickup-popup .leaflet-popup-tip-container {
   margin-top: -1px;
 }
 

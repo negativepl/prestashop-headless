@@ -1260,25 +1260,31 @@ export default function CheckoutPage() {
           </div>
         </form>
 
-        {/* Point Picker Modals */}
-        <PointPickerModal
-          isOpen={showInPostWidget}
-          onClose={() => setShowInPostWidget(false)}
-          onSelect={handlePointSelect}
-          service="inpost"
-        />
-        <PointPickerModal
-          isOpen={showZabkaWidget}
-          onClose={() => setShowZabkaWidget(false)}
-          onSelect={handlePointSelect}
-          service="zabka"
-        />
-        <PointPickerModal
-          isOpen={showOrlenWidget}
-          onClose={() => setShowOrlenWidget(false)}
-          onSelect={handlePointSelect}
-          service="orlen"
-        />
+        {/* Point Picker Modals - only render when open to reset state each time */}
+        {showInPostWidget && (
+          <PointPickerModal
+            isOpen={showInPostWidget}
+            onClose={() => setShowInPostWidget(false)}
+            onSelect={handlePointSelect}
+            service="inpost"
+          />
+        )}
+        {showZabkaWidget && (
+          <PointPickerModal
+            isOpen={showZabkaWidget}
+            onClose={() => setShowZabkaWidget(false)}
+            onSelect={handlePointSelect}
+            service="zabka"
+          />
+        )}
+        {showOrlenWidget && (
+          <PointPickerModal
+            isOpen={showOrlenWidget}
+            onClose={() => setShowOrlenWidget(false)}
+            onSelect={handlePointSelect}
+            service="orlen"
+          />
+        )}
       </div>
     </div>
   );

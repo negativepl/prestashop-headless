@@ -39,12 +39,12 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://geowidget.inpost.pl", // unsafe needed for Next.js + InPost Geowidget
-      "style-src 'self' 'unsafe-inline' https://geowidget.inpost.pl https://unpkg.com", // unsafe-inline needed for styled components + InPost + Leaflet
-      "img-src 'self' data: blob: https://presta.trkhspl.com https://images.unsplash.com https://upload.wikimedia.org https://blog.trkhspl.com https://*.tile.openstreetmap.org https://geowidget.inpost.pl https://cdnjs.cloudflare.com https://unpkg.com https://static.easypack24.net https://sklep.bizonmobile.pl",
-      "font-src 'self' data: https://geowidget.inpost.pl",
-      "connect-src 'self' https://presta.trkhspl.com https://blog.trkhspl.com https://geowidget.inpost.pl https://api-pl-points.inpost.pl https://nominatim.openstreetmap.org",
-      "frame-src 'self' https://geowidget.inpost.pl https://geowidget-app.inpost.pl https://www.google.com https://maps.google.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe needed for Next.js
+      "style-src 'self' 'unsafe-inline' https://unpkg.com", // unsafe-inline needed for styled components + Leaflet
+      "img-src 'self' data: blob: https://presta.trkhspl.com https://images.unsplash.com https://blog.trkhspl.com https://*.tile.openstreetmap.org https://cdnjs.cloudflare.com https://unpkg.com https://static.easypack24.net https://sklep.bizonmobile.pl",
+      "font-src 'self' data:",
+      "connect-src 'self' https://presta.trkhspl.com https://blog.trkhspl.com https://nominatim.openstreetmap.org",
+      "frame-src 'self' https://www.google.com https://maps.google.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -80,11 +80,6 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "images.unsplash.com",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "upload.wikimedia.org",
         pathname: "/**",
       },
       {

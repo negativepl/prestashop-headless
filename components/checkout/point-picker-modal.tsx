@@ -94,8 +94,6 @@ const SERVICE_CONFIG = {
   },
 };
 
-// Minimum zoom level to show/fetch points (13 = default zoom, miasto widoczne)
-const MIN_ZOOM_FOR_POINTS = 13;
 
 export function PointPickerModal({ isOpen, onClose, onSelect, service }: PointPickerModalProps) {
   const config = SERVICE_CONFIG[service];
@@ -106,28 +104,65 @@ export function PointPickerModal({ isOpen, onClose, onSelect, service }: PointPi
   const [selectedPoint, setSelectedPoint] = useState<PickupPoint | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>([52.2297, 21.0122]); // Warsaw
   const [locatingUser, setLocatingUser] = useState(false);
-  const [isZoomSufficient, setIsZoomSufficient] = useState(true);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 
   // Flag to skip refetch when clicking point from list
   const skipNextMapMove = useRef(false);
 
-  // Fetch points from API
+  // Fetch points from API (Furgonetka)
   const fetchPoints = useCallback(async (lat?: number, lng?: number) => {
     setLoading(true);
     try {
-      let url = `/api/inpost/points?service=${service}&type=parcel_locker&per_page=100`;
+      const params = new URLSearchParams({
+        provider: service,
+        limit: "100",
+      });
 
       if (lat && lng) {
-        url += `&lat=${lat}&lng=${lng}`;
+        params.set("lat", lat.toString());
+        params.set("lng", lng.toString());
       }
 
-      const response = await fetch(url);
+      const response = await fetch(`/api/shipping/points?${params.toString()}`);
       const data = await response.json();
 
-      if (data.items) {
-        setPoints(data.items);
-        setFilteredPoints(data.items);
+      if (data.success && data.points) {
+        // Map ShippingPoint format to PickupPoint format expected by modal
+        const mappedPoints: PickupPoint[] = data.points.map((point: {
+          id: string;
+          name: string;
+          type: string;
+          address: { street: string; city: string; postCode: string; country: string };
+          location: { lat: number; lng: number };
+          openingHours?: string;
+          meta?: { service?: string; distance?: number; description?: string };
+        }) => ({
+          name: point.id || point.name,
+          type: [point.type === "locker" ? "parcel_locker" : "pop"],
+          status: "Operating",
+          location: {
+            latitude: point.location.lat,
+            longitude: point.location.lng,
+          },
+          address: {
+            line1: point.address.street,
+            line2: `${point.address.postCode} ${point.address.city}`,
+          },
+          address_details: {
+            city: point.address.city,
+            province: "",
+            post_code: point.address.postCode,
+            street: point.address.street.split(" ").slice(0, -1).join(" ") || point.address.street,
+            building_number: point.address.street.split(" ").pop() || "",
+          },
+          opening_hours: point.openingHours || "24/7",
+          location_description: point.meta?.description,
+          distance: point.meta?.distance,
+          image_url: undefined,
+        }));
+
+        setPoints(mappedPoints);
+        setFilteredPoints(mappedPoints);
       }
     } catch (error) {
       console.error(`Error fetching ${service} points:`, error);
@@ -165,19 +200,10 @@ export function PointPickerModal({ isOpen, onClose, onSelect, service }: PointPi
     );
   }, [fetchPoints]);
 
-  // Initial load
+  // Initial load - get user location and fetch points
   useEffect(() => {
-    if (isOpen && points.length === 0) {
-      getUserLocation();
-    }
-  }, [isOpen, points.length, getUserLocation]);
-
-  // Reset on service change
-  useEffect(() => {
-    setPoints([]);
-    setFilteredPoints([]);
-    setSelectedPoint(null);
-  }, [service]);
+    getUserLocation();
+  }, [getUserLocation]);
 
   // Search filter (local)
   useEffect(() => {
@@ -197,16 +223,13 @@ export function PointPickerModal({ isOpen, onClose, onSelect, service }: PointPi
     setFilteredPoints(filtered);
   }, [search, points]);
 
-  // Handle map move - fetch new points for area (skip if programmatic or zoom too low)
-  const handleMapMove = useCallback((lat: number, lng: number, zoom: number) => {
+  // Handle map move - fetch new points for area
+  const handleMapMove = useCallback((lat: number, lng: number) => {
     if (skipNextMapMove.current) {
       skipNextMapMove.current = false;
       return;
     }
-    // Only fetch points if zoom is sufficient
-    if (zoom >= MIN_ZOOM_FOR_POINTS) {
-      fetchPoints(lat, lng);
-    }
+    fetchPoints(lat, lng);
   }, [fetchPoints]);
 
   // Search by city/postcode via geocoding
@@ -278,10 +301,7 @@ export function PointPickerModal({ isOpen, onClose, onSelect, service }: PointPi
           <div>
             <h2 className="font-semibold text-lg">{config.title}</h2>
             <p className="text-sm text-muted-foreground">
-              {isZoomSufficient
-                ? `${filteredPoints.length} punktów w okolicy`
-                : "Przybliż mapę aby zobaczyć punkty"
-              }
+              {loading ? "Ładowanie..." : `${filteredPoints.length} punktów w okolicy`}
             </p>
           </div>
         </div>
@@ -330,15 +350,7 @@ export function PointPickerModal({ isOpen, onClose, onSelect, service }: PointPi
       <div className="flex-1 flex overflow-hidden">
         {/* Points list - left sidebar */}
         <div className="w-full md:w-[380px] border-r overflow-y-auto bg-card">
-          {!isZoomSufficient ? (
-            <div className="p-8 text-center text-muted-foreground">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-                <Search className="size-7 text-muted-foreground" />
-              </div>
-              <p className="font-medium">Przybliż mapę</p>
-              <p className="text-sm mt-1">aby zobaczyć punkty odbioru w okolicy</p>
-            </div>
-          ) : loading ? (
+          {loading ? (
             <div className="flex items-center justify-center h-40">
               <Loader2 className="size-8 animate-spin text-muted-foreground" />
             </div>
@@ -437,10 +449,8 @@ export function PointPickerModal({ isOpen, onClose, onSelect, service }: PointPi
             onPointClick={handlePointClick}
             onPointSelect={handleSelect}
             onMapMove={handleMapMove}
-            onZoomSufficiencyChange={setIsZoomSufficient}
             markerColor={config.color}
             markerLogo={config.logo}
-            minZoom={MIN_ZOOM_FOR_POINTS}
             userLocation={userLocation}
           />
         </div>

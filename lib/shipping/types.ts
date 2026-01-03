@@ -137,6 +137,7 @@ export interface PointSearchQuery {
   };
   type?: string; // locker, pop
   limit?: number;
+  service?: string; // inpost, zabka, orlen
 }
 
 export interface RateCalculationParams {

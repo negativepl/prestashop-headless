@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-interface InPostPoint {
+interface PickupPoint {
   name: string;
   type: string[];
   status: string;
@@ -32,15 +32,13 @@ interface InPostPoint {
 
 interface LeafletMapProps {
   center: [number, number];
-  points: InPostPoint[];
-  selectedPoint: InPostPoint | null;
-  onPointClick: (point: InPostPoint) => void;
-  onPointSelect: (point: InPostPoint) => void;
-  onMapMove: (lat: number, lng: number, zoom: number) => void;
-  onZoomSufficiencyChange?: (isSufficient: boolean) => void;
+  points: PickupPoint[];
+  selectedPoint: PickupPoint | null;
+  onPointClick: (point: PickupPoint) => void;
+  onPointSelect: (point: PickupPoint) => void;
+  onMapMove: (lat: number, lng: number) => void;
   markerColor?: string; // hex color like "#FFCD00"
   markerLogo?: string; // URL to logo image for markers
-  minZoom?: number; // minimum zoom level to show points (default: 13)
   userLocation?: [number, number] | null; // user's current location
 }
 
@@ -129,10 +127,8 @@ const createMarkerIcon = (selected: boolean, color: string = "#FFCD00", logoUrl?
 // Map event handler component
 function MapEventHandler({
   onMapMove,
-  onZoomChange
 }: {
-  onMapMove: (lat: number, lng: number, zoom: number) => void;
-  onZoomChange: (zoom: number) => void;
+  onMapMove: (lat: number, lng: number) => void;
 }) {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -146,22 +142,12 @@ function MapEventHandler({
         try {
           if (map && map.getCenter) {
             const center = map.getCenter();
-            const zoom = map.getZoom();
-            onMapMove(center.lat, center.lng, zoom);
+            onMapMove(center.lat, center.lng);
           }
         } catch {
           // Map not ready yet
         }
       }, 500);
-    },
-    zoomend: () => {
-      try {
-        if (map) {
-          onZoomChange(map.getZoom());
-        }
-      } catch {
-        // Map not ready yet
-      }
     },
   });
 
@@ -175,7 +161,7 @@ function MapController({
   markerRefs
 }: {
   center: [number, number];
-  selectedPoint: InPostPoint | null;
+  selectedPoint: PickupPoint | null;
   markerRefs: React.MutableRefObject<Map<string, L.Marker>>;
 }) {
   const map = useMap();
@@ -203,8 +189,6 @@ function MapController({
   return null;
 }
 
-const MIN_ZOOM_DEFAULT = 13;
-
 export default function LeafletMap({
   center,
   points,
@@ -212,26 +196,11 @@ export default function LeafletMap({
   onPointClick,
   onPointSelect,
   onMapMove,
-  onZoomSufficiencyChange,
   markerColor = "#FFCD00",
   markerLogo,
-  minZoom = MIN_ZOOM_DEFAULT,
   userLocation,
 }: LeafletMapProps) {
-  const [mapKey, setMapKey] = useState(0);
-  const [currentZoom, setCurrentZoom] = useState(13);
   const markerRefs = useRef<Map<string, L.Marker>>(new Map());
-  const prevZoomSufficient = useRef(true);
-
-  const isZoomSufficient = currentZoom >= minZoom;
-
-  // Notify parent when zoom sufficiency changes
-  useEffect(() => {
-    if (prevZoomSufficient.current !== isZoomSufficient) {
-      prevZoomSufficient.current = isZoomSufficient;
-      onZoomSufficiencyChange?.(isZoomSufficient);
-    }
-  }, [isZoomSufficient, onZoomSufficiencyChange]);
 
   // Fix default marker icon issue in Leaflet
   useEffect(() => {
@@ -256,15 +225,14 @@ export default function LeafletMap({
     <div style={{ position: "relative", height: "100%", width: "100%" }}>
       <MapContainer
         center={center}
-        zoom={13}
+        zoom={14}
         style={{ height: "100%", width: "100%" }}
-        key={mapKey}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> | Dane dostarcza <a href="https://furgonetka.pl">Furgonetka.pl</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <MapEventHandler onMapMove={onMapMove} onZoomChange={setCurrentZoom} />
+        <MapEventHandler onMapMove={onMapMove} />
         <MapController center={center} selectedPoint={selectedPoint} markerRefs={markerRefs} />
 
         {/* User location marker */}
@@ -276,7 +244,7 @@ export default function LeafletMap({
           />
         )}
 
-        {isZoomSufficient && points.slice(0, 100).map((point) => (
+        {points.slice(0, 100).map((point) => (
         <Marker
           key={point.name}
           ref={(marker) => setMarkerRef(point.name, marker)}
@@ -286,7 +254,7 @@ export default function LeafletMap({
             click: () => onPointClick(point),
           }}
         >
-          <Popup closeButton={false} className="inpost-popup" maxWidth={420} minWidth={320}>
+          <Popup closeButton={false} className="pickup-popup" maxWidth={420} minWidth={320}>
             <div style={{ padding: "12px" }}>
               {/* Top row: Image + Content */}
               <div style={{ display: "flex", gap: "12px" }}>
@@ -362,57 +330,6 @@ export default function LeafletMap({
         </Marker>
       ))}
       </MapContainer>
-
-      {/* Zoom overlay - pokazuje się gdy zoom jest zbyt mały */}
-      {!isZoomSufficient && (
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            pointerEvents: "none",
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "rgba(0, 0, 0, 0.75)",
-              color: "#fff",
-              padding: "16px 24px",
-              borderRadius: "12px",
-              textAlign: "center",
-              maxWidth: "280px",
-              boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
-            }}
-          >
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              style={{ margin: "0 auto 8px" }}
-            >
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              <line x1="11" y1="8" x2="11" y2="14" />
-              <line x1="8" y1="11" x2="14" y2="11" />
-            </svg>
-            <p style={{ margin: 0, fontSize: "14px", fontWeight: 500 }}>
-              Przybliż mapę
-            </p>
-            <p style={{ margin: "4px 0 0", fontSize: "12px", opacity: 0.8 }}>
-              aby zobaczyć punkty odbioru
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
