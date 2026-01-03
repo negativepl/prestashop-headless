@@ -503,7 +503,7 @@ export default function CheckoutPage() {
               >
                 <div className="p-6 border-b bg-muted/30">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl border-2 border-primary/30 flex items-center justify-center">
                       <User className="size-5 text-primary" />
                     </div>
                     <div>
@@ -669,7 +669,7 @@ export default function CheckoutPage() {
               >
                 <div className="p-6 border-b bg-muted/30">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl border-2 border-primary/30 flex items-center justify-center">
                       <Truck className="size-5 text-primary" />
                     </div>
                     <div>
@@ -951,7 +951,7 @@ export default function CheckoutPage() {
               >
                 <div className="p-6 border-b bg-muted/30">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl border-2 border-primary/30 flex items-center justify-center">
                       <CreditCard className="size-5 text-primary" />
                     </div>
                     <div>
@@ -1024,10 +1024,15 @@ export default function CheckoutPage() {
               >
                 {/* Summary header */}
                 <div className="p-6 border-b bg-muted/30">
-                  <h2 className="font-semibold text-lg flex items-center gap-2">
-                    <ShoppingBag className="size-5" />
-                    Podsumowanie ({items.length})
-                  </h2>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl border-2 border-primary/30 flex items-center justify-center">
+                      <ShoppingBag className="size-5 text-primary" />
+                    </div>
+                    <div>
+                      <h2 className="font-semibold text-lg">Podsumowanie</h2>
+                      <p className="text-sm text-muted-foreground">{items.length} {items.length === 1 ? 'produkt' : items.length < 5 ? 'produkty' : 'produktów'} w koszyku</p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Items list */}
@@ -1036,17 +1041,19 @@ export default function CheckoutPage() {
                     {items.map((item) => (
                       <div
                         key={`${item.product.id}-${item.productAttributeId}`}
-                        className="flex gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
                       >
                         <div className="relative flex-shrink-0">
-                          <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden">
+                          <div className="w-16 h-16 bg-white rounded-xl border border-border/50 p-1.5">
                             {item.product.imageUrl ? (
-                              <Image
-                                src={item.product.imageUrl}
-                                alt={item.product.name}
-                                fill
-                                className="object-cover"
-                              />
+                              <div className="relative w-full h-full">
+                                <Image
+                                  src={item.product.imageUrl}
+                                  alt={item.product.name}
+                                  fill
+                                  className="object-contain rounded-lg"
+                                />
+                              </div>
                             ) : (
                               <div className="w-full h-full flex items-center justify-center">
                                 <Package className="size-6 text-muted-foreground" />
@@ -1058,11 +1065,11 @@ export default function CheckoutPage() {
                           </span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm line-clamp-2">{item.product.name}</p>
-                          <p className="text-sm text-primary font-semibold mt-1">
-                            {formatPrice(item.product.price * item.quantity)}
-                          </p>
+                          <p className="font-medium text-base line-clamp-2">{item.product.name}</p>
                         </div>
+                        <p className="text-base text-primary font-semibold flex-shrink-0">
+                          {formatPrice(item.product.price * item.quantity)}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -1070,12 +1077,9 @@ export default function CheckoutPage() {
 
                 {/* Discount code */}
                 <div className="px-4 pb-4">
-                  <div className="p-3 bg-muted/50 rounded-xl">
-                    <Label htmlFor="discount" className="text-sm font-medium flex items-center gap-2 mb-2">
-                      <Tag className="size-4" />
-                      Kod rabatowy
-                    </Label>
-                    <div className="flex gap-2">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                       <Input
                         id="discount"
                         value={discountCode}
@@ -1089,84 +1093,84 @@ export default function CheckoutPage() {
                             handleApplyDiscount();
                           }
                         }}
-                        placeholder="Wpisz kod"
-                        className={`h-10 ${discountError ? "border-red-500" : ""}`}
+                        placeholder="Kod rabatowy"
+                        className={`h-10 pl-9 ${discountError ? "border-red-500" : ""}`}
                         disabled={discountApplied || isApplyingDiscount}
                       />
-                      <Button
-                        type="button"
-                        variant={discountApplied ? "default" : "outline"}
-                        onClick={() => {
-                          if (discountApplied) {
-                            handleRemoveDiscount();
-                          } else {
-                            handleApplyDiscount();
-                          }
-                        }}
-                        disabled={!discountApplied && (!discountCode.trim() || isApplyingDiscount)}
-                        className={`h-10 px-4 min-w-[90px] ${discountApplied ? "bg-green-600 hover:bg-green-700 text-white" : ""}`}
-                      >
-                        {isApplyingDiscount ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : discountApplied ? (
-                          <X className="size-4" />
-                        ) : (
-                          "Zastosuj"
-                        )}
-                      </Button>
                     </div>
-                    <div className="h-5 mt-2">
-                      <AnimatePresence mode="wait">
-                        {discountApplied && (
-                          <motion.p
-                            key="success"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="text-xs text-green-600 flex items-center gap-1"
-                          >
-                            <Check className="size-3" />
-                            Kod rabatowy został dodany
-                          </motion.p>
-                        )}
-                        {discountError && !discountApplied && (
-                          <motion.p
-                            key="error"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="text-xs text-red-500"
-                          >
-                            {discountError}
-                          </motion.p>
-                        )}
-                      </AnimatePresence>
-                    </div>
+                    <Button
+                      type="button"
+                      variant={discountApplied ? "default" : "outline"}
+                      onClick={() => {
+                        if (discountApplied) {
+                          handleRemoveDiscount();
+                        } else {
+                          handleApplyDiscount();
+                        }
+                      }}
+                      disabled={!discountApplied && (!discountCode.trim() || isApplyingDiscount)}
+                      className={`h-10 px-4 min-w-[90px] ${discountApplied ? "bg-green-600 hover:bg-green-700 text-white" : ""}`}
+                    >
+                      {isApplyingDiscount ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : discountApplied ? (
+                        <X className="size-4" />
+                      ) : (
+                        "Zastosuj"
+                      )}
+                    </Button>
+                  </div>
+                  <div className="h-5 mt-2">
+                    <AnimatePresence mode="wait">
+                      {discountApplied && (
+                        <motion.p
+                          key="success"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="text-xs text-green-600 flex items-center gap-1"
+                        >
+                          <Check className="size-3" />
+                          Kod rabatowy został dodany
+                        </motion.p>
+                      )}
+                      {discountError && !discountApplied && (
+                        <motion.p
+                          key="error"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="text-xs text-red-500"
+                        >
+                          {discountError}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
 
                 {/* Price breakdown */}
                 <div className="px-4 pb-4">
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-base">
                       <span className="text-muted-foreground">Produkty</span>
                       <span className="font-medium">{formatPrice(total)}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between text-base">
                       <span className="text-muted-foreground">Dostawa</span>
                       <span className={`font-medium ${shippingCost === 0 ? "text-green-600" : ""}`}>
                         {shippingCost === 0 ? "Gratis" : formatPrice(shippingCost)}
                       </span>
                     </div>
                     {paymentSurcharge > 0 && (
-                      <div className="flex justify-between">
+                      <div className="flex justify-between text-base">
                         <span className="text-muted-foreground">Opłata za pobranie</span>
                         <span className="font-medium">{formatPrice(paymentSurcharge)}</span>
                       </div>
                     )}
                     {discountApplied && discountAmount > 0 && (
-                      <div className="flex justify-between text-green-600">
-                        <span>Rabat ({discountCode.toUpperCase()})</span>
+                      <div className="flex justify-between text-base text-green-600">
+                        <span>Kod rabatowy</span>
                         <span className="font-medium">-{formatPrice(discountAmount)}</span>
                       </div>
                     )}
@@ -1192,10 +1196,10 @@ export default function CheckoutPage() {
                 </div>
 
                 {/* Total */}
-                <div className="p-4 bg-muted/50 border-t">
+                <div className="p-5 bg-muted/50 border-t">
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold text-lg">Do zapłaty</span>
-                    <span className="text-2xl font-bold text-primary">{formatPrice(finalTotal)}</span>
+                    <span className="font-semibold text-xl">Do zapłaty</span>
+                    <span className="text-3xl font-bold text-primary">{formatPrice(finalTotal)}</span>
                   </div>
                 </div>
 
@@ -1242,19 +1246,6 @@ export default function CheckoutPage() {
                   )}
                 </div>
 
-                {/* Trust badges */}
-                <div className="p-4 border-t">
-                  <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <Shield className="size-4" />
-                      <span>Bezpieczne płatności</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Lock className="size-4" />
-                      <span>SSL 256-bit</span>
-                    </div>
-                  </div>
-                </div>
               </motion.div>
             </div>
           </div>

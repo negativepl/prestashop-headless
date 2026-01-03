@@ -80,19 +80,19 @@ export default function CartPage() {
                     key={`${item.product.id}-${item.productAttributeId}`}
                     className="p-4 md:p-6"
                   >
-                    <div className="flex gap-4">
+                    <div className="flex items-center gap-4">
                       {/* Product image */}
                       <Link href={`/products/${item.product.id}`} className="flex-shrink-0">
-                        <div className="w-24 h-24 md:w-32 md:h-32 bg-muted rounded-xl overflow-hidden">
+                        <div className="w-16 h-16 bg-white rounded-xl border border-border/50 p-1.5">
                           {item.product.imageUrl ? (
                             <img
                               src={item.product.imageUrl}
                               alt={item.product.name}
-                              className="w-full h-full object-cover hover:scale-105 transition-transform"
+                              className="w-full h-full object-contain rounded-lg"
                             />
                           ) : (
                             <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                              Brak zdjęcia
+                              <ShoppingBag className="size-6 text-muted-foreground" />
                             </div>
                           )}
                         </div>
@@ -105,9 +105,6 @@ export default function CartPage() {
                             {item.product.name}
                           </h3>
                         </Link>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {formatPrice(item.product.price)} / szt.
-                        </p>
 
                         {/* Mobile: quantity and remove */}
                         <div className="mt-4 flex items-center justify-between md:hidden">
@@ -201,49 +198,54 @@ export default function CartPage() {
 
             {/* Order summary - 1 column */}
             <div className="lg:col-span-1">
-              <div className="bg-card rounded-2xl border p-6 sticky top-24">
-                <h2 className="text-lg font-semibold mb-6">Podsumowanie</h2>
+              <div className="bg-card rounded-2xl border shadow-sm sticky top-24 overflow-hidden">
+                {/* Header */}
+                <div className="p-6 border-b bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl border-2 border-primary/30 flex items-center justify-center">
+                      <ShoppingBag className="size-5 text-primary" />
+                    </div>
+                    <div>
+                      <h2 className="font-semibold text-lg">Podsumowanie</h2>
+                      <p className="text-sm text-muted-foreground">{itemCount} {itemCount === 1 ? 'produkt' : itemCount < 5 ? 'produkty' : 'produktów'} w koszyku</p>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Summary */}
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Produkty ({itemCount})</span>
-                    <span>{formatPrice(total)}</span>
+                <div className="p-6 space-y-3">
+                  <div className="flex justify-between text-base">
+                    <span className="text-muted-foreground">Produkty</span>
+                    <span className="font-medium">{formatPrice(total)}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between text-base">
                     <span className="text-muted-foreground">Dostawa</span>
                     {total >= freeShippingThreshold ? (
                       <span className="text-green-600 font-medium">Gratis</span>
                     ) : (
-                      <span>od 7,00 zł</span>
+                      <span className="font-medium">od 7,00 zł</span>
                     )}
                   </div>
-                  <div className="flex justify-between font-semibold text-lg pt-3 border-t">
-                    <span>Do zapłaty</span>
-                    <span className="text-primary">{formatPrice(total)}</span>
+                </div>
+
+                {/* Total */}
+                <div className="p-5 bg-muted/50 border-t">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-xl">Do zapłaty</span>
+                    <span className="text-3xl font-bold text-primary">{formatPrice(total)}</span>
                   </div>
                 </div>
 
                 {/* Checkout button */}
-                <div className="mt-6 space-y-3">
+                <div className="p-4 space-y-3">
                   <Link href="/checkout" className="block">
-                    <Button size="lg" className="w-full h-14 text-base">
+                    <Button size="lg" className="w-full h-14 text-base font-semibold gap-2 shadow-lg shadow-primary/25">
                       Przejdź do kasy
-                      <ArrowRight className="ml-2 size-4" />
+                      <ArrowRight className="size-5" />
                     </Button>
                   </Link>
                 </div>
 
-                {/* Trust badges */}
-                <div className="mt-6 pt-6 border-t space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Truck className="size-4" />
-                    <span>Darmowa dostawa od {formatPrice(freeShippingThreshold)}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Zwrot do 30 dni bez podania przyczyny
-                  </p>
-                </div>
               </div>
             </div>
           </div>

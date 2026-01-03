@@ -178,9 +178,9 @@ export function Footer() {
         <div className="container py-6">
           <div className="flex flex-col gap-4 md:grid md:grid-cols-3 items-center text-xs lg:text-sm">
             <div className="flex items-center gap-2 lg:gap-4 order-2 md:order-1 md:justify-start">
-              <img src="/images/payment/visa.png" alt="Visa" className="h-4 lg:h-6 opacity-70" />
-              <img src="/images/payment/mastercard.png" alt="Mastercard" className="h-4 lg:h-6 opacity-70" />
-              <img src="/images/payment/paypal.png" alt="PayPal" className="h-4 lg:h-6 opacity-70" />
+              <img src="/images/payment/visa.png" alt="Visa" className="h-4 lg:h-6 opacity-50 grayscale" />
+              <img src="/images/payment/mastercard.png" alt="Mastercard" className="h-4 lg:h-6 opacity-50 grayscale" />
+              <img src="/images/payment/paypal.png" alt="PayPal" className="h-4 lg:h-6 opacity-50 grayscale" />
             </div>
             <p className="order-1 md:order-2 text-center text-foreground whitespace-nowrap">© Home Screen Magdalena Cylke. Wszystkie prawa zastrzeżone.</p>
             <div className="order-3 md:justify-self-end">
