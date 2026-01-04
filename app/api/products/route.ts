@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
   const limit = searchParams.get("limit");
   const page = searchParams.get("page");
   const sort = searchParams.get("sort");
+  const filters = searchParams.get("q"); // Faceted search filter
 
   // Map sort options
   const sortMap: Record<string, string> = {
@@ -23,15 +24,16 @@ export async function GET(request: NextRequest) {
   try {
     const sortBy = sort ? (sortMap[sort] as "date" | "price_asc" | "price_desc" | "name" | "sales") : "date";
 
-    const { products, total } = await binshops.getProducts({
+    const { products, total, facets } = await binshops.getProducts({
       categoryId: categoryId ? parseInt(categoryId) : 2,
       limit: limit ? parseInt(limit) : 24,
       page: page ? parseInt(page) : 1,
       sortBy,
+      filters: filters || undefined,
     });
 
     return NextResponse.json(
-      { products, total },
+      { products, total, facets },
       {
         headers: {
           "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
@@ -41,7 +43,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error fetching products:", error);
     return NextResponse.json(
-      { error: "Failed to fetch products", products: [], total: 0 },
+      { error: "Failed to fetch products", products: [], total: 0, facets: [] },
       { status: 500 }
     );
   }

@@ -166,7 +166,8 @@ export class BinshopsClient {
     categoryId?: number;
     page?: number;
     sortBy?: "date" | "price_asc" | "price_desc" | "name" | "sales";
-  }): Promise<{ products: Product[]; total: number; pagination?: any }> {
+    filters?: string; // Faceted search query, e.g. "Kolor-Czarny"
+  }): Promise<{ products: Product[]; total: number; pagination?: any; facets?: any[] }> {
     const categoryId = params?.categoryId || 2; // Root category
     const page = params?.page || Math.floor((params?.offset || 0) / (params?.limit || 24)) + 1;
     const resultsPerPage = params?.limit || 24;
@@ -182,12 +183,17 @@ export class BinshopsClient {
     const order = sortMap[params?.sortBy || "date"] || "product.date_add.desc";
 
     try {
-      const response = await this.fetch<BinshopsCategoryProductsResponse>(
-        `categoryproducts?id_category=${categoryId}&page=${page}&resultsPerPage=${resultsPerPage}&with_all_images=0&image_size=home_default&order=${order}`
-      );
+      let url = `categoryproducts?id_category=${categoryId}&page=${page}&resultsPerPage=${resultsPerPage}&with_all_images=0&image_size=home_default&order=${order}`;
+
+      // Add faceted search filter
+      if (params?.filters) {
+        url += `&q=${encodeURIComponent(params.filters)}`;
+      }
+
+      const response = await this.fetch<BinshopsCategoryProductsResponse>(url);
 
       if (!response.success || !response.psdata?.products) {
-        return { products: [], total: 0 };
+        return { products: [], total: 0, facets: [] };
       }
 
       const products = response.psdata.products.map((p) => this.mapProductListItem(p));
@@ -196,10 +202,11 @@ export class BinshopsClient {
         products,
         total: response.psdata.pagination?.total_items || products.length,
         pagination: response.psdata.pagination,
+        facets: response.psdata.facets || [],
       };
     } catch (error) {
       console.error("Error fetching products:", error);
-      return { products: [], total: 0 };
+      return { products: [], total: 0, facets: [] };
     }
   }
 
@@ -383,6 +390,7 @@ export class BinshopsClient {
             parentId: 0,
             level: item.depth || 0,
             active: true,
+            imageUrl: item.image_urls?.[0] || undefined,
             children: item.children?.length > 0
               ? this.mapMenuItemsToCategories(item.children.filter((c: any) => c.type === "category"))
               : undefined,
@@ -423,6 +431,46 @@ export class BinshopsClient {
         const newPath = [...currentPath, category];
 
         if (item.slug === slug) {
+          path.push(...newPath);
+          return true;
+        }
+
+        if (item.children && findPath(item.children, newPath)) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    findPath(bootstrap.psdata.menuItems, []);
+    return path;
+  }
+
+  async getCategoryPath(id: number): Promise<Category[]> {
+    const bootstrap = await this.getBootstrap();
+    if (!bootstrap?.psdata?.menuItems) {
+      return [];
+    }
+
+    const path: Category[] = [];
+
+    const findPath = (items: any[], currentPath: Category[]): boolean => {
+      for (const item of items) {
+        if (item.type !== "category") continue;
+
+        const category: Category = {
+          id: item.id,
+          name: item.label,
+          description: "",
+          parentId: 0,
+          level: item.depth || 0,
+          active: true,
+          imageUrl: item.image_urls?.[0] || undefined,
+        };
+
+        const newPath = [...currentPath, category];
+
+        if (item.id === id) {
           path.push(...newPath);
           return true;
         }
@@ -1028,6 +1076,7 @@ export class BinshopsClient {
         parentId: 0,
         level: item.depth || 0,
         active: true,
+        imageUrl: item.image_urls?.[0] || undefined,
         children: item.children?.length > 0
           ? this.mapMenuItemsToCategories(item.children)
           : undefined,

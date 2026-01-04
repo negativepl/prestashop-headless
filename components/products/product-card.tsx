@@ -141,22 +141,23 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
         </Link>
 
         {/* Price and cart section - pushed to bottom */}
-        <div className="mt-auto pt-3">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xl md:text-2xl font-bold">{formatPrice(product.price)}</span>
+        <div className="mt-auto pt-2 sm:pt-3">
+          {/* Price row */}
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <span className="text-base sm:text-xl md:text-2xl font-bold">{formatPrice(product.price)}</span>
             {!isOutOfStock && (
-              <span className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground">
-                <span className="w-2 h-2 rounded-full bg-green-500"></span>
+              <span className="text-[10px] sm:text-sm font-medium flex items-center gap-1 text-muted-foreground">
+                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-green-500 shrink-0"></span>
                 {product.quantity !== null ? `${product.quantity} szt.` : "Dostępny"}
               </span>
             )}
           </div>
 
           {/* Add to cart section */}
-          <div className="pt-3 border-t min-h-[72px] flex flex-col justify-center">
+          <div className="pt-2 sm:pt-3 border-t">
           {isOutOfStock ? (
             <div className="flex items-center justify-center">
-              <Button disabled className="h-10 px-8" variant="secondary">
+              <Button disabled className="h-8 sm:h-10 px-4 sm:px-8 text-xs sm:text-sm" variant="secondary">
                 Niedostępny
               </Button>
             </div>
@@ -166,7 +167,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
               <div className="flex items-center border rounded-md bg-muted/50 h-8">
                 <button
                   onClick={decrementQuantity}
-                  className="h-full w-7 flex items-center justify-center hover:bg-muted transition-colors rounded-l-md"
+                  className="h-full w-6 sm:w-7 flex items-center justify-center hover:bg-muted transition-colors rounded-l-md"
                   disabled={quantity <= 1}
                   aria-label="Zmniejsz ilość"
                 >
@@ -179,12 +180,12 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
                   onChange={handleInputChange}
                   onBlur={handleInputBlur}
                   onClick={handleInputClick}
-                  className="w-6 text-center text-xs font-medium bg-transparent focus:outline-none"
+                  className="w-5 sm:w-6 text-center text-xs font-medium bg-transparent focus:outline-none"
                   aria-label="Ilość produktu"
                 />
                 <button
                   onClick={incrementQuantity}
-                  className="h-full w-7 flex items-center justify-center hover:bg-muted transition-colors rounded-r-md"
+                  className="h-full w-6 sm:w-7 flex items-center justify-center hover:bg-muted transition-colors rounded-r-md"
                   disabled={quantity >= maxQuantity}
                   aria-label="Zwiększ ilość"
                 >
@@ -196,18 +197,18 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
               <Button
                 onClick={handleAddToCart}
                 size="sm"
-                className="flex-1 h-8 gap-1 min-w-0 px-2 text-xs"
+                className="flex-1 h-8 gap-1.5 px-2 sm:px-3 text-xs"
               >
-                <ShoppingCart className="size-3.5 sm:size-4 shrink-0" />
-                <span className="truncate">Do koszyka</span>
+                <ShoppingCart className="size-4 shrink-0" />
+                <span className="hidden sm:inline">Do koszyka</span>
+                <span className="sm:hidden">Dodaj</span>
               </Button>
             </div>
           )}
           {/* TODO: W przyszłości podłączymy prawdziwe czasy wysyłki z API */}
           {!isOutOfStock && (
-            <p className="text-xs text-muted-foreground text-center mt-2">
-              <span className="hidden sm:inline">Zamów do 16:00 - wysyłka dziś</span>
-              <span className="sm:hidden">Wysyłka dziś do 16:00</span>
+            <p className="hidden sm:block text-xs text-muted-foreground text-center mt-2">
+              Zamów do 16:00 - wysyłka dziś
             </p>
           )}
           </div>

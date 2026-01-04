@@ -299,6 +299,7 @@ export interface Category {
   parentId: number;
   level: number;
   active: boolean;
+  imageUrl?: string;
   children?: Category[];
 }
 
