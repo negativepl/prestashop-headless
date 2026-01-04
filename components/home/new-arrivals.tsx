@@ -50,7 +50,7 @@ export function NewArrivals({ initialProducts }: NewArrivalsProps) {
     <div className="relative group/carousel">
       <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth px-6 md:px-10 pb-4 -mb-4 scroll-pl-6 md:scroll-pl-10"
+        className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth px-[7.5%] md:px-10 pb-4 -mb-4 md:scroll-pl-10"
         style={{
           scrollbarWidth: "none",
           msOverflowStyle: "none",
@@ -60,7 +60,7 @@ export function NewArrivals({ initialProducts }: NewArrivalsProps) {
         {initialProducts.map((product) => (
           <div
             key={product.id}
-            className="snap-start shrink-0 w-[75%] md:w-[48%] lg:w-[32%] xl:w-[24%] 2xl:w-[19%]"
+            className="snap-center md:snap-start shrink-0 w-[85%] md:w-[48%] lg:w-[32%] xl:w-[24%] 2xl:w-[19%]"
           >
             <ProductCard product={product} />
           </div>

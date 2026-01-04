@@ -48,18 +48,19 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
             className="fixed inset-0 bg-black/50 z-[110]"
             onClick={onClose}
           />
 
-          {/* Modal - full screen on mobile */}
+          {/* Modal - full screen slide up */}
           <motion.div
-            initial={{ opacity: 0, y: "100%" }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: "100%" }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-            className="fixed inset-0 z-[110] bg-background flex flex-col"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+            className="fixed inset-0 z-[110] bg-background flex flex-col will-change-transform"
+            style={{ backfaceVisibility: "hidden" }}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b">

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
-import { ShoppingCart, Search, User, ChevronDown, Phone, Star, Minus, Plus, Trash2, ShoppingBag, ArrowRight, Heart, LogIn, LogOut, Truck, X, Globe, Coins, Menu } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ShoppingCart, Search, User, ChevronDown, Phone, Star, Minus, Plus, Trash2, ShoppingBag, ArrowRight, Heart, LogIn, LogOut, Truck, X, Globe, Coins, Menu, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -48,6 +49,31 @@ export function Header({ categories = [] }: HeaderProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<number | null>(null);
+  const [topbarIndex, setTopbarIndex] = useState(0);
+  const pathname = usePathname();
+  const isHomePage = pathname === "/";
+
+  const topbarItems = [
+    { text: "Darmowa dostawa od 100 zł" },
+    { text: "Ponad 40 000 produktów w ofercie" },
+    { text: "Ponad 80 producentów do wyboru" },
+  ];
+
+  // Auto-rotate topbar on mobile
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTopbarIndex((prev) => (prev + 1) % topbarItems.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [topbarItems.length]);
+
+  const nextTopbar = useCallback(() => {
+    setTopbarIndex((prev) => (prev + 1) % topbarItems.length);
+  }, [topbarItems.length]);
+
+  const prevTopbar = useCallback(() => {
+    setTopbarIndex((prev) => (prev - 1 + topbarItems.length) % topbarItems.length);
+  }, [topbarItems.length]);
 
   const handleLogout = async () => {
     await logoutUser();
@@ -98,61 +124,81 @@ export function Header({ categories = [] }: HeaderProps) {
 
   return (
     <>
-      {/* Top bar - scrolls away */}
-      <div className="bg-muted text-foreground">
-        <div className="container py-2 md:py-2.5 flex justify-center md:justify-between items-center text-xs lg:text-sm relative">
-          <div className="hidden md:flex items-center gap-3 lg:gap-6">
-            <span className="flex items-center gap-1.5 lg:gap-2"><Phone className="h-3 w-3 lg:h-4 lg:w-4" /> +48 793 237 970</span>
+      {/* Top bar */}
+      <div className="bg-white dark:bg-card md:bg-muted md:dark:bg-muted text-foreground">
+        {/* Mobile topbar with carousel - only on homepage */}
+        {isHomePage && (
+          <div className="md:hidden py-1.5 overflow-hidden">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={topbarIndex}
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -30 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className="flex items-center justify-center gap-1.5 text-xs"
+              >
+                <span>{topbarItems[topbarIndex].text}</span>
+              </motion.div>
+            </AnimatePresence>
           </div>
-          <div className="hidden md:flex items-center gap-3 lg:gap-6 absolute left-1/2 -translate-x-1/2">
-            <span className="flex items-center gap-1.5 lg:gap-2"><Truck className="h-3 w-3 lg:h-4 lg:w-4" /> Darmowa dostawa od 100 PLN</span>
-            <span className="hidden lg:flex items-center gap-2"><Star className="h-4 w-4" /> Na rynku od ponad 10 lat</span>
-          </div>
-          <p className="md:hidden text-xs">Darmowa dostawa od 100 PLN</p>
-          <div className="hidden md:flex items-center gap-2 lg:gap-4">
-            {/* Currency selector */}
-            <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1 lg:gap-1.5 hover:text-primary transition-colors cursor-pointer outline-none">
-                <Coins className="size-3 lg:size-3.5" />
-                <span>PLN</span>
-                <ChevronDown className="size-2.5 lg:size-3" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-[100px] bg-white dark:bg-black">
-                <DropdownMenuItem className="cursor-pointer">
-                  <span className="font-medium">PLN</span>
-                  <span className="text-muted-foreground ml-2">zł</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer">
-                  <span className="font-medium">EUR</span>
-                  <span className="text-muted-foreground ml-2">€</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+        )}
 
-            {/* Language selector */}
-            <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1 lg:gap-1.5 hover:text-primary transition-colors cursor-pointer outline-none">
-                <Globe className="size-3 lg:size-3.5" />
-                <span>PL</span>
-                <ChevronDown className="size-2.5 lg:size-3" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-[120px] bg-white dark:bg-black">
-                <DropdownMenuItem className="cursor-pointer">Polski</DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer">English</DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer">Deutsch</DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer">Română</DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer">Čeština</DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer">Magyar</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+        {/* Desktop topbar */}
+        <div className="hidden md:block">
+          <div className="container py-1.5 lg:py-2 flex justify-between items-center text-[11px] lg:text-xs relative">
+            <div className="flex items-center gap-3 lg:gap-5">
+              <span className="flex items-center gap-1.5"><Phone className="size-3" /> +48 793 237 970</span>
+            </div>
+            <div className="flex items-center gap-3 lg:gap-5 absolute left-1/2 -translate-x-1/2">
+              <span className="flex items-center gap-1.5"><Truck className="size-3" /> Darmowa dostawa od 100 zł</span>
+              <span className="hidden lg:flex items-center gap-1.5"><Star className="size-3" /> Na rynku od ponad 10 lat</span>
+            </div>
+            <div className="flex items-center gap-2 lg:gap-4">
+              {/* Currency selector */}
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center gap-1 lg:gap-1.5 hover:text-primary transition-colors cursor-pointer outline-none">
+                  <Coins className="size-3 lg:size-3.5" />
+                  <span>PLN</span>
+                  <ChevronDown className="size-2.5 lg:size-3" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[100px] bg-white dark:bg-black">
+                  <DropdownMenuItem className="cursor-pointer">
+                    <span className="font-medium">PLN</span>
+                    <span className="text-muted-foreground ml-2">zł</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer">
+                    <span className="font-medium">EUR</span>
+                    <span className="text-muted-foreground ml-2">€</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-            <a href="https://b2b.homescreen.pl" className="hover:underline transition-colors">Hurtownia</a>
+              {/* Language selector */}
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center gap-1 lg:gap-1.5 hover:text-primary transition-colors cursor-pointer outline-none">
+                  <Globe className="size-3 lg:size-3.5" />
+                  <span>PL</span>
+                  <ChevronDown className="size-2.5 lg:size-3" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[120px] bg-white dark:bg-black">
+                  <DropdownMenuItem className="cursor-pointer">Polski</DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer">English</DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer">Deutsch</DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer">Română</DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer">Čeština</DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer">Magyar</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <a href="https://b2b.homescreen.pl" className="hover:underline transition-colors">Hurtownia</a>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main header - sticky */}
-      <header className={`sticky top-0 z-50 bg-card transition-shadow duration-300 ease-in-out ${isScrolled ? "shadow-sm" : "shadow-none"}`}>
+      <header className={`sticky top-0 z-50 bg-white dark:bg-card transition-shadow duration-300 ease-in-out ${isScrolled ? "shadow-sm" : "shadow-none"}`}>
         <div className="container py-2 md:py-2.5">
           <div className="flex items-center justify-between gap-4 md:gap-8">
             {/* Left - Hamburger (md only) + Logo */}
@@ -255,8 +301,9 @@ export function Header({ categories = [] }: HeaderProps) {
 
             {/* Favorites - visible on mobile */}
             <Link href="/favorites" className="md:hidden">
-              <Button variant="ghost" size="icon" className="h-10 w-10 relative cursor-pointer hover:bg-transparent! hover:text-primary">
-                <motion.div
+              <Button variant="ghost" size="icon" className="h-10 w-10 cursor-pointer hover:bg-transparent! hover:text-primary">
+                <motion.span
+                  className="relative"
                   animate={favoritesAnimating ? {
                     scale: [1, 1.3, 1],
                     rotate: [0, -10, 10, 0],
@@ -264,16 +311,16 @@ export function Header({ categories = [] }: HeaderProps) {
                   transition={{ duration: 0.5 }}
                 >
                   <Heart className="size-5" />
-                </motion.div>
-                {mounted && favoritesCount > 0 && (
-                  <motion.span
-                    className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold"
-                    animate={favoritesAnimating ? { scale: [1, 1.4, 1] } : { scale: 1 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    {favoritesCount > 9 ? "9+" : favoritesCount}
-                  </motion.span>
-                )}
+                  {mounted && favoritesCount > 0 && (
+                    <motion.span
+                      className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold"
+                      animate={favoritesAnimating ? { scale: [1, 1.4, 1] } : { scale: 1 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {favoritesCount > 9 ? "9+" : favoritesCount}
+                    </motion.span>
+                  )}
+                </motion.span>
               </Button>
             </Link>
 
@@ -515,7 +562,7 @@ export function Header({ categories = [] }: HeaderProps) {
       </header>
 
       {/* Mega Menu navigation bar - scrolls away (hidden on mobile) */}
-      <div className="hidden lg:block bg-card relative z-40">
+      <div className="hidden lg:block bg-white dark:bg-card relative z-40">
         {/* Fading divider line */}
         <div className="container">
           <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />

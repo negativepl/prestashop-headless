@@ -14,7 +14,7 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
   return (
     <div className="md:hidden -mx-6">
       <div
-        className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth px-6 pb-4 -mb-4 scroll-pl-6"
+        className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth px-[7.5%] pb-4 -mb-4"
         style={{
           scrollbarWidth: "none",
           msOverflowStyle: "none",
@@ -24,8 +24,7 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
         {posts.map((post) => (
           <div
             key={post.id}
-            className="snap-start shrink-0"
-            style={{ width: "80%" }}
+            className="snap-center shrink-0 w-[85%]"
           >
             <article className="group bg-accent rounded-xl border overflow-hidden hover:border-foreground/20 transition-colors h-full">
               <Link href={`/blog/${post.slug}`}>

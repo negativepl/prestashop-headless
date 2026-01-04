@@ -4,10 +4,23 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { Search, X, ArrowRight, Loader2, Command, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SafeHighlight } from "@/components/ui/safe-html";
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  return isMobile;
+}
 
 interface SearchProduct {
   id: number;
@@ -61,6 +74,7 @@ interface SearchModalProps {
 export function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchProduct[]>([]);
   const [searchCategories, setSearchCategories] = useState<SearchCategory[]>([]);
@@ -227,18 +241,19 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
             className="fixed inset-0 bg-black/50 z-[110]"
             onClick={onClose}
           />
 
-          {/* Modal */}
+          {/* Modal - mobile: slide up, desktop: scale fade */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.98, y: -10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.98, y: -10 }}
-            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
-            className="fixed inset-0 md:inset-auto md:left-1/2 md:top-[5%] md:-translate-x-1/2 w-full md:max-w-3xl z-[110] md:px-4"
+            initial={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.96 }}
+            animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1 }}
+            exit={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.96 }}
+            transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+            className="fixed inset-0 z-[110] md:inset-auto md:left-1/2 md:top-[5%] md:-translate-x-1/2 md:w-full md:max-w-3xl md:px-4 will-change-transform"
+            style={{ backfaceVisibility: "hidden" }}
           >
             <div className="bg-background md:rounded-2xl shadow-2xl overflow-hidden h-full md:h-auto md:max-h-[85vh] flex flex-col border-0 md:border">
               {/* Search Header */}

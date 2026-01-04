@@ -245,11 +245,11 @@ export default async function HomePage() {
       </section>
 
       {/* Trust Section */}
-      <section className="bg-card">
+      <section>
         <div className="container py-8 md:py-10 lg:py-14">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 xl:gap-8">
             <div className="flex items-center gap-2 sm:gap-3 xl:gap-4">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 xl:w-12 xl:h-12 bg-primary/10 rounded-lg xl:rounded-xl flex items-center justify-center shrink-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 xl:w-12 xl:h-12 rounded-lg xl:rounded-xl border-2 border-primary/30 flex items-center justify-center shrink-0">
                 <Truck className="h-4 w-4 sm:h-5 sm:w-5 xl:h-6 xl:w-6 text-primary" />
               </div>
               <div>
@@ -258,7 +258,7 @@ export default async function HomePage() {
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 xl:gap-4">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 xl:w-12 xl:h-12 bg-primary/10 rounded-lg xl:rounded-xl flex items-center justify-center shrink-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 xl:w-12 xl:h-12 rounded-lg xl:rounded-xl border-2 border-primary/30 flex items-center justify-center shrink-0">
                 <RotateCcw className="h-4 w-4 sm:h-5 sm:w-5 xl:h-6 xl:w-6 text-primary" />
               </div>
               <div>
@@ -267,7 +267,7 @@ export default async function HomePage() {
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 xl:gap-4">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 xl:w-12 xl:h-12 bg-primary/10 rounded-lg xl:rounded-xl flex items-center justify-center shrink-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 xl:w-12 xl:h-12 rounded-lg xl:rounded-xl border-2 border-primary/30 flex items-center justify-center shrink-0">
                 <Percent className="h-4 w-4 sm:h-5 sm:w-5 xl:h-6 xl:w-6 text-primary" />
               </div>
               <div>
@@ -276,7 +276,7 @@ export default async function HomePage() {
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 xl:gap-4">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 xl:w-12 xl:h-12 bg-primary/10 rounded-lg xl:rounded-xl flex items-center justify-center shrink-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 xl:w-12 xl:h-12 rounded-lg xl:rounded-xl border-2 border-primary/30 flex items-center justify-center shrink-0">
                 <Headphones className="h-4 w-4 sm:h-5 sm:w-5 xl:h-6 xl:w-6 text-primary" />
               </div>
               <div>

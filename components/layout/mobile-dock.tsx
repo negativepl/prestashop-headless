@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -28,6 +28,22 @@ export function MobileDock({ categories = [] }: MobileDockProps) {
     if (path === "/") return pathname === "/";
     return pathname.startsWith(path);
   };
+
+  // Calculate active index for indicator animation
+  const activeIndex = useMemo(() => {
+    // Modal states have priority
+    if (menuOpen) return 1; // Menu
+    if (searchModal.isOpen) return 2; // Search
+    if (cartModal.isOpen) return 3; // Cart
+
+    // Check pathname
+    if (pathname === "/") return 0; // Home
+    if (pathname.startsWith("/categories")) return 1; // Menu/Categories
+    if (pathname.startsWith("/cart") || pathname.startsWith("/checkout")) return 3; // Cart
+    if (pathname.startsWith("/account")) return 4; // Account
+
+    return -1; // No active
+  }, [pathname, menuOpen, searchModal.isOpen, cartModal.isOpen]);
 
   const currentCategories = categoryStack.length > 0
     ? categoryStack[categoryStack.length - 1].children || []

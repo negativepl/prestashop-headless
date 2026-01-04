@@ -648,6 +648,7 @@ export class BinshopsClient {
   } | null> {
     try {
       const response = await this.fetch<BinshopsAccountInfoResponse>("accountinfo");
+      console.log("accountinfo API response:", JSON.stringify(response, null, 2));
 
       if (response.success && response.psdata?.customer) {
         const c = response.psdata.customer;
@@ -660,7 +661,8 @@ export class BinshopsClient {
       }
 
       return null;
-    } catch {
+    } catch (error) {
+      console.error("getAccountInfo error:", error);
       return null;
     }
   }

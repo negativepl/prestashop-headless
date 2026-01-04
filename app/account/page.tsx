@@ -64,6 +64,7 @@ export default async function AccountPage() {
       binshops.getCustomerAddresses(),
       binshops.getAccountInfo(),
     ]);
+    console.log("Customer data:", customer);
   } catch (error) {
     console.error("Error fetching account data:", error);
   }
@@ -96,22 +97,20 @@ export default async function AccountPage() {
                 </div>
               </div>
               <div className="space-y-3 text-sm">
-                {customer?.firstName && customer?.lastName && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Imię i nazwisko</span>
-                    <span>{customer.firstName} {customer.lastName}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5">
+                  <span className="text-muted-foreground">Imię i nazwisko</span>
+                  <span>{[session.firstName, session.lastName].filter(Boolean).join(" ") || "Nie podano"}</span>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5">
                   <span className="text-muted-foreground">Email</span>
-                  <span className="truncate ml-2">{session.email}</span>
+                  <span className="break-all">{session.email}</span>
                 </div>
               </div>
               <div className="space-y-2 mt-4">
                 <EditProfileDialog
                   currentEmail={session.email}
-                  currentFirstName={customer?.firstName}
-                  currentLastName={customer?.lastName}
+                  currentFirstName={session.firstName}
+                  currentLastName={session.lastName}
                 />
                 <ChangePasswordDialog />
               </div>

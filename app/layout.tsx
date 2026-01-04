@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { MobileDock } from "@/components/layout/mobile-dock";
 import { ThemeProvider } from "@/components/theme-provider";
+import { CookieBanner } from "@/components/cookie-consent";
 import { binshops } from "@/lib/binshops/client";
 import { getSEO } from "@/lib/cms/client";
 import type { Category } from "@/lib/prestashop/types";
@@ -141,6 +142,7 @@ export default async function RootLayout({
           <main className="flex-1">{children}</main>
           <Footer />
           <MobileDock categories={categories} />
+          <CookieBanner />
         </ThemeProvider>
       </body>
     </html>
