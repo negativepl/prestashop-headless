@@ -6,7 +6,6 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { SafeHtml } from "@/components/ui/safe-html";
 import { ProductGallery } from "@/components/products/product-gallery";
 import { ProductAccordion } from "@/components/products/product-accordion";
-import { ProductCard } from "@/components/products/product-card";
 
 // ISR - revalidate every 5 minutes
 export const revalidate = 300;
@@ -38,11 +37,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound();
   }
 
-  // Get related products and category path in parallel
-  const [relatedProducts, categoryPath] = await Promise.all([
-    product.categoryId ? binshops.getRelatedProducts(productId, 4) : Promise.resolve([]),
-    product.categorySlug ? binshops.getCategoryPathBySlug(product.categorySlug) : Promise.resolve([]),
-  ]);
+  // Get category path for breadcrumbs
+  const categoryPath = product.categorySlug
+    ? await binshops.getCategoryPathBySlug(product.categorySlug)
+    : [];
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pl-PL", {
@@ -111,18 +109,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
           </div>
         </div>
       </div>
-
-      {/* Related products */}
-      {relatedProducts.length > 0 && (
-        <div className="mt-12">
-          <h2 className="text-xl font-bold mb-6">Inni klienci przeglądali również</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {relatedProducts.map((relatedProduct) => (
-              <ProductCard key={relatedProduct.id} product={relatedProduct} />
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Accordion sections */}
       <div className="mt-12">
